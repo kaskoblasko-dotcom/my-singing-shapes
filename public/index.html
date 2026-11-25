@@ -294,6 +294,10 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .taskrow.done{border-color:#6ad04a;box-shadow:0 0 12px rgba(106,208,74,.4);}
 .tstars{color:#ffd23a;font-size:calc(18px*var(--u));letter-spacing:1px;text-shadow:var(--ol);white-space:nowrap;}
 .treward{text-align:right;font-weight:900;white-space:nowrap;line-height:1.5;}
+#dtray{position:absolute;left:50%;bottom:calc(14px*var(--u));transform:translateX(-50%);z-index:7;width:calc(96px*var(--u));height:calc(58px*var(--u));border-radius:calc(30px*var(--u)) calc(30px*var(--u)) 14px 14px;border:4px solid var(--wood);box-shadow:0 0 0 3px var(--woodD),0 5px 0 var(--woodD);background:linear-gradient(#7ad8ff,#3a8ad8);display:grid;place-items:center;animation:trayBob 1.4s ease-in-out infinite;cursor:pointer;padding:0;}
+#dtray svg{width:62%;height:62%;}
+#dtray .dot{top:-10px;right:-10px;}
+@keyframes trayBob{50%{transform:translate(-50%,-5px);}}
 </style>
 </head>
 <body>
@@ -331,6 +335,7 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
   <div id="bk-list" class="hidden"></div>
 </div>
 <div id="sheet" class="hidden"></div>
+<button id="dtray" class="hidden"><svg viewBox="0 0 40 30"><path d="M6 24 L20 8 L34 24" fill="none" stroke="#2a1f3d" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 24 L20 8 L34 24" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="dtray-n" class="dot"></span></button>
 <div id="placebar" class="hidden">
   <button class="rbtn c-cream" id="pb-cancel"><span data-ico="x"></span></button>
   <div class="msg">Drag it, or tap the island to pick a spot</div>
@@ -654,6 +659,53 @@ const SHAPES = [
     look:{ body:'#a8a8c8', body2:'#4a4a6a', eyes:1, eye:'calm', mouth:'small', acc:['runes'], pat:'cracks', legs:0, size:1.15, shape:'mono' },
     pat: [...atBar(0,[[0,[0,4],16,.9]]), ...atBar(2,[[0,[0,4],16,.85]]), ...atBar(3,[[12,7,4,.6]])] },
 ];
+// ---------- RUIN FAMILY: each original Ruin carries a Ruin element. Ruin Island breeds doubles; Shattered Island synthesizes triples, quads and the quint ----------
+Object.assign(ELEMENTS, {
+  regal:  { name:'Regal',  color:'#ffcf3a', dark:'#a8781a', icon:'👑', ruinEl: true },
+  twist:  { name:'Twist',  color:'#6ae8ff', dark:'#2a8aa8', icon:'➰', ruinEl: true },
+  glitch: { name:'Glitch', color:'#5aff7a', dark:'#2a9a3a', icon:'👾', ruinEl: true },
+  rune:   { name:'Rune',   color:'#b0a8d8', dark:'#5a5080', icon:'🗿', ruinEl: true },
+  odd:    { name:'Odd',    color:'#ff8ae8', dark:'#a03a9a', icon:'👻', ruinEl: true },
+});
+const RUIN_SINGLE_EL = { dodecadon:'regal', mobius:'twist', glitchling:'glitch', monolith:'rune', oddball:'odd' };
+SHAPES.forEach(s => { if (RUIN_SINGLE_EL[s.id]) s.el = [RUIN_SINGLE_EL[s.id]]; });
+// compact pattern helpers for the new Ruins
+const mel = (notes, len = 2, vel = 0.8, every = 4) => rep4(notes.map((n, i) => [i * every, n, len, vel]).filter(e => e[1] !== null));
+const RF = (id, name, el, cat, shape, inst, vol, sec, look, sound, desc, pat) => ({ id, sec, name, cat, el, tier:5, inst, vol, rate: [0, 0, 300, 380, 470, 650][el.length], time: [0, 0, 21600, 28800, 43200, 86400][el.length], sound, desc, look: { eyes:2, legs:0, size:1.15, ...look, ...(shape ? { shape } : {}) }, pat });
+SHAPES.push(
+  // doubles (Ruin Island)
+  RF('spiralord', 'Spiralord', ['regal','twist'], 'special', 'ring', 'choir', 0.38, 'C', { body:'#ffe07a', body2:'#5ad8ff', eye:'calm', mouth:'small', acc:['crown'], pat:'none' }, 'Royal hum', 'A golden loop that never stops turning. Spiralord insists on being bowed to, then spins away before anyone can.', mel([0, null, 4, null], 4, 0.6, 8)),
+  RF('pixelking', 'Pixelking', ['regal','glitch'], 'special', 'pixel', 'stab', 0.433, 'VC', { body:'#ffd84a', body2:'#2a9a3a', eye:'pixel', mouth:'pixel', acc:['crown','pixels'], pat:'scan', legs:2 }, 'Chunky stabs', 'Pixelking rules a kingdom only it can see, made of blocky castles and eight-bit trumpets.', rep4([[0, [0,2,4], 1, .8], [6, [0,2,4], 1, .6], [10, [1,3,5], 1, .7]])),
+  RF('throneheart', 'Throneheart', ['regal','rune'], 'special', 'mono', 'organ', 0.205, 'VB', { body:'#e8d8a0', body2:'#a07a2a', eyes:1, eye:'calm', mouth:'small', acc:['runes','crown'], pat:'cracks', size:1.2 }, 'Solemn organ', 'A standing stone with a golden crown carved right into it. Throneheart has been waiting for a king for a very long time.', rep4([[0, [0,4], 8, .7], [8, [2,5], 8, .6]])),
+  RF('blobbess', 'Blobbess', ['regal','odd'], 'special', 'blob', 'lead', 0.513, 'C', { body:'#ffb0e8', body2:'#ffcf3a', eyes:3, eye:'lashes', mouth:'o', acc:['tiara'], pat:'swirls', acol:'#ffcf3a' }, 'Wobbly lead', 'Blobbess wobbles everywhere with great dignity. Her tiara has fallen off forty times today.', mel([4, 5, 4, 2, 0, null, 2, null], 2, 0.75, 2).slice(0, 24)),
+  RF('glitchloop', 'Glitchloop', ['twist','glitch'], 'special', 'ring', 'arp', 0.592, 'VC', { body:'#5aff9a', body2:'#5ad8ff', eye:'pixel', mouth:'small', acc:['pixels'], pat:'scan' }, 'Looping arp', 'A ring that keeps skipping like a scratched disc. Glitchloop has been stuck in the same second since Tuesday.', rep4([[0,0,1,.8],[2,2,1,.6],[4,4,1,.7],[6,7,1,.6],[8,4,1,.7],[10,2,1,.6],[12,0,1,.7],[14,2,1,.5]])),
+  RF('runewhirl', 'Runewhirl', ['twist','rune'], 'diamond', null, 'swell', 0.319, 'B', { body:'#c8c0f0', body2:'#5ad8ff', eyes:1, eye:'calm', mouth:'small', acc:['runes','wisps'], pat:'facets' }, 'Rising swell', 'Runewhirl spins so fast that its runes blur into one glowing ring. It only slows down to read them.', rep4([[0, [0,4], 16, .6]])),
+  RF('wobbleknot', 'Wobbleknot', ['twist','odd'], 'special', 'blob', 'theremin', 0.284, 'B', { body:'#9ae8ff', body2:'#ff8ae8', eyes:2, eye:'dizzy', mouth:'o', acc:['swirl'], pat:'swirls' }, 'Spooky theremin', 'Wobbleknot tied itself in a knot years ago and decided it liked the look.', mel([7, null, 9, null], 6, 0.6, 8)),
+  RF('bytestone', 'Bytestone', ['glitch','rune'], 'special', 'mono', 'glitch', 0.658, 'VC', { body:'#7a8a7a', body2:'#5aff7a', eyes:1, eye:'visor', mouth:'small', acc:['pixels'], pat:'circuits' }, 'Data crunches', 'Ancient code runs across Bytestone like moss. Nobody knows what program it is still running.', rep4([[0,0,1,.8],[3,7,1,.5],[8,4,1,.8],[13,9,1,.6]])),
+  RF('gloopix', 'Gloopix', ['glitch','odd'], 'special', 'pixel', 'wobble', 0.224, 'C', { body:'#ff8ae8', body2:'#5aff7a', eye:'odd', eyes:3, mouth:'pixel', acc:['antenna'], pat:'scan', legs:2 }, 'Gooey wobble', 'Gloopix is half slime, half screen. It leaves little pixel puddles everywhere it goes.', rep4([[0, 0, 4, .8], [8, 0, 2, .6], [12, 2, 4, .7]])),
+  RF('hauntolith', 'Hauntolith', ['rune','odd'], 'special', 'mono', 'bell', 0.41, 'VB', { body:'#d8b8e8', body2:'#7a5a8a', eyes:2, eye:'sleepy', mouth:'o', acc:['runes','wisps'], pat:'cracks' }, 'Ghostly bells', 'A standing stone that floats a few inches off the ground. It insists it is not haunted. It is a little haunted.', mel([7, null, null, 4], 4, 0.6, 4)),
+  // triples (Shattered Island)
+  RF('kaleidrone', 'Kaleidrone', ['regal','twist','glitch'], 'hexagon', null, 'pluck', 0.649, 'VC', { body:'#ffe07a', body2:'#5aff9a', eye:'sparkle', mouth:'grin', acc:['shine','pixels'], pat:'facets', legs:2 }, 'Kaleidoscope pluck', 'Every face of Kaleidrone shows a different picture. Look too long and you will see yourself waving back.', rep4([[0,0,1,.8],[3,4,1,.6],[6,7,1,.7],[8,4,1,.6],[11,2,1,.7],[14,0,1,.5]])),
+  RF('chronoliss', 'Chronoliss', ['regal','twist','rune'], 'diamond', null, 'block', 0.581, 'VC', { body:'#f0d890', body2:'#8a80c0', eyes:2, eye:'monocle', mouth:'small', acc:['clock','crown'], pat:'facets' }, 'Ticking blocks', 'Chronoliss keeps time for every Ruin. Its gears were carved before clocks were invented.', rep4([[0,'w',1,.8],[4,'w',1,.6],[8,'b',1,.7],[12,'w',1,.6],[14,'w',1,.4]])),
+  RF('marquessa', 'Marquessa', ['regal','twist','odd'], 'star', null, 'lead', 0.513, 'C', { body:'#ff9ad8', body2:'#ffcf3a', eyes:2, eye:'lashes', mouth:'singer', acc:['crown','wings'], pat:'none' }, 'Grand lead', 'Marquessa floats into every room as if a parade were following her. Usually, one is.', mel([4, 2, 4, 7, 9, 7, 4, null], 2, 0.75, 2).slice(0, 28)),
+  RF('circuitcrown', 'Circuitcrown', ['regal','glitch','rune'], 'square', null, 'clav', 0.384, 'VC', { body:'#3a4a3a', body2:'#ffcf3a', eye:'visor', mouth:'small', acc:['crown','antenna'], pat:'circuits', legs:2 }, 'Funky clav', 'Circuitcrown was built to rule a robot kingdom. The robots never showed up, so it rules itself.', rep4([[0,[0,2],1,.8],[3,[0,2],1,.5],[6,[1,3],1,.7],[10,[0,2],1,.6],[12,[1,3],1,.5]])),
+  RF('jesterbyte', 'Jesterbyte', ['regal','glitch','odd'], 'triangle', null, 'marimba', 0.531, 'VC', { body:'#ff8ae8', body2:'#5aff7a', eye:'happy', mouth:'grin', acc:['horns','bow'], pat:'zigzag', legs:2 }, 'Silly marimba', 'Jesterbyte tells jokes that make no sense, then glitches before the punchline.', mel([0, 4, 2, 7], 1, 0.8, 4)),
+  RF('phantomarch', 'Phantomarch', ['regal','rune','odd'], 'special', 'mono', 'choir', 0.38, 'B', { body:'#e8d0ff', body2:'#ffcf3a', eyes:2, eye:'closed', mouth:'o', acc:['crown','cape'], pat:'cracks', size:1.25 }, 'Phantom choir', 'Phantomarch was a king once, or so it says. Now it drifts through the shards in a cape of mist.', rep4([[0, [0,2,4], 16, .55]])),
+  RF('fractalith', 'Fractalith', ['twist','glitch','rune'], 'diamond', null, 'bell', 0.41, 'VB', { body:'#9ad8c8', body2:'#7a70a8', eyes:1, eye:'calm', mouth:'small', acc:['twinkle','runes'], pat:'facets' }, 'Fractal bells', 'Zoom in on Fractalith and you find a tinier Fractalith, and a tinier one inside that.', mel([0, 4, 7, 4], 3, 0.6, 4)),
+  RF('snarlwave', 'Snarlwave', ['twist','glitch','odd'], 'special', 'blob', 'wobble', 0.224, 'C', { body:'#5ae8c8', body2:'#ff5ad8', eyes:2, eye:'angry', mouth:'teeth', acc:['spikes'], pat:'zigzag' }, 'Snarling wub', 'Snarlwave growls at everyone, then rolls over for belly rubs.', rep4([[0, 0, 3, .8], [4, 0, 1, .6], [6, 2, 2, .7], [10, 0, 4, .7]])),
+  RF('echoshade', 'Echoshade', ['twist','rune','odd'], 'special', 'ring', 'pad', 0.181, 'VB', { body:'#b8b0d8', body2:'#ff9ae8', eye:'sleepy', mouth:'small', acc:['wisps'], pat:'none' }, 'Echoing pad', 'Anything said near Echoshade comes back three times, each a little quieter and a little stranger.', rep4([[0, [0,4,7], 16, .6]])),
+  RF('corruptus', 'Corruptus', ['glitch','rune','odd'], 'special', 'pixel', 'tom', 0.326, 'VC', { body:'#8a7a9a', body2:'#5aff7a', eyes:3, eye:'odd', mouth:'teeth', acc:['pixels'], pat:'cracks', legs:2 }, 'Broken toms', 'Corruptus is what happens when a ghost gets stuck inside an old stone computer.', rep4([[0,'l',1,.8],[6,'m',1,.6],[10,'h',1,.7],[12,'m',1,.5]])),
+  // quads (Shattered Island)
+  RF('prismatrix', 'Prismatrix', ['regal','twist','glitch','rune'], 'hexagon', null, 'arp', 0.592, 'VC', { body:'#e8f0ff', body2:'#5ad8ff', eye:'visor', mouth:'small', acc:['crystals','halo'], pat:'facets', size:1.3, acol:'#5ad8ff' }, 'Crystal arp', 'Prismatrix is a crystal brain that thinks in rainbows. It solved every puzzle in the Shattered Isles in an afternoon.', rep4([[0,0,1,.7],[2,4,1,.6],[4,7,1,.7],[6,9,1,.6],[8,7,1,.7],[10,4,1,.6],[12,2,1,.7],[14,4,1,.5]])),
+  RF('carnivault', 'Carnivault', ['regal','twist','glitch','odd'], 'star', null, 'brass', 0.486, 'C', { body:'#ff7ab0', body2:'#ffcf3a', eyes:3, eye:'big', mouth:'grin', acc:['mane','tophat'], pat:'stripes', size:1.3, acol:'#5aff9a' }, 'Carnival brass', 'Carnivault is a one-Shape carnival. It has rides, games and a popcorn stand somewhere in its mane.', rep4([[0,[0,4],2,.8],[4,[0,4],1,.6],[6,[2,5],2,.7],[12,[0,4],2,.6]])),
+  RF('elderspire', 'Elderspire', ['regal','twist','rune','odd'], 'special', 'mono', 'organ', 0.205, 'VB', { body:'#d8d0f0', body2:'#ffcf3a', eyes:2, eye:'closed', mouth:'small', acc:['halo','aurora','runes'], pat:'cracks', size:1.4 }, 'Elder organ', 'Elderspire is the oldest thing in the Shattered Isles. Even the other Ruins call it grandpa.', rep4([[0,[0,2,4],8,.6],[8,[1,3,5],8,.55]])),
+  RF('sovereign', 'Sovereign', ['regal','glitch','rune','odd'], 'square', null, 'tuba', 0.198, 'VC', { body:'#5a3a8a', body2:'#ffcf3a', eye:'cool', mouth:'mustache', acc:['crown','cape'], pat:'gems', size:1.35, legs:2 }, 'Royal tuba', 'Sovereign sits on a throne nobody else can see. It hands out medals to anyone who asks nicely.', rep4([[0,0,3,.8],[6,4,2,.6],[8,0,3,.8],[14,2,2,.6]])),
+  RF('nullvoid', 'Nullvoid', ['twist','glitch','rune','odd'], 'special', 'ring', 'swell', 0.319, 'B', { body:'#2a2050', body2:'#ff5ad8', eye:'sparkle', mouth:'o', acc:['glow','starorbit'], pat:'none', size:1.3, acol:'#b05aff' }, 'Void swell', 'Look through the middle of Nullvoid and you can see the stars of a completely different sky.', rep4([[0, [0,4], 16, .65]])),
+  // the quint (Shattered Island)
+  RF('shatterheart', 'Shatterheart', ['regal','twist','glitch','rune','odd'], 'special', 'dodeca', 'opera', 0.519, 'C', { body:'#f0e8ff', body2:'#ff5ad8', eyes:3, eye:'sparkle', mouth:'singer', acc:['rays','crystals','crown'], pat:'gems', size:1.5, acol:'#5ad8ff' }, 'Shattered opera', 'Shatterheart is every Ruin at once, glued together with light. When it smiles, the whole island glows.', mel([7, 9, 7, 4, 2, 4, 7, null], 2, 0.8, 2).slice(0, 28)),
+);
+const RUIN_DOUBLES = ['spiralord','pixelking','throneheart','blobbess','glitchloop','runewhirl','wobbleknot','bytestone','gloopix','hauntolith'];
+const SHATTER_IDS = ['kaleidrone','chronoliss','marquessa','circuitcrown','jesterbyte','phantomarch','fractalith','snarlwave','echoshade','corruptus','prismatrix','carnivault','elderspire','sovereign','nullvoid','shatterheart'];
 // ---------- ISLANDS ----------
 const ISLANDS = [
   { id:'shape', name:'Shape Island', theme:'grass', els:['moss','ember','tide','lumen'], ruin:'dodecadon', bpm:104, root:48, scale:[0,2,4,5,7,9,11], prog:[0,5,3,4], swing:0, rev:0.22, bright:1,
@@ -670,7 +722,9 @@ const ISLANDS = [
   { id:'diamond', name:'Diamond Island', theme:'diamond', special:'diamond', els:[], bpm:108, root:50, scale:[0,2,4,6,7,9,11], prog:[0,3,4,0], swing:0.06, rev:0.34, bright:1.2,
     desc:'A glittering island where every Shape can live. Teleport your level 15 Shapes here.', req:{ level:18, coins:400000 } },
   { id:'ruins', name:'Ruin Island', theme:'ruin', special:'ruin', els:[], bpm:80, root:45, scale:[0,2,3,5,7,8,11], prog:[0,5,4,0], swing:0, rev:0.5, bright:0.85,
-    desc:'Ancient floating stones where only Ruins live. Teleport level 15 Ruins here and breed them together.', req:{ level:20, coins:750000 } },
+    desc:'Ancient floating stones where only Ruins live. Teleport level 15 Ruins here, buy Ruins with gems, and breed double Ruins.', req:{ level:20, coins:750000 } },
+  { id:'shattered', name:'Shattered Island', theme:'shatter', special:'shattered', els:[], bpm:96, root:47, scale:[0,2,3,5,7,8,10], prog:[0,6,3,4], swing:0.1, rev:0.45, bright:0.95,
+    desc:'Broken crystal isles where the biggest Ruins are synthesized. Opens with Ruin Island and comes with a free Ruin.', req:{ level:20, coins:0 } },
 ];
 const ISLAND = {}; ISLANDS.forEach(i => ISLAND[i.id] = i);
 const NORMAL_ISLANDS = ISLANDS.filter(i => !i.special);
@@ -684,7 +738,8 @@ ISLANDS.forEach(I => {
   I.triples = base.filter(s => s.tier === 3).map(s => s.id); I.quad = base.find(s => s.tier === 4).id;
 });
 ISLAND.diamond.commons = [...new Set(NORMAL_ISLANDS.flatMap(I => I.commons))].sort((a, b) => SHAPES.find(s => s.id === a).tier - SHAPES.find(s => s.id === b).tier);
-ISLAND.ruins.commons = NORMAL_ISLANDS.map(I => I.ruin);
+ISLAND.ruins.commons = [...NORMAL_ISLANDS.map(I => I.ruin), ...RUIN_DOUBLES];
+ISLAND.shattered.commons = SHATTER_IDS.slice();
 ISLANDS.filter(I => I.special).forEach(I => { I.singles = []; I.doubles = []; I.triples = []; });
 
 // ---------- RARE & EPIC VARIANTS (looks only) ----------
@@ -692,6 +747,10 @@ function hexToHsl(h) { h = h.replace('#', ''); const n = parseInt(h, 16); let r 
 function hslToHex(H, S, L) { H = ((H % 360) + 360) % 360 / 360; const f = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; let r, g, b; if (!S) r = g = b = L; else { const q = L < 0.5 ? L * (1 + S) : L + S - L * S, p = 2 * L - q; r = f(p, q, H + 1 / 3); g = f(p, q, H); b = f(p, q, H - 1 / 3); } return '#' + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); }
 function recolor(hex, dh, ds = 0, dl = 0) { const [h, s, l] = hexToHsl(hex); return hslToHex(h + dh, Math.max(0, Math.min(1, s + ds)), Math.max(0.05, Math.min(0.92, l + dl))); }
 const VARIANT_LOOKS = {"bobble":{"rare":["#ffd36a","#d8902a","spots",["sprout","flowercrown","leafwings"],"#ff7ab0",null],"epic":["#2a6a4a","#0e3a2a","gems",["glow","crystals","sprout","tiara"],"#7affc0","sparkle"]},"tikki":{"rare":["#7ad0ff","#2a70c0","stripes",["flame","scarf"],"#ffffff",null],"epic":["#3a1a2a","#1a0a14","zigzag",["firering","flame","horns"],"#ff5a1a","angry"]},"blocco":{"rare":["#ff9ad0","#c0508a","dots",["drip","tophat"],"#3a2a4a",null],"epic":["#1a3a8a","#0a1a4a","facets",["frost","crystals","drip"],"#bfefff","cool"]},"twinkla":{"rare":["#b8f0ff","#5aa0e0","none",["starorbit","headband"],"#ff7ad9",null],"epic":["#3a2a8a","#1a1050","sparkle",["glow","starorbit","tiara"],"#ffd23a",null]},"zephyx":{"rare":["#ffe08a","#d0a030","facets",["wisps","feather"],"#ff6a9a",null],"epic":["#1a1a3a","#7a3aff","facets",["shards","wisps","glow"],"#b08aff",null]},"clackle":{"rare":["#ff8ad0","#a03a8a","zigzag",["horns","bowtie"],"#3ad0a0",null],"epic":["#2a2a2a","#7a1a1a","cracks",["firering","antlers","gemcore"],"#ff3a3a",null]},"gloobo":{"rare":["#c0a0ff","#6a4ac0","spots",["lilypad","bubbleorb"],"#bfe8ff",null],"epic":["#0a4a5a","#04202a","bubbles",["glow","bubbleorb","crystals","tiara"],"#6affe0",null]},"hexbloom":{"rare":["#ffb0d0","#c0507a","none",["petals","flowercrown"],"#fff07a",null],"epic":["#4a1a4a","#200a24","gems",["petals","glow","starorbit"],"#ff5ac8","sparkle"]},"rumbletum":{"rare":["#d0b0ff","#7a5ab0","stripes",["ears","drumbelly","scarf"],"#ff6a6a",null],"epic":["#5a3a1a","#2a1a0a","gems",["mane","drumbelly","gemcore"],"#ffd23a",null]},"fizzwick":{"rare":["#a0f0c0","#3a9a6a","bubbles",["steam","tophat"],"#2a2a3a",null],"epic":["#2a1a5a","#140a30","bubbles",["steam","bubbleorb","glow"],"#ff7af0",null]},"solara":{"rare":["#ff9ad8","#c04a8a","none",["rays","scarf"],"#ffe07a",null],"epic":["#3a0a0a","#a01a0a","zigzag",["firering","rays","tiara"],"#ff8a1a",null]},"whirlo":{"rare":["#9ae8ff","#3a8ad0","stripes",["swirl","feather"],"#ffd23a",null],"epic":["#2a0a3a","#0a0414","swirls",["shards","swirl","glow"],"#c05aff",null]},"lulla":{"rare":["#ffd0a0","#e08a4a","dots",["bow","starorbit"],"#fff6b0",null],"epic":["#1a2a5a","#0a1030","sparkle",["glow","wings","tiara"],"#9ad8ff",null]},"cubbit":{"rare":["#ffb08a","#c05a3a","zigzag",["quiff","bowtie"],"#3a8ad8",null],"epic":["#1a1a1a","#3a3a3a","stripes",["quiff","glow","gemcore","shards"],"#ffd23a","cool"]},"prismo":{"rare":["#a0ffd0","#ff8ad0","facets",["shine","tiara"],"#7ad8ff",null],"epic":["#0a0a1a","#ffffff","facets",["glow","shards","shine"],"#ffffff",null]},"bongaroo":{"rare":["#9ad070","#4a8a2a","stripes",["bongos","headband"],"#ff5a5a",null],"epic":["#3a2a6a","#1a103a","gems",["bongos","mane","gemcore"],"#ffb02e",null]},"clocktri":{"rare":["#c0d8ff","#5a7ab0","none",["clock","tophat"],"#2a2a3a",null],"epic":["#2a1a0a","#c8a040","gems",["clock","glow","shards"],"#ffd23a",null]},"novastar":{"rare":["#8ad0ff","#3a6ad8","none",["crown","starorbit"],"#ffffff",null],"epic":["#1a0a2a","#ff3a8a","sparkle",["glow","starorbit","crown","mane"],"#ff5ad0",null]},"aurielle":{"rare":["#ffd0f0","#c070d0","facets",["halo","leafwings"],"#a0ffb0",null],"epic":["#0a1a2a","#3affc0","facets",["aurora","halo","glow","starorbit"],"#7affe0",null]},"grumblox":{"rare":["#d0a070","#7a5030","cracks",["spikes","antlers"],"#ff8a3a",null],"epic":["#1a1a2a","#3aff8a","circuits",["spikes","glow","crystals"],"#3aff8a",null]},"hexapella":{"rare":["#a0e0ff","#d05a8a","none",["cap","scarf"],"#ffd23a",null],"epic":["#2a0a2a","#ff3ad0","zigzag",["cap","glow","shards","gemcore"],"#ff3ad0",null]},"polyphon":{"rare":["#ffd08a","#e07a3a","circuits",["antenna","bowtie"],"#3a6ad8",null],"epic":["#0a1a1a","#3affe0","circuits",["antenna","rings","glow","crystals"],"#3affe0",null]},"dodecadon":{"rare":["#c0e8ff","#4a7ad0","gems",["mane","tiara"],"#ffffff",null],"epic":["#1a0a2a","#ffd23a","gems",["glow","starorbit","crown","cape"],"#ffd23a",null]},"oddball":{"rare":["#a0ffb0","#3aa0ff","swirls",["antenna","tophat"],"#ff5a8a",null],"epic":["#0a0a1a","#ff5af0","swirls",["glow","bubbleorb","witchhat"],"#c05aff",null]},"mobius":{"rare":["#ffb0a0","#ffe07a","none",["starorbit"],"#ffffff",null],"epic":["#1a0a3a","#7affff","none",["glow","shards"],"#7affff",null]},"glitchling":{"rare":["#ff8ad0","#3a2a7a","scan",["pixels","headband"],"#7aff7a",null],"epic":["#0a0a0a","#3aff3a","scan",["pixels","glow","shards"],"#3aff3a",null]},"kelpsong":{"rare":["#ffc08a","#d06a3a","spots",["kelp","bubbleorb"],"#bfe8ff",null],"epic":["#0a2a4a","#3affd0","bubbles",["kelp","glow","tiara"],"#3affd0",null]},"didgeroo":{"rare":["#a0c0ff","#3a5ab0","stripes",["didg","feather"],"#ff5a5a",null],"epic":["#3a1a0a","#ff8a2a","zigzag",["didg","firering","antlers"],"#ff8a2a",null]},"flutterby":{"rare":["#ffe08a","#ff8a5a","dots",["wings","flowercrown"],"#ff7ab0",null],"epic":["#1a0a3a","#7a5aff","sparkle",["wings","glow","starorbit","tiara"],"#c0a0ff",null]},"steamtrom":{"rare":["#a0ffd0","#3a9a7a","facets",["trumpet","tophat"],"#2a2a3a",null],"epic":["#2a1a1a","#ffd23a","gems",["trumpet","glow","gemcore"],"#ffd23a",null]},"sparkplug":{"rare":["#a0d0ff","#3a5ad0","zigzag",["bolt","headband"],"#ffd23a",null],"epic":["#0a0a2a","#3affff","circuits",["bolt","glow","shards"],"#3affff","angry"]},"celestar":{"rare":["#c0ffd0","#3ab0a0","none",["halo","starorbit"],"#ffffff",null],"epic":["#0a0a2a","#ffd23a","sparkle",["glow","mane","halo","starorbit"],"#ffd23a",null]},"organon":{"rare":["#c0d8ff","#5a6ab0","none",["pipes","bowtie"],"#c4304a",null],"epic":["#2a0a1a","#ffd23a","gems",["pipes","glow","tiara"],"#ff5a8a",null]},"bassoonix":{"rare":["#ffb0d0","#c05a8a","spots",["tuba","scarf"],"#ffd23a",null],"epic":["#0a1a1a","#ffd23a","gems",["tuba","glow","crown"],"#ffd23a",null]},"monolith":{"rare":["#e0d0a0","#8a7040","cracks",["runes","flowercrown"],"#7ad0ff",null],"epic":["#0a0a1a","#7affd0","cracks",["runes","glow","shards","crystals"],"#7affd0",null]}};
+{ const RA = ['tophat','scarf','flowercrown','bowtie','feather','headband','leafwings','bubbleorb','tiara','antlers'], EA = [['glow','firering'],['glow','shards'],['glow','starorbit'],['glow','crystals'],['glow','mane'],['glow','frost'],['glow','bubbleorb'],['glow','gemcore']];
+  [...RUIN_DOUBLES, ...SHATTER_IDS].forEach((id, i) => { const b = SHAPES.find(x => x.id === id), L = b.look, keep = L.acc.slice(0, 2);
+    VARIANT_LOOKS[id] = { rare: [recolor(L.body, 70 + i * 23, 0.05, 0.04), recolor(L.body2, 70 + i * 23, 0, 0), L.pat === 'none' ? 'dots' : L.pat, [...keep, RA[i % RA.length]], recolor(L.body2, 160 + i * 31, 0.2, 0.1), null],
+      epic: [recolor(L.body, 200 + i * 17, 0.1, -0.35), recolor(L.body2, 200 + i * 17, 0.1, -0.1), i % 2 ? 'gems' : 'sparkle', [...EA[i % EA.length], ...keep.slice(0, 1), i % 3 ? 'tiara' : 'gemcore'].slice(0, 4), recolor(L.body2, 180 + i * 41, 0.3, 0.15), null] }; }); }
 // each Rare and Epic has its own hand-picked colors and accessories: [body, body2, pattern, accessories, accent color, eye]
 const ACC_WORDS = { glow:'a shimmering glow', mane:'a wild mane', crystals:'crystal spikes', starorbit:'orbiting stars', bubbleorb:'floating bubbles', firering:'a ring of fire', leafwings:'leafy wings', frost:'icy frills', shards:'spinning shards', tophat:'a dapper top hat', tiara:'a jeweled tiara', scarf:'a cozy scarf', flowercrown:'a flower crown', bowtie:'a sharp bow tie', gemcore:'a glowing gem heart', feather:'a fancy feather', antlers:'antlers', witchhat:'a pointy hat', headband:'a star headband', crown:'a golden crown', halo:'a halo', wings:'shimmering wings', cape:'a royal cape' };
 function liftDark(hex, minL) { const [h, s0, l] = hexToHsl(hex); return l >= minL ? hex : hslToHex(h, Math.min(1, s0 + 0.15), minL); } // keep dark Epics readable
@@ -725,11 +784,14 @@ ISLANDS.forEach((I, ii) => {
   shuffle(I.commons).forEach((c, k) => add(epicPairs[k][0], epicPairs[k][1], 'epic_' + c, 0.06));
   const rt = shuffle(I.triples); add(rt[0], rt[1], I.ruin, 0.1);
 });
-{ // Ruin Island: two Ruins can make a Rare or Epic Ruin
-  const R = ISLAND.ruins, ru = R.commons, pairs = []; for (let i = 0; i < ru.length; i++) for (let j = i + 1; j < ru.length; j++) pairs.push([ru[i], ru[j]]);
+// Ruin Island and Shattered Island: secret pairings make Rare and Epic Ruins
+['ruins', 'shattered'].forEach((iid, n) => {
+  const R = ISLAND[iid], cm = R.commons, rnd = seededRand(4507 * (n + 2)), pairs = [];
+  for (let i = 0; i < cm.length; i++) for (let j = i + 1; j < cm.length; j++) pairs.push([cm[i], cm[j]]);
+  for (let i = pairs.length - 1; i > 0; i--) { const k = Math.floor(rnd() * (i + 1)); [pairs[i], pairs[k]] = [pairs[k], pairs[i]]; }
   const add = (a, b, id, chance) => { const k = pairKey(a, b); (R.recipes[k] = R.recipes[k] || []).push({ id, chance }); };
-  ru.forEach((id, k) => { add(...pairs[k], 'rare_' + id, 0.05); add(...pairs[k + 5], 'epic_' + id, 0.05); });
-}
+  cm.forEach((id, k) => { add(...pairs[k * 2], 'rare_' + id, 0.05); add(...pairs[k * 2 + 1], 'epic_' + id, 0.04); });
+});
 // ---------- DECORATIONS ----------
 const DECOS = [
   { id:'bush',     name:'Round Bush',     cost:80,    bonus:1, kind:'bush' },
@@ -756,7 +818,7 @@ SHAPES.filter(s => !s.base).forEach((s, i) => {
   const decos = []; while (decos.length < 2) { const d = pool[Math.floor(rnd() * pool.length)]; if (!decos.includes(d)) decos.push(d); }
   const home = ISLANDS.find(I => I.commons.includes(s.id)) || ISLANDS[0];
   const mates = home.commons.filter(id => id !== s.id && SHAPE[id].tier <= Math.max(1, s.tier - 1 || 1));
-  const shape = mates.length ? mates[Math.floor(rnd() * mates.length)] : home.singles.find(id => id !== s.id);
+  const pool2 = mates.length ? mates : home.commons.filter(id => id !== s.id), shape = pool2[Math.floor(rnd() * pool2.length)];
   LIKES[s.id] = { decos, shape };
 });
 const likesOf = id => LIKES[SHAPE[id].baseId];
@@ -777,10 +839,16 @@ const STRUCTS = {
               up:[{}, { gems:75 }], info: l => l > 1 ? 'Holds 1 egg · Enhanced: hatches 25% faster' : 'Holds 1 egg', next: () => 'Enhanced: 25% faster hatching' },
   bakery:   { name:'Bakery', r:80, max:4, buy:{ coins:200, lvl:1 },
               up:[{}, { gems:50 }], info: l => l > 1 ? 'Enhanced: all 5 recipes' : '3 recipes', next: () => 'Enhanced: unlocks all 5 recipes' },
+  synth:    { name:'Synthesizer', r:95, max:2, buy:{ coins:50000, lvl:1 },
+              up:[{}, { gems:75 }], info: l => l > 1 ? 'Enhanced: synthesis is 25% faster' : 'Fuses two Ruins into a bigger one (if you are lucky)', next: () => 'Enhanced: 25% faster synthesis' },
   mine:     { name:'Gem Mine', r:78, max:1, buy:{ gems:20, lvl:1 },
               up:[{}], info: () => 'Digs up 1 gem every 24 hours', next: () => '' },
 };
 const MINE_TIME = 24 * 3600; // seconds per gem
+const RUIN_TELEPORT_TIME = 10 * 3600; // a teleported Ruin re-hatches on Ruin Island in 10 hours
+const RUIN_GEM_PRICE = { 1: 5000, 2: 10000 }; // Ruin Island: singles and doubles; Shattered Island sells triples
+const SHATTER_TRIPLE_PRICE = 15000;
+const SYNTH_CHANCE = { 4: 0.3, 5: 0.15 }; // chance a synthesis makes the bigger Ruin
 const RECIPES = [
   { id:'toast',  name:'Tune Toast',      food:30,   coins:50,    time:30 },
   { id:'snack',  name:'Shape Snacks',    food:150,  coins:250,   time:300 },
@@ -790,6 +858,7 @@ const RECIPES = [
 ];
 const ISLAND_RX = 840, DIAMOND_RX = 1500, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
 const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 }, mine:{ x:-440, y:170 } };
+STRUCT_DEFAULT_POS.synth = STRUCT_DEFAULT_POS.breeder;
 // obstacles: sizes (cost, time in seconds, XP, chance of a gem, footprint) and the kinds found on each island theme
 const OBST_SIZE = {
   s: { coins:500,   time:120,  xp:20,  gem:0.15, r:42 },
@@ -804,6 +873,7 @@ const OBST_KINDS = {
   lagoon: [['palm','l','Leaning Palm'], ['coral','m','Coral Heap'], ['driftwood','s','Driftwood Pile']],
   diamond:[['bigcrystal','l','Crystal Cluster'], ['boulder','m','Mossy Boulder'], ['cavestone','s','Glowstone']],
   ruin:   [['bigcrystal','l','Crystal Cluster'], ['stalag','m','Stalagmite'], ['fossil','s','Old Fossil']],
+  shatter:[['bigcrystal','l','Crystal Cluster'], ['iceblock','m','Ice Block'], ['cavestone','s','Glowstone']],
 };
 const OBST_NAME = {}; Object.values(OBST_KINDS).forEach(l => l.forEach(([k, , n]) => OBST_NAME[k] = n));
 const BREED_MIN_LEVEL = 2;
@@ -1409,6 +1479,44 @@ const ANIM_DESC = {
   glitchling: 'Glitches and teleports', kelpsong: 'Sways like seaweed', didgeroo: 'Puffs up its cheeks', flutterby: 'Flutters in little loops', steamtrom: 'Recoils with each puff of steam',
   sparkplug: 'Twitches like electricity', celestar: 'Cartwheels through the sky', organon: 'Rises up tall and proud', bassoonix: 'Double bounces', monolith: 'Hovers and rumbles',
 };
+// ---- Ruin Island doubles ----
+Object.assign(ANIM, {
+  spiralord: (P, k) => { P.jump = 18 + Math.sin(k.t * 1.2 + k.seed) * 6; P.spinX = 0.6 + 0.4 * Math.abs(Math.cos(k.t * 1.1 + k.seed)); P.rot = Math.sin(k.t * 0.6) * 0.1; },
+  pixelking: (P, k) => { const st = Math.floor(k.beat * 2) % 2; P.jump = k.pl ? st * 6 + k.env * 6 : 0; P.jx = k.pl ? (st ? 2 : -2) : 0; P.rot = k.pl ? (st ? 0.05 : -0.05) : 0; },
+  throneheart: (P, k) => { P.jump = 10 + Math.sin(k.t * 0.7 + k.seed) * 3; const p = 1 + k.sus * 0.06; P.sy *= p; P.rot = Math.sin(k.t * 0.5) * 0.03; },
+  blobbess: (P, k) => { P.jump = 12 + Math.sin(k.t * 1.6 + k.seed) * 6; const w = Math.sin(k.t * 3.2 + k.seed) * 0.07 + k.env * 0.08; P.sx += w; P.sy -= w; P.rot = Math.sin(k.t * 1.1) * 0.06; },
+  glitchloop: (P, k) => { P.jump = 14 + Math.sin(k.t * 2 + k.seed) * 4; P.bodyRot = k.t * (k.pl ? 2.4 : 0.8); if (k.pl && k.env > 0.4) P.jx = (Math.floor(k.t * 25) % 3 - 1) * 3; },
+  runewhirl: (P, k) => { P.jump = 14 + Math.sin(k.t * 1.4 + k.seed) * 5 + k.sus * 6; P.spinX = 0.35 + 0.65 * Math.abs(Math.cos(k.t * (k.pl ? 3.2 : 1) + k.seed)); },
+  wobbleknot: (P, k) => { P.jump = 16 + Math.sin(k.t * 1.1 + k.seed) * 8; P.skew = Math.sin(k.t * 2.3 + k.seed) * 0.18; P.rot = Math.sin(k.t * 1.7) * 0.12; },
+  bytestone: (P, k) => { P.jump = 8 + Math.sin(k.t * 0.9 + k.seed) * 3; if (k.pl && k.since < 0.15) { P.jx = (Math.random() - 0.5) * 8; P.sx += 0.05; } },
+  gloopix: (P, k) => { const q = k.pl ? Math.exp(-k.since * 5) * k.vel : 0; P.sy -= q * 0.2; P.sx += q * 0.18; P.jump = Math.floor(Math.max(0, Math.sin(k.t * 3 + k.seed)) * 3) * 3; },
+  hauntolith: (P, k) => { P.jump = 20 + Math.sin(k.t * 0.8 + k.seed) * 9; P.rot = Math.sin(k.t * 0.6 + k.seed) * 0.12; P.jx = Math.sin(k.t * 0.4) * 10; },
+  // ---- Shattered Island ----
+  kaleidrone: (P, k) => { P.bodyRot = k.t * (k.pl ? 1.4 : 0.4) + k.env * 0.4; P.jump = k.env * 8; },
+  chronoliss: (P, k) => { P.jump = 12 + Math.sin(k.t * 1.3 + k.seed) * 4; P.rot = k.pl ? Math.sin(k.beat * Math.PI) * 0.25 : Math.sin(k.t) * 0.05; },
+  marquessa: (P, k) => { P.jump = 16 + Math.sin(k.t * 1.8 + k.seed) * 7; const p = 1 + k.env * 0.12; P.sx *= p; P.sy *= p; P.bodyRot = Math.sin(k.t * 0.9) * 0.2; },
+  circuitcrown: (P, k) => { const st = Math.floor(k.beat * 4) % 4; P.rot = k.pl ? [0, 0.06, 0, -0.06][st] : 0; P.jump = k.pl ? (st % 2) * 4 : 0; },
+  jesterbyte: (P, k) => { P.jump = hop(k, 0.3, 22); P.rot = k.pl ? Math.sin(k.t * 7) * 0.15 * k.env : Math.sin(k.t * 2) * 0.04; squashAt(P, k, 0.12); },
+  phantomarch: (P, k) => { P.jump = 18 + Math.sin(k.t * 0.7 + k.seed) * 6; P.jx = Math.sin(k.t * 0.5 + k.seed) * 14; const p = 1 + k.sus * 0.05; P.sy *= p; },
+  fractalith: (P, k) => { P.jump = 14 + Math.sin(k.t * 1.5 + k.seed) * 5; const p = 1 + Math.abs(Math.sin(k.t * 1.2)) * 0.06 + k.env * 0.1; P.sx *= p; P.sy *= p; P.spinX = 0.7 + 0.3 * Math.cos(k.t * 2.2); },
+  snarlwave: (P, k) => { P.jump = 12 + Math.sin(k.t * 2.4 + k.seed) * 4; P.skew = Math.sin(k.t * 6) * 0.1 * (0.3 + k.sus); P.sy -= k.env * 0.1; P.sx += k.env * 0.08; },
+  echoshade: (P, k) => { P.jump = 18 + Math.sin(k.t * 0.9 + k.seed) * 6; P.spinX = 0.8 + 0.2 * Math.cos(k.t * 1.3); P.rot = Math.sin(k.t * 0.7) * 0.18; },
+  corruptus: (P, k) => { P.jump = k.pl && k.env > 0.3 ? (Math.floor(k.t * 18) % 2) * 6 : 0; P.jx = k.pl && k.env > 0.5 ? (Math.floor(k.t * 31) % 3 - 1) * 5 : 0; P.rot = Math.sin(k.t * 1.3) * 0.04; },
+  prismatrix: (P, k) => { P.jump = 10 + Math.sin(k.t * 1.2 + k.seed) * 4; P.bodyRot = Math.sin(k.t * 0.7) * 0.5 + (k.pl ? k.beat * 0.15 : 0); },
+  carnivault: (P, k) => { P.jump = hop(k, 0.35, 16); P.bodyRot = k.t * 0.6; const p = 1 + k.env * 0.1; P.sx *= p; P.sy *= p; },
+  elderspire: (P, k) => { P.jump = 14 + Math.sin(k.t * 0.5 + k.seed) * 6 + k.sus * 8; P.rot = Math.sin(k.t * 0.4) * 0.03; },
+  sovereign: (P, k) => { const e = k.pl ? Math.exp(-k.since * 3) * k.vel : 0; P.sy -= e * 0.12; P.sx += e * 0.1; P.rot = Math.sin(k.t * 0.9 + k.seed) * 0.05; },
+  nullvoid: (P, k) => { P.jump = 20 + Math.sin(k.t * 0.8 + k.seed) * 8; P.bodyRot = -k.t * 0.5; const p = 1 + k.sus * 0.1; P.sx *= p; P.sy *= p; },
+  shatterheart: (P, k) => { P.jump = 16 + Math.sin(k.t * 1.1 + k.seed) * 6; P.rot = k.pl ? Math.sin(k.beat * Math.PI) * 0.08 : 0; const p = 1 + k.env * 0.08 + k.sus * 0.05; P.sx *= p; P.sy *= p; },
+});
+Object.assign(ANIM_DESC, {
+  spiralord: 'Floats and turns like a royal hoop', pixelking: 'Marches in chunky steps', throneheart: 'Hovers proudly and swells', blobbess: 'Wobbles with great dignity', glitchloop: 'Spins and skips like a scratched disc',
+  runewhirl: 'Whirls its runes into a blur', wobbleknot: 'Bends and twists in midair', bytestone: 'Hovers and glitches sideways', gloopix: 'Squishes and drips in steps', hauntolith: 'Drifts around like a ghost',
+  kaleidrone: 'Turns its faces like a kaleidoscope', chronoliss: 'Swings like a pendulum', marquessa: 'Floats and twirls like royalty', circuitcrown: 'Ticks side to side like a robot', jesterbyte: 'Hops and shakes with laughter',
+  phantomarch: 'Glides slowly back and forth', fractalith: 'Pulses and flips in layers', snarlwave: 'Shivers and growls', echoshade: 'Floats and tilts dreamily', corruptus: 'Stutters and teleports',
+  prismatrix: 'Rotates like a thinking crystal', carnivault: 'Bounces while its mane spins', elderspire: 'Rises slowly, very slowly', sovereign: 'Puffs up with every word', nullvoid: 'Spins backwards in space', shatterheart: 'Hovers and glows with every note',
+});
+
 
 // Main monster renderer. Origin = ground point under the monster.
 // o: {t, hi:{env,since,vel,dur,sustain}, beat, seed, playing, scale, ghost, muted, flip}
@@ -1734,7 +1842,7 @@ function drawEgg(c, def, s, t, ready, progress) {
 
 // ---------- structures ----------
 function drawCastle(c, lvl, t, theme, beat) {
-  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb', diamond: '#fff8e0', ruin: '#8a8aa0' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c', diamond: '#e8c060', ruin: '#4a4a62' }[theme] || '#c8b28c';
+  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb', diamond: '#fff8e0', ruin: '#8a8aa0', shatter: '#d8c8f0' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c', diamond: '#e8c060', ruin: '#4a4a62', shatter: '#7a5aa8' }[theme] || '#c8b28c';
   const roofs = ['#ff5f7a', '#4fb0ff', '#ffc23a', '#7ad65a', '#b07aff'];
   c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 150, 30, 0, 0, TAU); c.fill();
@@ -1852,6 +1960,22 @@ function drawMine(c, t, ready, progress) {
   else { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(0, -28, 14, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
 }
 
+// Synthesizer (Shattered Island): two crystal pylons with an energy orb between them
+function drawSynth(c, t, busy, progress, ready, beat) {
+  c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
+  c.fillStyle = 'rgba(20,10,40,0.25)'; c.beginPath(); c.ellipse(0, 0, 92, 20, 0, 0, TAU); c.fill();
+  c.fillStyle = '#4a3a6a'; c.beginPath(); c.ellipse(0, -6, 86, 22, 0, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = '#6a5a90'; c.beginPath(); c.ellipse(0, -12, 70, 15, 0, 0, TAU); c.fill(); c.stroke();
+  const glow = busy ? 0.6 + 0.4 * Math.sin(t * 6) : 0.3;
+  [-1, 1].forEach(sd => { c.save(); c.translate(sd * 56, -14); c.fillStyle = sd < 0 ? '#ff8ae8' : '#6ae8ff'; c.beginPath(); c.moveTo(-14, 0); c.lineTo(-10, -70); c.lineTo(0, -98); c.lineTo(10, -70); c.lineTo(14, 0); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(-10, -70); c.lineTo(0, -98); c.lineTo(-2, 0); c.lineTo(-12, 0); c.closePath(); c.fill(); c.restore(); });
+  if (busy && !ready) { c.save(); c.strokeStyle = `rgba(255,255,255,${glow})`; c.lineWidth = 3; c.shadowColor = '#c08aff'; c.shadowBlur = 14; [-1, 1].forEach(sd => { c.beginPath(); c.moveTo(sd * 56, -100); for (let i = 1; i <= 6; i++) { const f = i / 6; c.lineTo(sd * 56 * (1 - f) + Math.sin(t * 30 + i * 2) * 5, -100 + f * 30 + Math.cos(t * 25 + i) * 5); } c.stroke(); }); c.restore(); }
+  const oy = -72 + Math.sin(t * 2) * 4, orbR = 22 + (busy ? Math.sin(t * 8) * 2 : 0);
+  const g = c.createRadialGradient(-6, oy - 6, 3, 0, oy, orbR); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, ready ? '#7aff9a' : '#c08aff'); g.addColorStop(1, ready ? '#2a9a4a' : '#5a2aa0');
+  c.save(); c.shadowColor = ready ? '#7aff9a' : '#c08aff'; c.shadowBlur = busy ? 24 : 8; c.fillStyle = g; c.beginPath(); c.arc(0, oy, orbR, 0, TAU); c.fill(); c.restore(); c.stroke();
+  if (busy && !ready) { c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.arc(0, oy, orbR + 7, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
+}
+
 function drawMarket(c, t, beat) {
   c.lineWidth = 4; c.strokeStyle = OUTLINE;
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 85, 18, 0, 0, TAU); c.fill();
@@ -1871,7 +1995,7 @@ function drawDeco(c, kind, t, theme, ghost) {
   c.save(); if (ghost) c.globalAlpha = 0.6;
   c.lineWidth = 3.5; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.2)'; c.beginPath(); c.ellipse(0, 0, 26, 7, 0, 0, TAU); c.fill();
-  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a', diamond: '#9ae8ff', ruin: '#5a9a7a' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a', diamond: '#4aa0d8', ruin: '#2a5a4a' }[theme] || '#2f8a25';
+  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a', diamond: '#9ae8ff', ruin: '#5a9a7a', shatter: '#c08aff' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a', diamond: '#4aa0d8', ruin: '#2a5a4a', shatter: '#6a3aa8' }[theme] || '#2f8a25';
   switch (kind) {
     case 'bush': [[-12, -14, 15], [12, -14, 15], [0, -24, 17]].forEach(([x, y, r]) => { const g = c.createRadialGradient(x - 4, y - 5, 2, x, y, r); g.addColorStop(0, shade(leaf, 0.3)); g.addColorStop(1, leafD); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); }); break;
     case 'flowers': for (let i = 0; i < 5; i++) { const x = (i - 2) * 9, h = 14 + (i % 2) * 8, sw = Math.sin(t * 2 + i) * 2; c.strokeStyle = '#2f8a25'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + sw, -h); c.stroke(); c.fillStyle = ['#ff5f7a', '#ffd23a', '#b07aff', '#4fb0ff', '#ff9a3a'][i]; c.strokeStyle = OUTLINE; c.lineWidth = 2; c.beginPath(); c.arc(x + sw, -h, 6, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff6b0'; c.beginPath(); c.arc(x + sw, -h, 2.5, 0, TAU); c.fill(); } break;
@@ -1931,7 +2055,7 @@ function portrait(def, size, opts = {}) {
 function renderPortrait(c, def, size, opts = {}) {
   c.clearRect(0, 0, size, size);
   const acc = def.look.acc || [], tall = acc.some(a => ['mane', 'crystals', 'antlers', 'witchhat', 'tophat', 'feather', 'frost', 'bunny'].includes(a)), wide = acc.some(a => ['starorbit', 'firering', 'shards', 'leafwings', 'bubbleorb'].includes(a));
-  const s = size / 130 * (tall ? 0.84 : wide ? 0.9 : 1);
+  const s = size / 130 * (tall ? 0.84 : wide ? 0.9 : 1) * Math.min(1, 1.25 / (def.look.size || 1));
   c.save(); c.translate(size / 2, size * (tall ? 0.9 : 0.86)); c.scale(s, s);
   if (opts.silhouette) { drawShape(c, def, { t: 0, seed: 3 }); c.globalCompositeOperation = 'source-atop'; c.fillStyle = opts.silCol || '#3a2f55'; c.fillRect(-100, -200, 200, 260); }
   else drawShape(c, def, { t: opts.t || 0, seed: 3, hi: opts.hi, playing: opts.playing, beat: opts.beat });
@@ -1944,7 +2068,7 @@ const STRUCT = { // fixed buildings
   castle:   { x: 0,    y: -150, r: 150, name: 'Castle' },
 };
 function newStruct(kind, x, y, st) { const o = { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; if (kind === 'mine') o.mine = now(); return o; }
-function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: (ISLAND[id || 'shape'].special === 'diamond' ? [] : ['breeder', 'hatchery']).map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; if (ISLAND[id || 'shape'].special === 'diamond') { I0.noPlat = true; I0.bigV = 1; } genObstacles(I0, id || 'shape', st); return I0; }
+function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: (ISLAND[id || 'shape'].special === 'diamond' ? [] : ISLAND[id || 'shape'].special === 'shattered' ? ['synth', 'hatchery'] : ['breeder', 'hatchery']).map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; if (ISLAND[id || 'shape'].special === 'diamond') { I0.noPlat = true; I0.bigV = 1; } genObstacles(I0, id || 'shape', st); return I0; }
 // ---------- platforms (fixed, joined to the island edge) ----------
 function platforms(I0) { if (I0.noPlat) return []; const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
 function onPlatform(x, y, I0, pad = 0.72) { return platforms(I0).some(p => ((x - p.x) / (p.rx * pad)) ** 2 + ((y - p.y) / (p.ry * pad)) ** 2 < 1); }
@@ -2009,6 +2133,7 @@ function normalizeSave(src) {
   }
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.lvl > 2) st.lvl = 2; }));
   if (d.tut == null) d.tut = d.seenIntro ? TUT_DONE : 0;
+  if (d.unlocked && d.unlocked.ruins && !d.unlocked.shattered) { d.found = d.found || {}; d.discovered = d.discovered || {}; openShattered(d); }
   if (d.islands && d.islands.diamond && !d.islands.diamond.bigV) { const D = d.islands.diamond; D.bigV = 1; D.noPlat = true; genObstacles(D, 'diamond', d); } // existing players skip the tutorial
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.kind === 'mine' && !st.mine) st.mine = Date.now(); }));
   if (!d.found) { d.found = {}; for (const [iid, I0] of Object.entries(d.islands)) { d.found[iid] = {}; I0.monsters.forEach(m => d.found[iid][m.id] = true); } }
@@ -2092,7 +2217,7 @@ function baseValue(d) { const b = SHAPE[d.baseId]; const v = b.tier === 1 ? b.pr
 function sellValue(m) { return Math.round(baseValue(SHAPE[m.id]) * 0.25 + m.level * 20); }
 function sellMonster(m) {
   const I0 = isl(); const v = sellValue(m);
-  I0.monsters = I0.monsters.filter(x => x !== m); addCoins(v); Audio.sfx('coin'); UI.toast(`Sold ${SHAPE[m.id].name} for ${fmt(v)} coins`);
+  I0.monsters = I0.monsters.filter(x => x !== m); pruneCopies(); addCoins(v); Audio.sfx('coin'); UI.toast(`Sold ${SHAPE[m.id].name} for ${fmt(v)} coins`);
   syncAudio(); markDirty();
 }
 function toggleMute(m) { m.muted = !m.muted; syncAudio(); markDirty(); }
@@ -2104,7 +2229,7 @@ function breedOutcomes(idA, idB, islandId) {
   const union = [...new Set([...A.el, ...B.el])].filter(e => e !== 'ruin');
   const out = {};
   const add = (id, w) => { if (allowed.includes(id)) out[id] = (out[id] || 0) + w; };
-  const match = SHAPES.find(s => s.variant === 'common' && sameSet(s.el, union) && I0.commons.includes(s.id));
+  const match = I0.commons.map(id => SHAPE[id]).find(s => sameSet(s.el, union));
   if (match && match.id !== A.id && match.id !== B.id) { add(match.id, 50); add(A.id, 25); add(B.id, 25); }
   else { add(A.id, 50); add(B.id, 50); }
   const specials = (I0.recipes[pairKey(A.id, B.id)] || []).filter(r => allowed.includes(r.id));
@@ -2158,12 +2283,12 @@ const Admin = {
   fillBanks() { isl().monsters.forEach(m => m.last = now() - 3 * 3600e3); markDirty(); UI.toast('Coin banks filled', 'good'); },
   discoverAll() { SHAPES.forEach(s => S.discovered[s.id] = true); ISLANDS.forEach(I => I.shapes.forEach(id => markFound(id, I.id))); markDirty(); UI.toast('All Shapes discovered', 'good'); },
   resetCollection() { S.discovered = {}; S.found = {}; Object.entries(S.islands).forEach(([iid, I0]) => { I0.monsters.forEach(m => { S.discovered[m.id] = true; markFound(m.id, iid); }); }); markDirty(); UI.toast('Collection reset (placed Shapes stay known)'); },
-  unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id]) { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S, i.id); } }); markDirty(); UI.toast('All islands unlocked', 'good'); },
+  unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id] && i.id !== 'shattered') { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S, i.id); } }); openShattered(S); markDirty(); UI.toast('All islands unlocked', 'good'); },
   maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; I0.castleUp = null; markDirty(); UI.toast('Castle maxed', 'good'); },
   maxLevels() { isl().monsters.forEach(m => { m.level = MAX_LEVEL; m.feeds = 0; }); markDirty(); UI.toast(`All Shapes here set to level ${MAX_LEVEL}`, 'good'); },
   spawnEgg(id) { const I0 = isl(); if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); return UI.toast('Hatchery is full', 'bad'); } I0.hatch.push({ id, start: now() - 1000, end: now() }); markDirty(); UI.toast(`${SHAPE[id].name} egg added (ready to hatch)`, 'good'); },
   spawnNow(id) { const I0 = isl(); const p = findFreeSpot(); I0.monsters.push({ uid: S.uid++, id, x: p.x, y: p.y, level: 1, feeds: 0, last: now(), muted: false }); const first = !S.discovered[id]; S.discovered[id] = true; markFound(id); syncAudio(); FX.burst(p.x, p.y - 50, 'spark', 14); Audio.sfx(first ? 'discover' : 'place'); markDirty(); UI.toast(`${SHAPE[id].name} placed`, 'good'); },
-  clearIsland() { const I0 = isl(); I0.monsters = []; I0.structs.forEach(s => s.br = null); syncAudio(); markDirty(); UI.toast('Removed all Shapes from this island'); },
+  clearIsland() { const I0 = isl(); I0.monsters = []; pruneCopies(); I0.structs.forEach(s => s.br = null); syncAudio(); markDirty(); UI.toast('Removed all Shapes from this island'); },
   clearDecos() { isl().decos = []; markDirty(); UI.toast('Removed all decorations'); },
 };
 
@@ -2201,7 +2326,10 @@ function speedBake(sid) { const st = structById(sid), b = st && st.bake; if (!b)
 // ---------- structures ----------
 function buyStructStatus(kind) {
   const d = STRUCTS[kind], have = structsOf(kind).length;
-  if (islDef().special === 'diamond' && (kind === 'breeder' || kind === 'hatchery')) return { ok: false, why: 'Not on Diamond Island' };
+  const sp = islDef().special;
+  if (sp === 'diamond' && (kind === 'breeder' || kind === 'hatchery')) return { ok: false, why: 'Not on Diamond Island' };
+  if (sp === 'shattered' && kind === 'breeder') return { ok: false, why: 'Use the Synthesizer here' };
+  if (sp !== 'shattered' && kind === 'synth') return { ok: false, why: 'Shattered Island only' };
   if (have >= d.max) return { ok: false, why: have ? 'Owned' : '' , owned: true };
   if (S.level < d.buy.lvl) return { ok: false, why: `Requires level ${d.buy.lvl}` };
   return { ok: true, coins: d.buy.coins || 0, gems: d.buy.gems || 0 };
@@ -2213,7 +2341,9 @@ function upgradeStruct(sid) {
 
 // ---------- market ----------
 function marketStatus(id) {
-  const d = SHAPE[id];
+  const d = SHAPE[id], sp = islDef().special;
+  if (sp === 'ruin') { if (d.variant === 'rare' || d.variant === 'epic') return { ok: false, why: 'Breeding only' }; return RUIN_GEM_PRICE[d.el.length] ? { ok: true, shards: RUIN_GEM_PRICE[d.el.length] } : { ok: false, why: 'Breeding only' }; }
+  if (sp === 'shattered') { if (d.variant === 'rare' || d.variant === 'epic' || d.el.length > 3) return { ok: false, why: 'Synthesis only' }; return { ok: true, shards: SHATTER_TRIPLE_PRICE }; }
   if (d.tier === 1) return S.level >= d.lvl ? { ok: true, coins: d.price } : { ok: false, why: `Reach level ${d.lvl}` };
   if (d.variant === 'rare' || d.variant === 'epic') return { ok: false, why: 'Breeding only' };
   return { ok: true, shards: GEM_PRICE[d.tier] };
@@ -2247,22 +2377,16 @@ function validSpot(x, y, ignoreUid, big) {
   return true;
 }
 // ---------- teleport (level 15 Shapes to Diamond Island, level 15 Ruins to Ruin Island) ----------
-function teleportDests(m) {
-  if (islDef().special === 'diamond') return [];
-  const out = [], ruin = SHAPE[SHAPE[m.id].baseId].tier === 5;
-  if (islDef().special !== 'ruin') out.push('diamond');
-  if (ruin && islDef().special !== 'ruin') out.push('ruins');
-  if (islDef().special === 'ruin') out.push('diamond');
-  return out;
-}
+// ---------- teleport: a level 15 Ruin moves to Ruin Island (back to an egg: level 1, 10 hours) ----------
+function isRuinSingle(id) { return !!RUIN_SINGLE_EL[SHAPE[id].baseId]; }
+function teleportDests(m) { return !islDef().special && isRuinSingle(m.id) ? ['ruins'] : []; }
 function teleport(m, dest) {
   const D = ISLAND[dest]; if (m.level < MAX_LEVEL) { Audio.sfx('error'); UI.toast(`Reach level ${MAX_LEVEL} to teleport`, 'bad'); return false; }
   if (!S.unlocked[dest]) { Audio.sfx('error'); UI.toast(`Unlock ${D.name} first (level ${D.req.level})`, 'bad'); return false; }
-  const DI = S.islands[dest]; if (DI.monsters.length >= capacity(DI)) { Audio.sfx('error'); UI.toast(`${D.name}'s castle is full!`, 'bad'); return false; }
-  const prev = S.current; S.current = dest; const p = findFreeSpot(); S.current = prev;
+  const DI = S.islands[dest]; if (DI.hatch.length >= hatchSlots(DI)) { Audio.sfx('error'); UI.toast(`${D.name}'s Hatchery is full!`, 'bad'); return false; }
   isl().monsters = isl().monsters.filter(x => x !== m);
-  DI.monsters.push({ ...m, x: p.x, y: p.y, last: now(), muted: false }); markFound(m.id, dest);
-  syncAudio(); Audio.sfx('discover'); UI.toast(`${SHAPE[m.id].name} teleported to ${D.name}!`, 'good'); track('teleport'); markDirty(); return true;
+  DI.hatch.push({ id: m.id, start: now(), end: now() + RUIN_TELEPORT_TIME * 1000 });
+  pruneCopies(); syncAudio(); Audio.sfx('discover'); UI.toast(`${SHAPE[m.id].name} is on its way to ${D.name}! It will hatch there in 10 hours.`, 'good'); track('teleport'); markDirty(); return true;
 }
 // ---------- tasks ----------
 function track(k, n = 1) { S.stats[k] = (S.stats[k] || 0) + n; }
@@ -2294,6 +2418,42 @@ function claimTask(i) {
   UI.toast(`Task complete! +${fmt(t.r.coins)} coins${t.r.gems ? `, +${t.r.gems} gem${t.r.gems > 1 ? 's' : ''}` : ''}${t.r.food ? `, +${t.r.food} food` : ''}`, 'good');
   S.tasks.splice(i, 1, newTask(S.tasks.map(x => x.k))); markDirty();
 }
+// ---------- Diamond Island copies: level 15 Shapes from other islands can be copied there; a copy vanishes if its original is gone ----------
+function canCopyToDiamond(id) { return ISLAND.diamond.shapes.includes(id); } // Ruin doubles and Shattered Ruins can't go
+function diamondCandidates() {
+  const D = S.islands.diamond; if (!D) return []; const have = new Set(D.monsters.filter(m => m.orig).map(m => m.orig.uid)); const out = [];
+  for (const [iid, I0] of Object.entries(S.islands)) { if (iid === 'diamond') continue; I0.monsters.forEach(m => { if (m.level >= MAX_LEVEL && canCopyToDiamond(m.id) && !have.has(m.uid)) out.push({ iid, m }); }); }
+  return out;
+}
+function pruneCopies() {
+  const D = S.islands.diamond; if (!D) return; const alive = new Set(); Object.entries(S.islands).forEach(([iid, I0]) => { if (iid !== 'diamond') I0.monsters.forEach(m => alive.add(iid + ':' + m.uid)); });
+  const before = D.monsters.length; D.monsters = D.monsters.filter(m => !m.orig || alive.has(m.orig.iid + ':' + m.orig.uid));
+  if (D.monsters.length !== before) { markDirty(); if (S.current === 'diamond' && !VISIT) syncAudio(); }
+}
+function placeCopy(iid, uid, x, y) {
+  const src = (S.islands[iid] || { monsters: [] }).monsters.find(m => m.uid === uid), D = S.islands.diamond; if (!src || !D) return false;
+  if (D.monsters.length >= capacity(D)) { Audio.sfx('error'); UI.toast('Diamond Island is full!', 'bad'); return false; }
+  D.monsters.push({ uid: S.uid++, id: src.id, x, y, level: MAX_LEVEL, feeds: 0, last: now(), muted: false, orig: { iid, uid } });
+  markFound(src.id, 'diamond'); syncAudio(); Audio.sfx('discover'); FX.burst(x, y - 60, 'spark', 18); UI.toast(`${SHAPE[src.id].name} copied to Diamond Island!`, 'good'); markDirty(); return true;
+}
+// ---------- Shattered Island synthesizer ----------
+function synthOutcome(a, b) { // { target, chance, specials[] }
+  const A = SHAPE[SHAPE[a].baseId], B = SHAPE[SHAPE[b].baseId], I = ISLAND.shattered, union = [...new Set([...A.el, ...B.el])];
+  const top = Math.max(A.el.length, B.el.length), target = I.commons.map(id => SHAPE[id]).find(s => s.el.length === top + 1 && sameSet(s.el, union));
+  const specials = (I.recipes[pairKey(A.id, B.id)] || []);
+  return { target: target ? target.id : null, chance: target ? SYNTH_CHANCE[target.el.length] : 0, specials };
+}
+function startSynth(ua, ub, sid) {
+  const I0 = isl(), st = structById(sid); if (!st || st.br) return;
+  const a = I0.monsters.find(m => m.uid === ua), b = I0.monsters.find(m => m.uid === ub); if (!a || !b || a === b) return UI.toast('Pick two different Ruins');
+  if (a.level < BREED_MIN_LEVEL || b.level < BREED_MIN_LEVEL) return UI.toast(`Both Ruins must be level ${BREED_MIN_LEVEL}+ (feed them!)`, 'bad');
+  const o = synthOutcome(a.id, b.id); if (!o.target && !o.specials.length) { Audio.sfx('error'); return UI.toast('These two Ruins can\'t make anything bigger', 'bad'); }
+  let res = null, r = Math.random(); for (const sp of o.specials) { if (r < sp.chance) { res = sp.id; break; } r -= sp.chance; } if (!res && o.target && r < o.chance) res = o.target;
+  const t = SHAPE[o.target || a.id].time * 1500 * (st.lvl > 1 ? 0.75 : 1);
+  st.br = { a: a.id, b: b.id, ua: a.uid, ub: b.uid, res, synth: true, start: now(), end: now() + t };
+  S.stats.bred++; track('synth'); addXP(40); Audio.sfx('breed'); FX.burst(st.x, st.y - 130, 'spark', 14); markDirty();
+}
+function clearSynth(sid) { const st = structById(sid); if (st && st.br && !st.br.res && now() >= st.br.end) { st.br = null; markDirty(); } }
 function findFreeSpot(big) {
   const { rx, ry } = islandRadius();
   if (isl().noPlat && !big) { // Diamond Island: spread Shapes out evenly (pick the open spot farthest from everyone)
@@ -2314,6 +2474,7 @@ function beginPlace(p) {
 function confirmPlace() {
   if (!placing) return; const p = placing, I0 = isl();
   if (!validSpot(p.x, p.y, p.uid, p.big)) { Audio.sfx('error'); UI.toast("Can't place there", 'bad'); return; }
+  if (p.kind === 'dcopy') { if (placeCopy(p.iid, p.srcUid, p.x, p.y)) { placing = null; UI.placeBar(false); UI.refreshHUD(); } return; }
   if (p.kind === 'hatch') {
     if (I0.monsters.length >= capacity()) { Audio.sfx('error'); UI.toast('Castle is full! Upgrade it to fit more Shapes.', 'bad'); return; }
     const e = I0.hatch[p.idx]; if (!e) { cancelPlace(); return; }
@@ -2357,7 +2518,15 @@ function unlockIsland(id) {
   const d = ISLAND[id]; if (S.unlocked[id]) return;
   if (S.level < d.req.level) { Audio.sfx('error'); return UI.toast(`Requires level ${d.req.level}`, 'bad'); }
   if (!spend(d.req.coins)) return;
-  S.unlocked[id] = true; S.islands[id] = newIsland(S, id); addXP(200); Audio.sfx('discover'); UI.toast(`${d.name} unlocked!`, 'good'); markDirty();
+  S.unlocked[id] = true; S.islands[id] = newIsland(S, id); addXP(200); Audio.sfx('discover'); UI.toast(`${d.name} unlocked!`, 'good');
+  if (id === 'ruins') openShattered(S); markDirty();
+}
+function openShattered(st) { // Shattered Island opens with Ruin Island and gives one free triple Ruin
+  if (st.unlocked.shattered) return; st.unlocked.shattered = true; const I0 = st.islands.shattered = newIsland(st, 'shattered');
+  const triples = ISLAND.shattered.commons.filter(id => SHAPE[id].el.length === 3), id = triples[Math.floor(Math.random() * triples.length)];
+  I0.monsters.push({ uid: st.uid++, id, x: 120, y: 120, level: 1, feeds: 0, last: Date.now(), muted: false });
+  st.discovered[id] = true; (st.found.shattered = st.found.shattered || {})[id] = true;
+  if (typeof UI !== 'undefined' && st === S) UI.toast(`Shattered Island opened! A free ${SHAPE[id].name} is waiting there.`, 'good');
 }
 function travel(id) {
   if (!S.unlocked[id]) return; document.getElementById('map').classList.add('hidden'); S.current = id; placing = null; UI.placeBar(false); UI.closeAll(); UI.closeSheet();
@@ -2394,11 +2563,12 @@ function currentGoal() {
   if (!S.unlocked.prism) return S.level >= 6 ? 'Prism Peaks is ready to unlock on the island map!' : 'Reach level 6 to unlock Prism Peaks.';
   if (discoveredCount() < 12) return 'Mix elements to discover new Shapes. Two elements + one more makes a Triple!';
   if (!S.unlocked.volt) return S.level >= 9 ? 'Volt Grotto is ready to unlock on the island map!' : 'Reach level 9 to unlock Volt Grotto.';
-  if (islDef().special === 'diamond') return 'Tap a level 15 Shape on another island and press Teleport to bring it here.';
-  if (islDef().special === 'ruin' && isl().monsters.length < 2) return 'Teleport level 15 Ruins here, then breed them for Rare and Epic Ruins.';
+  if (islDef().special === 'diamond') return 'Tap the arrow at the bottom of the screen to copy your level 15 Shapes here.';
+  if (islDef().special === 'ruin') return 'Buy Ruins here with gems, teleport level 15 Ruins from other islands, and breed two Ruins for a double.';
+  if (islDef().special === 'shattered') return 'Use the Synthesizer: two triples can make a quad, and two quads can make the quint.';
   if (discoveredCount() < SHAPES.length) return `Collection: ${discoveredCount()}/${SHAPES.length} Shapes found. Rares and Epics come from secret pairings!`;
-  if (!S.unlocked.diamond) return S.level >= 18 ? 'Diamond Island is ready to unlock on the island map!' : 'Reach level 18 to unlock Diamond Island, where level 15 Shapes can teleport.';
-  return 'Every Shape found! Teleport level 15 Shapes to Diamond Island.';
+  if (!S.unlocked.diamond) return S.level >= 18 ? 'Diamond Island is ready to unlock on the island map!' : 'Reach level 18 to unlock Diamond Island, where level 15 Shapes can be copied.';
+  return 'Every Shape found! Copy your level 15 Shapes onto Diamond Island.';
 }
 
 // ===================== FX =====================
@@ -2522,6 +2692,7 @@ const Render = (() => {
     else if (th === 'lagoon') { g.addColorStop(0, '#2ac8e8'); g.addColorStop(0.6, '#9af0f0'); g.addColorStop(1, '#e8fff8'); }
     else if (th === 'diamond') { g.addColorStop(0, '#8a7ae8'); g.addColorStop(0.45, '#f0b8ff'); g.addColorStop(1, '#fff6dc'); }
     else if (th === 'ruin') { g.addColorStop(0, '#0a1a2a'); g.addColorStop(0.55, '#2a2060'); g.addColorStop(1, '#5a3a7a'); }
+    else if (th === 'shatter') { g.addColorStop(0, '#120830'); g.addColorStop(0.5, '#4a1a6a'); g.addColorStop(1, '#c05a9a'); }
     else { g.addColorStop(0, '#07040f'); g.addColorStop(0.6, '#1a0d36'); g.addColorStop(1, '#2a1250'); }
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     if (th === 'desert') {
@@ -2536,6 +2707,9 @@ const Render = (() => {
     if (th === 'diamond') { // glittering sky with drifting gems
       terrain.stars.forEach(([x, y, p]) => { const tw = Math.max(0, Math.sin(t * 1.6 + p * 30)); if (tw < 0.3) return; c.save(); c.translate(x * W, y * H * 0.8); c.globalAlpha = tw; c.fillStyle = p > 0.5 ? '#ffffff' : '#ffe8a0'; c.beginPath(); c.moveTo(0, -6 * tw); c.lineTo(1.5, 0); c.lineTo(0, 6 * tw); c.lineTo(-1.5, 0); c.closePath(); c.moveTo(-6 * tw, 0); c.lineTo(0, 1.5); c.lineTo(6 * tw, 0); c.lineTo(0, -1.5); c.fill(); c.restore(); });
       [[0.12, 0.2, 40], [0.82, 0.12, 54], [0.92, 0.42, 30], [0.25, 0.48, 26]].forEach(([fx, fy, sz], k) => { const x = W * fx, y = H * fy + Math.sin(t * 0.8 + k) * 10; c.save(); c.translate(x, y); c.rotate(Math.sin(t * 0.4 + k) * 0.2); c.globalAlpha = 0.55; c.fillStyle = k % 2 ? '#bfe8ff' : '#ffd0f4'; c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -sz); c.lineTo(sz * 0.7, -sz * 0.25); c.lineTo(0, sz); c.lineTo(-sz * 0.7, -sz * 0.25); c.closePath(); c.fill(); c.stroke(); c.restore(); });
+    } else if (th === 'shatter') { // broken crystal shards drifting in a magenta sky
+      terrain.stars.forEach(([x, y, p]) => { c.fillStyle = `rgba(255,200,255,${0.2 + 0.6 * Math.abs(Math.sin(t * 0.7 + p * 20))})`; c.fillRect(x * W, y * H * 0.85, 2, 2); });
+      terrain.stal.slice(0, 12).forEach(([x, h, w, p], k) => { const sx = x * W, sy = H * (0.1 + h * 1.6) + Math.sin(t * 0.5 + k) * 10, sz = 14 + w * 1200; c.save(); c.translate(sx, sy); c.rotate(Math.sin(t * 0.3 + k) * 0.4 + k); c.globalAlpha = 0.7; c.fillStyle = k % 3 === 0 ? '#ff8ae8' : k % 3 === 1 ? '#6ae8ff' : '#c08aff'; c.strokeStyle = '#1a0a30'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, -sz); c.lineTo(sz * 0.5, sz * 0.2); c.lineTo(sz * 0.1, sz * 0.7); c.lineTo(-sz * 0.45, sz * 0.1); c.closePath(); c.fill(); c.stroke(); c.restore(); });
     } else if (th === 'ruin') { // dark sky, glowing runes and floating stones
       terrain.stars.forEach(([x, y, p]) => { c.fillStyle = `rgba(160,255,230,${0.2 + 0.6 * Math.abs(Math.sin(t * 0.6 + p * 20))})`; c.fillRect(x * W, y * H * 0.8, 2, 2); });
       terrain.stal.slice(0, 7).forEach(([x, h, w, p], k) => { const sx = x * W, sy = H * (0.15 + h) + Math.sin(t * 0.6 + k) * 8, sz = 18 + w * 900; c.fillStyle = '#3a2e5a'; c.strokeStyle = '#120a28'; c.lineWidth = 3; c.beginPath(); c.moveTo(sx - sz, sy); c.lineTo(sx - sz * 0.6, sy - sz * 0.5); c.lineTo(sx + sz * 0.7, sy - sz * 0.45); c.lineTo(sx + sz, sy); c.lineTo(sx + sz * 0.2, sy + sz * 0.8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = `rgba(110,255,210,${0.4 + 0.4 * Math.sin(t * 2 + k)})`; c.font = `900 ${sz * 0.5}px sans-serif`; c.textAlign = 'center'; c.fillText('ᚱᚦᛟᚨᛉᛞᚹ'[k], sx, sy - sz * 0.05); });
@@ -2557,7 +2731,7 @@ const Render = (() => {
 
   function drawWater(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8', diamond: '#6ab8f0', ruin: '#141a40' }[th] || '#0a3a50';
+    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8', diamond: '#6ab8f0', ruin: '#141a40', shatter: '#2a1050' }[th] || '#0a3a50';
     c.fillStyle = col; c.fillRect(-4000, ry * 0.2, 8000, 4000);
     const g = c.createLinearGradient(0, ry * 0.2, 0, ry + 600); g.addColorStop(0, th === 'cave' ? 'rgba(60,240,255,0.25)' : 'rgba(255,255,255,0.18)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(-4000, ry * 0.2, 8000, 800);
     c.strokeStyle = th === 'cave' ? 'rgba(80,255,240,0.45)' : 'rgba(255,255,255,0.6)'; c.lineWidth = 3;
@@ -2566,8 +2740,8 @@ const Render = (() => {
   }
   function drawIsland(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'], diamond: ['#ffffff', '#bfe2f8'], ruin: ['#7a8a8a', '#4a5260'] }[th] || ['#3a2f6a', '#221a48'];
-    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'], diamond: ['#c8b8ff', '#7a6ad8'], ruin: ['#5a5070', '#241a3a'] }[th] || ['#2a2050', '#120a28'];
+    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'], diamond: ['#ffffff', '#bfe2f8'], ruin: ['#7a8a8a', '#4a5260'], shatter: ['#d8c0f0', '#8a6ac0'] }[th] || ['#3a2f6a', '#221a48'];
+    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'], diamond: ['#c8b8ff', '#7a6ad8'], ruin: ['#5a5070', '#241a3a'], shatter: ['#6a3a9a', '#200a40'] }[th] || ['#2a2050', '#120a28'];
     const depth = 110;
     // cliff
     let g = c.createLinearGradient(0, 0, 0, ry + depth); g.addColorStop(0, cliff[0]); g.addColorStop(1, cliff[1]);
@@ -2579,7 +2753,7 @@ const Render = (() => {
     c.strokeStyle = 'rgba(30,10,40,0.18)'; c.lineWidth = 3; for (let k = 1; k <= 2; k++) { c.beginPath(); c.ellipse(0, k * 32, rx * (1 - k * 0.02), ry, 0, 0.1, Math.PI - 0.1); c.stroke(); }
     if (th === 'cave') { c.strokeStyle = `rgba(60,240,255,${0.35 + 0.3 * Math.max(0, Math.sin(beat * Math.PI * 2))})`; c.lineWidth = 3; c.beginPath(); for (let i = 0; i < 10; i++) { const a = 0.2 + i * 0.28; c.moveTo(Math.cos(a) * rx * 0.98, Math.sin(a) * ry); c.lineTo(Math.cos(a) * rx * 0.95 + 8, Math.sin(a) * ry + 50 + (i % 3) * 15); } c.stroke(); }
     // platforms joined to the island edge
-    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8', diamond: '#ffe68a', ruin: '#8a80a0' }[th] || '#d8c8a8';
+    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8', diamond: '#ffe68a', ruin: '#8a80a0', shatter: '#ff9ae8' }[th] || '#d8c8a8';
     platforms(isl()).forEach(p => {
       const pd = 70, cg = c.createLinearGradient(0, p.y, 0, p.y + p.ry + pd); cg.addColorStop(0, cliff[0]); cg.addColorStop(1, cliff[1]);
       c.fillStyle = cg; c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI); c.lineTo(p.x - p.rx * 0.8, p.y + pd * 0.5);
@@ -2599,9 +2773,9 @@ const Render = (() => {
     c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill(); c.strokeStyle = OUTLINE; c.lineWidth = 5; c.stroke();
     if (th === 'lagoon') { c.save(); c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.clip(); c.strokeStyle = '#f6e2a8'; c.lineWidth = 46; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.stroke(); c.restore(); c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.stroke(); }
     // edge highlight
-    c.strokeStyle = th === 'cave' ? 'rgba(120,90,255,0.5)' : th === 'snow' || th === 'diamond' ? 'rgba(255,255,255,0.9)' : th === 'ruin' ? 'rgba(110,255,210,0.45)' : 'rgba(255,255,255,0.35)'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, rx - 10, ry - 7, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    c.strokeStyle = th === 'cave' ? 'rgba(120,90,255,0.5)' : th === 'snow' || th === 'diamond' ? 'rgba(255,255,255,0.9)' : th === 'shatter' ? 'rgba(255,170,240,0.6)' : th === 'ruin' ? 'rgba(110,255,210,0.45)' : 'rgba(255,255,255,0.35)'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, rx - 10, ry - 7, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
     // path to castle
-    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)', diamond: 'rgba(255,214,90,0.85)', ruin: 'rgba(150,140,170,0.6)' }[th] || 'rgba(90,70,160,0.6)';
+    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)', diamond: 'rgba(255,214,90,0.85)', ruin: 'rgba(150,140,170,0.6)', shatter: 'rgba(255,140,230,0.55)' }[th] || 'rgba(90,70,160,0.6)';
     c.beginPath(); c.moveTo(-36, -80); c.quadraticCurveTo(-60, 60, -20, ry * 0.95); c.lineTo(40, ry * 0.95); c.quadraticCurveTo(10, 60, 36, -80); c.closePath(); c.fill();
     // tufts / texture
     terrain.tufts.forEach(([nx, ny, r]) => {
@@ -2610,6 +2784,7 @@ const Render = (() => {
       else if (th === 'snow') { c.fillStyle = r > 0.5 ? 'rgba(160,190,230,0.5)' : 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(x, y, 7 * r + 3, 2.5, 0, 0, TAU); c.fill(); if (r > 0.95) { c.fillStyle = '#c8f0ff'; c.beginPath(); c.moveTo(x, y - 14); c.lineTo(x + 4, y); c.lineTo(x - 4, y); c.fill(); } }
       else if (th === 'desert') { if (r > 0.96) { c.fillStyle = '#4a9a3a'; c.strokeStyle = OUTLINE; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x - 3, y - 16, 6, 16, 3); c.roundRect(x - 9, y - 11, 5, 7, 2); c.fill(); c.stroke(); } else { c.fillStyle = r > 0.5 ? 'rgba(180,110,50,0.35)' : 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(x, y, 8 * r + 3, 2, 0, 0, TAU); c.fill(); } }
       else if (th === 'diamond') { if (r > 0.8) { const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + r * 50)), sz = (r > 0.95 ? 9 : 5) * tw; c.fillStyle = r > 0.9 ? '#ff9ae0' : r > 0.85 ? '#7ad8ff' : '#ffffff'; c.strokeStyle = 'rgba(80,60,160,0.6)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, y - sz); c.lineTo(x + sz * 0.7, y); c.lineTo(x, y + sz * 0.6); c.lineTo(x - sz * 0.7, y); c.closePath(); c.fill(); c.stroke(); } else { c.fillStyle = 'rgba(150,190,240,0.35)'; c.beginPath(); c.ellipse(x, y, 6 * r + 2, 2, 0, 0, TAU); c.fill(); } }
+      else if (th === 'shatter') { if (r > 0.78) { const sz = (r > 0.95 ? 9 : 5); c.fillStyle = r > 0.9 ? '#ff8ae8' : r > 0.84 ? '#6ae8ff' : '#ffffff'; c.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(t * 1.5 + r * 60)); c.beginPath(); c.moveTo(x, y - sz); c.lineTo(x + sz * 0.5, y + 1); c.lineTo(x - sz * 0.4, y + 2); c.closePath(); c.fill(); c.globalAlpha = 1; } else if (r > 0.5) { c.strokeStyle = 'rgba(60,20,90,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 9, y); c.lineTo(x - 2, y + 2); c.lineTo(x + 7, y - 1); c.stroke(); } }
       else if (th === 'ruin') { if (r > 0.9) { c.fillStyle = `rgba(110,255,210,${0.35 + 0.45 * Math.abs(Math.sin(t * 1.5 + r * 40))})`; c.font = '900 14px sans-serif'; c.textAlign = 'center'; c.fillText('ᚱᚦᛟᚨᛉ'[Math.floor(r * 50) % 5], x, y); } else if (r > 0.55) { c.fillStyle = 'rgba(60,140,90,0.5)'; c.beginPath(); c.ellipse(x, y, 7, 3, 0, 0, TAU); c.fill(); } else { c.strokeStyle = 'rgba(30,20,50,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 8, y); c.lineTo(x + 6, y + 2); c.stroke(); } }
       else if (th === 'lagoon') { if (r > 0.94) { c.fillStyle = r > 0.97 ? '#ff8a6a' : '#fff0e0'; c.beginPath(); starPts(5, 6, 2.5, -Math.PI / 2).forEach((q, k) => k ? c.lineTo(x + q[0], y + q[1]) : c.moveTo(x + q[0], y + q[1])); c.fill(); } else { c.strokeStyle = r > 0.5 ? '#2f9a3e' : '#b8f08a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x - 7, y - 8); c.moveTo(x + 4, y); c.lineTo(x + 7, y - 8); c.stroke(); } }
       else { if (r > 0.85) { c.fillStyle = r > 0.93 ? '#3af0ff' : '#ff4af0'; c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 2 + r * 40); c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill(); c.globalAlpha = 1; } else { c.fillStyle = 'rgba(10,5,30,0.35)'; c.beginPath(); c.ellipse(x, y, 6 * r + 2, 2, 0, 0, TAU); c.fill(); } }
@@ -2622,11 +2797,12 @@ const Render = (() => {
     if (th === 'grass' && ambient.length < 8) ambient.push({ x: (Math.random() - 0.5) * rx * 1.6, y: (Math.random() - 0.5) * ry * 1.4 - 40, v: 0, s: 1, p: Math.random() * 6, col: ['#ff8fc0', '#ffd23a', '#9ad0ff'][Math.floor(Math.random() * 3)] });
     if (th === 'desert' && ambient.length < 50) ambient.push({ x: -rx * 1.6, y: (Math.random() - 0.5) * ry * 2.4 - 80, v: 40 + Math.random() * 60, s: 1 + Math.random() * 2, p: Math.random() * 6 });
     if (th === 'lagoon' && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.6, y: ry + 120 + Math.random() * 200, v: 20 + Math.random() * 30, s: 3 + Math.random() * 5, p: Math.random() * 6 });
-    if ((th === 'diamond' || th === 'ruin') && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.2, y: (Math.random() - 0.5) * ry * 2.4 - 120, v: 8 + Math.random() * 14, s: 2 + Math.random() * 3, p: Math.random() * 6, life: 0 });
+    if ((th === 'diamond' || th === 'ruin' || th === 'shatter') && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.2, y: (Math.random() - 0.5) * ry * 2.4 - 120, v: 8 + Math.random() * 14, s: 2 + Math.random() * 3, p: Math.random() * 6, life: 0 });
     for (let i = ambient.length - 1; i >= 0; i--) {
       const a = ambient[i];
-      if (th === 'diamond' || th === 'ruin') { a.life += dt; a.y -= a.v * dt; if (a.life > 6) { ambient.splice(i, 1); continue; } const al = Math.sin(a.life / 6 * Math.PI); c.save(); c.translate(a.x + Math.sin(t + a.p) * 14, a.y); c.globalAlpha = al;
+      if (th === 'diamond' || th === 'ruin' || th === 'shatter') { a.life += dt; a.y -= a.v * dt; if (a.life > 6) { ambient.splice(i, 1); continue; } const al = Math.sin(a.life / 6 * Math.PI); c.save(); c.translate(a.x + Math.sin(t + a.p) * 14, a.y); c.globalAlpha = al;
         if (th === 'diamond') { c.fillStyle = a.p > 3 ? '#ffffff' : '#ffe8a0'; c.rotate(t * 2 + a.p); c.beginPath(); c.moveTo(0, -a.s * 2); c.lineTo(a.s * 0.5, 0); c.lineTo(0, a.s * 2); c.lineTo(-a.s * 0.5, 0); c.closePath(); c.moveTo(-a.s * 2, 0); c.lineTo(0, a.s * 0.5); c.lineTo(a.s * 2, 0); c.lineTo(0, -a.s * 0.5); c.fill(); }
+        else if (th === 'shatter') { c.rotate(t + a.p); c.fillStyle = a.p > 3 ? 'rgba(255,138,232,0.85)' : 'rgba(106,232,255,0.85)'; c.beginPath(); c.moveTo(0, -a.s * 2); c.lineTo(a.s, a.s); c.lineTo(-a.s, a.s * 0.6); c.closePath(); c.fill(); }
         else { c.fillStyle = 'rgba(110,255,210,0.8)'; c.shadowColor = '#6effd2'; c.shadowBlur = 10; c.beginPath(); c.arc(0, 0, a.s, 0, TAU); c.fill(); }
         c.restore(); continue; }
       if (th === 'desert') { a.x += a.v * dt; a.y += Math.sin(t + a.p) * 6 * dt; if (a.x > rx * 1.6) { ambient.splice(i, 1); continue; } c.fillStyle = 'rgba(255,230,180,0.7)'; c.beginPath(); c.arc(a.x, a.y, a.s, 0, TAU); c.fill(); continue; }
@@ -2694,6 +2870,7 @@ const Render = (() => {
     const p = placing; c.save(); c.translate(p.x, p.y);
     c.fillStyle = p.valid ? 'rgba(90,255,120,0.35)' : 'rgba(255,60,80,0.4)'; c.strokeStyle = p.valid ? '#3adf6a' : '#ff3a5a'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 0, p.big ? 110 : 50, p.big ? 38 : 20, 0, 0, TAU); c.fill(); c.stroke();
     if (p.kind === 'hatch') drawShape(c, SHAPE[isl().hatch[p.idx].id], { t, seed: 5, ghost: true, beat });
+    else if (p.kind === 'dcopy') drawShape(c, SHAPE[p.id], { t, seed: 5, ghost: true, beat, scale: 1.22 });
     else if (p.kind === 'move') { const m = isl().monsters.find(x => x.uid === p.uid); drawShape(c, SHAPE[m.id], { t, seed: 5, ghost: true, beat, scale: 1 + m.level * 0.015 }); }
     else if (p.kind === 'deco') drawDeco(c, DECO[p.id].kind, t, terrain.th, true);
     else if (p.kind === 'buystruct' || p.kind === 'movestruct') { c.restore(); const st = p.kind === 'buystruct' ? { kind: p.skind, x: p.x, y: p.y, lvl: 1 } : Object.assign({}, structById(p.uid), { x: p.x, y: p.y }); drawPlaced(st, t, beat, true); c.save(); c.translate(p.x, p.y); }
@@ -2717,7 +2894,8 @@ const Render = (() => {
 
   function drawPlaced(st, t, beat, ghost) {
     const I0 = isl(); c.save(); c.translate(st.x, st.y); if (ghost) c.globalAlpha = 0.6;
-    if (st.kind === 'breeder') { const b = st.br, ready = b && now() >= b.end; drawBreeder(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label('Ready!', 22, true); }
+    if (st.kind === 'synth') { const b = st.br, ready = b && now() >= b.end; drawSynth(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label(b.res ? 'Ready!' : 'Done', 22, !!b.res); }
+    else if (st.kind === 'breeder') { const b = st.br, ready = b && now() >= b.end; drawBreeder(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label('Ready!', 22, true); }
     else if (st.kind === 'hatchery') {
       const hs = structsOf('hatchery'), idx = hs.indexOf(st), off = Math.max(0, idx), n = 1;
       const eggs = []; for (let i = 0; i < n; i++) { const e = I0.hatch[off + i]; eggs.push(e ? { id: e.id, ready: eggReady(e), p: Math.min(1, (now() - e.start) / (e.end - e.start)) } : null); }
@@ -2825,6 +3003,7 @@ const UI = (() => {
     $('#food').textContent = fmt(S.food);
     const I0 = isl(), eggs = I0.hatch.filter(eggReady).length;
     if (!VISIT) { ensureTasks(); setDot('#b-goals', S.tasks.filter(t => taskProg(t) >= t.n).length); }
+    const showTray = !VISIT && S.current === 'diamond' && !placing && $('#sheet').classList.contains('hidden'); $('#dtray').classList.toggle('hidden', !showTray); if (showTray) { const n = diamondCandidates().length; $('#dtray-n').textContent = n; $('#dtray-n').style.display = n ? '' : 'none'; }
     const unl = ISLANDS.filter(i => !S.unlocked[i.id] && S.level >= i.req.level && S.coins >= i.req.coins).length; setDot('#b-map', unl ? '!' : 0);
   }
   function setDot(sel, n) { const b = $(sel); let d = b.querySelector('.dot'); if (n) { if (!d) { d = document.createElement('span'); d.className = 'dot'; b.appendChild(d); } d.textContent = n; } else if (d) d.remove(); }
@@ -2843,13 +3022,13 @@ const UI = (() => {
       renderPortrait(c, a.def, a.size, { t, hi, playing, beat: Audio.beatPhase() });
     }
     if (t - lastTimer > 0.25) {
-      lastTimer = t; if (!VISIT) checkCastles(); refreshHUD(); if (modalKind === 'tasks' && modal.dataset.sig !== taskSig()) openTasks(true);
+      lastTimer = t; if (!VISIT) { checkCastles(); pruneCopies(); } refreshHUD(); if (modalKind === 'tasks' && modal.dataset.sig !== taskSig()) openTasks(true);
       for (const el of timerEls) { const end = +el.dataset.end; const left = end - now(); if (left <= 0 && !el.dataset.doneShown) { el.dataset.doneShown = 1; rerender(); return; } el.textContent = fmtTime(left); if (el.dataset.start) { const bar = el.parentElement.querySelector('.bar i'); if (bar) bar.style.width = Math.min(100, (now() - el.dataset.start) / (end - el.dataset.start) * 100) + '%'; } }
       if (modal) modal.querySelectorAll('[data-cost]').forEach(el => { el.textContent = (el.dataset.cm === 'min' ? speedCostMin : speedCost)(+el.dataset.cost); });
       if (sheetFor) updateSheet();
     }
   }
-  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'castle') openCastle(true); else if (k === 'tasks') openTasks(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
+  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'synth') openSynth(true); else if (k === 'dtray') openDiamondTray(true); else if (k === 'castle') openCastle(true); else if (k === 'tasks') openTasks(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
 
   // ---------- MARKET ----------
   let currentTab = null;
@@ -2882,7 +3061,7 @@ const UI = (() => {
       body = `<div class="cats">${MARKET_CATS.map(([k, n]) => `<button class="cat" data-cat="${k}"><div class="catart" data-catart="${k}"></div><div class="catname">${n}</div></button>`).join('')}</div>`;
     } else if (tab === 'shapes') {
       title = 'Shapes';
-      body = islDef().special ? `<div class="info center" style="padding:24px"><b>Shapes can't be bought on ${islDef().name}.</b><br><br>${islDef().special === 'diamond' ? 'Tap a level 15 Shape on any other island and press <b>Teleport</b> to bring it here.' : 'Tap a level 15 Ruin on its home island and press <b>Teleport</b>, then breed Ruins together here for Rare and Epic Ruins.'}</div>`
+      body = islDef().special === 'diamond' ? `<div class="info center" style="padding:24px"><b>Shapes can't be bought on Diamond Island.</b><br><br>Every level 15 Shape on your other islands can be copied here for free. Tap the <b>arrow</b> at the bottom of the screen to pick one. If you ever sell the original, its copy disappears.</div>`
         : `<div class="muted center" style="margin-bottom:8px">Eggs go to the Hatchery (${isl().hatch.length}/${hatchSlots()} slots used)</div><div class="wgrid hrow scrollx">${islDef().commons.map(shapeCard).join('')}</div>`;
     } else if (tab === 'decor') {
       title = 'Decorations';
@@ -2900,7 +3079,7 @@ const UI = (() => {
     else open('market', title, '', 'market', body, tabs);
     modal.querySelectorAll('[data-catart]').forEach(el => el.replaceWith(catArt(el.dataset.catart)));
     const row = modal.querySelector('.hrow'); if (row) { row.scrollLeft = prevX; row.onwheel = e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); row.scrollLeft += e.deltaY; } }; }
-    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
+    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else if (k === 'synth') drawSynth(c, 0, false, 0, false, 0); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
     modal.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { Audio.sfx('open'); openMarket(b.dataset.cat, true); });
     const bk = modal.querySelector('[data-back]'); if (bk) bk.onclick = () => { Audio.sfx('close'); openMarket(null, true); };
     modal.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (buyShape(b.dataset.buy)) openMarket('shapes', true); });
@@ -3049,6 +3228,8 @@ const UI = (() => {
 
   // ---------- BOOK ----------
   function recipeText(d) {
+    if (d.variant === 'ruin' && RUIN_DOUBLES.includes(d.id)) return `Breed Ruins with ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')} on Ruin Island, or buy one there.`;
+    if (d.variant === 'ruin' && SHATTER_IDS.includes(d.id)) return d.el.length === 3 ? 'Buy on Shattered Island.' : `Synthesize Ruins with ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')} on Shattered Island.`;
     if (d.variant === 'rare' || d.variant === 'epic' || d.variant === 'ruin') return 'Bred from a secret pairing. Nobody knows the recipe... yet.';
     if (d.tier === 1) return `Buy at the Market from level ${d.lvl}.`;
     return `Breed Shapes that together have ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')}.`;
@@ -3136,7 +3317,7 @@ const UI = (() => {
 
   // ---------- MAP ----------
   const mapEl = $('#map'); let mapSel = null;
-  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'], diamond: ['#7ac8f0', '#f0fbff', '#9ab0f0'], ruin: ['#4a3a78', '#8a7ab0', '#2a1a48'] };
+  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'], diamond: ['#7ac8f0', '#f0fbff', '#9ab0f0'], ruin: ['#4a3a78', '#8a7ab0', '#2a1a48'], shatter: ['#8a4ab0', '#d8c0f0', '#4a1a6a'] };
   function islePreview(I) {
     const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), W = 300, H = 190; cv.width = W * d; cv.height = H * d; cv.style.width = W * VIEW.u + 'px'; cv.style.height = H * VIEW.u + 'px';
     const c = cv.getContext('2d'); c.scale(d, d); const col = ISLE_COL[I.theme], un = S.unlocked[I.id];
@@ -3160,7 +3341,7 @@ const UI = (() => {
       <div class="mtext">${un ? `Castle: ${I0.monsters.length}/${capacity(I0)}` : `Requires level ${I.req.level} · ${fmt(I.req.coins)} coins`}</div>
       <div class="mcounts"><span style="color:#2f7a25">Commons ${cnt(I.commons)}/${I.commons.length}</span><span style="color:#1f6ac0">Rares ${cnt(I.rares)}/${I.rares.length}</span><span style="color:#b8650a">Epics ${cnt(I.epics)}/${I.epics.length}</span></div>
       <div class="mdesc">${I.desc}</div>
-      ${S.current === I.id ? '<button class="btn gray" disabled>You are here</button>' : un ? '<button class="btn green mgo" data-mgo>GO</button>' : `<button class="btn green mgo" data-munlock ${S.level >= I.req.level ? '' : 'disabled'}>Unlock ${ic('coin')} ${fmt(I.req.coins)}</button>`}`;
+      ${S.current === I.id ? '<button class="btn gray" disabled>You are here</button>' : un ? '<button class="btn green mgo" data-mgo>GO</button>' : I.special === 'shattered' ? '<button class="btn gray" disabled>Opens with Ruin Island</button>' : `<button class="btn green mgo" data-munlock ${S.level >= I.req.level ? '' : 'disabled'}>Unlock ${ic('coin')} ${fmt(I.req.coins)}</button>`}`;
     right.querySelector('.mprev').appendChild(islePreview(I));
     mapEl.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { Audio.sfx('tap'); openIslands(b.dataset.mi); });
     const go = right.querySelector('[data-mgo]'); if (go) go.onclick = () => { mapEl.classList.add('hidden'); travel(I.id); };
@@ -3274,7 +3455,7 @@ const UI = (() => {
   // ---------- MIXER ----------
 
   // ---------- STRUCT ----------
-  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'castle') openCastle(); }
+  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'synth') openSynth(false, sid); else if (k === 'castle') openCastle(); }
 
   // ---------- MONSTER SHEET ----------
   const sheet = $('#sheet'); let sheetAnim = null;
@@ -3343,13 +3524,60 @@ const UI = (() => {
     return u.length ? `<div class="info" style="margin-top:10px;font-weight:800;font-size:14px">Unlocked: ${u.join(', ')}</div>` : '';
   }
 
+  // ---------- SYNTHESIZER ----------
+  let synSid = null, synA = null, synB = null;
+  function openSynth(keep, sid) {
+    if (sid != null) synSid = sid;
+    const I0 = isl(), st = structById(synSid); if (!st || st.kind !== 'synth') return;
+    const br = st.br; let body;
+    if (br) {
+      const ready = now() >= br.end;
+      body = `<div class="center"><div class="breedrow"><div class="mini"><div data-portrait="${br.a}" data-size="60"></div><b>${SHAPE[br.a].name}</b></div><div class="plus">+</div><div class="mini"><div data-portrait="${br.b}" data-size="60"></div><b>${SHAPE[br.b].name}</b></div></div>
+        ${!ready ? `<div class="big-name" style="margin-top:12px">Synthesizing...</div><div style="max-width:320px;margin:10px auto"><div class="bar"><i style="width:${(now() - br.start) / (br.end - br.start) * 100}%"></i></div><div class="timer" data-end="${br.end}" data-start="${br.start}">${fmtTime(br.end - now())}</div></div><button class="btn purple" data-synspeed>⚡ Finish now ${ic('shard')} <span data-cost="${br.end}" data-cm="min">${speedCostMin(br.end)}</span></button>`
+          : br.res ? `<div style="margin:14px auto;display:inline-block" class="stage"><div data-egg="${br.res}" data-size="130" data-ready="1"></div></div><div class="big-name">Synthesis worked!</div><p class="muted">${S.discovered[br.res] ? SHAPE[br.res].name : 'A brand new Ruin'} is ready for the Hatchery.</p><button class="btn green" data-syncol>Move to Hatchery</button>`
+          : `<div class="big-name" style="margin-top:14px">Synthesis failed</div><p class="muted">The crystals cracked apart this time. Both Ruins are fine. Try again!</p><button class="btn blue" data-synclear>OK</button>`}</div>`;
+    } else {
+      const mons = I0.monsters, a = mons.find(m => m.uid === synA), b = mons.find(m => m.uid === synB); if (!a) synA = null; if (!b) synB = null;
+      const slot = (m, lbl) => m ? `<div class="slot filled"><div data-portrait="${m.id}" data-size="92"></div><b>${SHAPE[m.id].name}</b><span class="muted">Lv ${m.level}</span></div>` : `<div class="slot"><div style="font-size:44px;opacity:.4">?</div>${lbl}</div>`;
+      let info = '';
+      if (a && b) { const o = synthOutcome(a.id, b.id); info = o.target ? `<div class="muted center" style="margin-top:8px">${Math.round(o.chance * 100)}% chance of ${S.discovered[o.target] ? `<b>${SHAPE[o.target].name}</b>` : 'a <b>new Ruin</b>'}${o.specials.length ? ', plus a tiny chance of something rarer' : ''}</div>` : o.specials.length ? '<div class="muted center" style="margin-top:8px">Only a tiny chance of something rare...</div>' : '<div class="muted center" style="margin-top:8px;color:#ff9a9a">These two can\'t make anything bigger. Their elements must add up to one more.</div>'; }
+      body = `<div class="breedrow">${slot(a, 'Pick a Ruin')}<div class="plus">+</div>${slot(b, 'Pick another')}</div>${info}
+        <div class="center" style="margin:12px 0"><button class="btn green" data-syngo ${a && b ? '' : 'disabled'}>Synthesize!</button></div>
+        <div class="muted center" style="margin-bottom:8px">Two triples make a quad, and two quads make the quint. Synthesis can fail.</div>
+        <div class="wgrid small-cards">${mons.length ? mons.map(m => { const ok = m.level >= BREED_MIN_LEVEL; return `<div class="wcard pick ${m.uid === synA || m.uid === synB ? 'sel' : ''} ${ok ? '' : 'locked'}" data-spick="${m.uid}"><div class="wname">${SHAPE[m.id].name}</div><div class="wart"><div data-portrait="${m.id}" data-size="76"></div></div><div class="muted">Level ${m.level}</div></div>`; }).join('') : '<div class="muted">No Ruins here yet.</div>'}</div>`;
+    }
+    body += structFooter(st);
+    if (keep && modalKind === 'synth') setBody(body); else open('synth', 'Synthesizer', '#7a4ae0', null, body);
+    wireFooter(st, openSynth);
+    const go = modal.querySelector('[data-syngo]'); if (go) go.onclick = () => { startSynth(synA, synB, st.uid); if (st.br) { synA = synB = null; } openSynth(true); };
+    const sp = modal.querySelector('[data-synspeed]'); if (sp) sp.onclick = () => { speedBreed(st.uid); openSynth(true); };
+    const co = modal.querySelector('[data-syncol]'); if (co) co.onclick = () => { collectBreed(st.uid); if (!st.br) openHatch(); };
+    const cl = modal.querySelector('[data-synclear]'); if (cl) cl.onclick = () => { clearSynth(st.uid); openSynth(true); };
+    modal.querySelectorAll('[data-spick]').forEach(el => el.onclick = () => {
+      const u = +el.dataset.spick, m = isl().monsters.find(x => x.uid === u); Audio.sfx('tap');
+      if (m.level < BREED_MIN_LEVEL) { toast(`${SHAPE[m.id].name} needs level ${BREED_MIN_LEVEL}. Feed it first!`, 'bad'); return; }
+      if (synA === u) synA = null; else if (synB === u) synB = null; else if (!synA) synA = u; else synB = u; openSynth(true);
+    });
+  }
+
+  // ---------- DIAMOND ISLAND: copy level 15 Shapes ----------
+  function openDiamondTray(keep) {
+    const list = diamondCandidates(), D = isl();
+    const body = `<div class="muted center" style="margin-bottom:8px">Pick a level 15 Shape to copy onto Diamond Island. The original stays where it is. If you sell the original, the copy disappears. (${D.monsters.length}/${capacity(D)} placed)</div>
+      ${list.length ? `<div class="wgrid hrow scrollx">${list.map(({ iid, m }) => `<div class="wcard"><div class="wname">${SHAPE[m.id].name}</div><div class="wprice"><span class="muted">${ISLAND[iid].name}</span><span></span></div><div class="wart"><div data-portrait="${m.id}" data-size="${Math.round(110 * VIEW.u)}"></div></div><button class="btn green sm wbuy" data-dcopy="${iid}:${m.uid}">Place</button></div>`).join('')}</div>`
+        : '<div class="info center" style="padding:24px">No Shapes are ready yet. Feed a Shape on another island to <b>level 15</b> and it will show up here.<br><br>Ruin Island doubles and Shattered Island Ruins can\'t be copied here.</div>'}`;
+    if (keep && modalKind === 'dtray') setBody(body); else open('dtray', 'Add to Diamond Island', '#3a8ad8', null, body);
+    modal.querySelectorAll('[data-dcopy]').forEach(b => b.onclick = () => { const [iid, uid] = b.dataset.dcopy.split(':'), src = S.islands[iid].monsters.find(m => m.uid === +uid); if (!src) return; if (D.monsters.length >= capacity(D)) { Audio.sfx('error'); toast('Diamond Island is full!', 'bad'); return; } Audio.sfx('tap'); beginPlace({ kind: 'dcopy', iid, srcUid: +uid, id: src.id }); });
+  }
+  $('#dtray').onclick = () => { Audio.sfx('open'); openDiamondTray(); };
+
   // ---------- TELEPORT ----------
   function openTeleport(m) {
     if (m.level < MAX_LEVEL) { Audio.sfx('error'); toast(`${SHAPE[m.id].name} must reach level ${MAX_LEVEL} to teleport`, 'bad'); return; }
     const dests = teleportDests(m);
-    const body = `<div class="center" style="margin-bottom:10px"><div class="stage" style="display:inline-grid;width:120px;height:120px"><div data-portrait="${m.id}" data-size="110"></div></div><p class="muted">Teleporting moves ${SHAPE[m.id].name} to another island for good. It keeps its level.</p></div>
-      <div class="row" style="justify-content:center;gap:14px">${dests.map(id => { const D = ISLAND[id], un = S.unlocked[id], I1 = S.islands[id], full = un && I1.monsters.length >= capacity(I1);
-        return `<div class="wcard" style="width:220px;padding:12px"><div class="wname">${D.name}</div><div class="muted" style="margin:8px 0;min-height:48px">${D.desc}</div>${!un ? `<div class="req">Unlock at level ${D.req.level}</div>` : full ? '<div class="req">Castle is full</div>' : `<button class="btn green" data-tpgo="${id}">Teleport</button>`}</div>`; }).join('')}</div>`;
+    const body = `<div class="center" style="margin-bottom:10px"><div class="stage" style="display:inline-grid;width:120px;height:120px"><div data-portrait="${m.id}" data-size="110"></div></div><p class="muted">${SHAPE[m.id].name} leaves this island for good and goes to Ruin Island's Hatchery as an egg. It hatches in 10 hours back at level 1.</p></div>
+      <div class="row" style="justify-content:center;gap:14px">${dests.map(id => { const D = ISLAND[id], un = S.unlocked[id], I1 = S.islands[id], full = un && I1.hatch.length >= hatchSlots(I1);
+        return `<div class="wcard" style="width:220px;padding:12px"><div class="wname">${D.name}</div><div class="muted" style="margin:8px 0;min-height:48px">${D.desc}</div>${!un ? `<div class="req">Unlock at level ${D.req.level}</div>` : full ? '<div class="req">Hatchery is full</div>' : `<button class="btn green" data-tpgo="${id}">Teleport</button>`}</div>`; }).join('')}</div>`;
     open('teleport', 'Teleport', '#7a4ae0', null, body);
     modal.querySelectorAll('[data-tpgo]').forEach(b => b.onclick = () => { if (teleport(m, b.dataset.tpgo)) { closeAll(); closeSheet(); refreshHUD(); } });
   }
