@@ -281,6 +281,9 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .likes .like{background:#eadfc8;border:2px solid #8a6a4a;border-radius:10px;padding:1px 7px;color:#5a3a20;}
 .likes .like.ok{background:#c8f0b0;border-color:#3f9a2a;color:#1f5a10;}
 .likes .like.no{opacity:.75;}
+.itext .likes{justify-content:flex-start;gap:8px;font-size:calc(16px*var(--u));margin-top:10px;}
+.itext .likes .like{padding:4px 12px;border-radius:12px;}
+.itext .likes .happy{font-size:calc(20px*var(--u));}
 .likes .happy{color:#e2407a;font-size:calc(14px*var(--u));margin-left:4px;}
 </style>
 </head>
@@ -445,12 +448,12 @@ const ELEMENTS = {
 };
 
 const CATS = {
-  circle:{name:'Circle Shapes', anim:'Bounces to the beat'},
+  circle:{name:'Circle Shapes', anim:'Bounces around'},
   triangle:{name:'Triangle Shapes', anim:'Taps its points'},
-  square:{name:'Square Shapes', anim:'Wobbles while singing'},
+  square:{name:'Square Shapes', anim:'Wobbles happily'},
   star:{name:'Star Shapes', anim:'Pulses and sparkles'},
-  diamond:{name:'Diamond Shapes', anim:'Spins while it plays'},
-  hexagon:{name:'Hexagon Shapes', anim:'Clicks round on accents'},
+  diamond:{name:'Diamond Shapes', anim:'Spins in place'},
+  hexagon:{name:'Hexagon Shapes', anim:'Clicks round and round'},
   special:{name:'Special Shapes', anim:'Does its own thing'},
 };
 
@@ -472,104 +475,104 @@ const CH = [0,2,4];
 const SHAPES = [
   // ---------- SINGLES ----------
   { id:'bobble', sec:'VC', name:'Bobble', cat:'circle', el:['moss'], tier:1, inst:'kick', vol:0.396, rate:5,  time:30,   price:150, lvl:1,
-    sound:'Bouncy kick drum', desc:'Bobble has never stopped bouncing since the day it hatched. Every island song starts with its heartbeat thump.',
+    sound:'Bouncy kick drum', desc:'Bobble has never stopped bouncing since the day it hatched. It is round, cheerful and the first friend every island makes.',
     look:{ body:'#6fd04f', body2:'#3a8f2c', eyes:2, eye:'big', mouth:'grin', acc:['sprout'], pat:'dots', legs:2, size:1 },
     pat: [...rep4([[0,'k',2,1],[8,'k',2,.9],[11,'k',1,.7]]), [62,'k',1,.6]] },
   { id:'tikki', sec:'CB', name:'Tikki', cat:'triangle', el:['ember'], tier:1, inst:'hat', vol:0.496, rate:6, time:60, price:300, lvl:1,
-    sound:'Crisp hi-hats', desc:'Tikki taps its three hot little points on the ground so fast they spark. It keeps time for everyone.',
+    sound:'Crisp hi-hats', desc:'Tikki\'s three hot little points spark whenever it gets excited, which is most of the time. Keep it away from the bushes.',
     look:{ body:'#ff8a3d', body2:'#c44d17', eyes:2, eye:'sly', mouth:'smirk', acc:['flame'], pat:'stripes', legs:3, size:0.95 },
     pat: rep4([[0,'c',1,.35],[2,'o',1,.8],[4,'c',1,.4],[6,'c',1,.85],[7,'c',1,.3],[8,'c',1,.35],[10,'o',1,.8],[12,'c',1,.4],[14,'c',1,.85],[15,'c',1,.45]]) },
   { id:'blocco', sec:'VC', name:'Blocco', cat:'square', el:['tide'], tier:1, inst:'bass', vol:0.172, rate:8, time:120, price:500, lvl:2,
-    sound:'Plucky round bass', desc:'Heavy, square and soaking wet. Blocco hums deep notes that make puddles ripple in time.',
+    sound:'Plucky round bass', desc:'Heavy, square and always a little bit damp. Blocco is slow to get going, but nothing on the island can push it over.',
     look:{ body:'#3ea8f0', body2:'#1d62a8', eyes:2, eye:'sleepy', mouth:'wide', acc:['drip'], pat:'none', legs:2, size:1.05 },
     pat: rep4([[0,0,3,1],[4,0,1,.6],[6,7,2,.8],[8,0,3,1],[11,4,2,.8],[14,2,2,.7]]) },
   { id:'twinkla', sec:'VB', name:'Twinkla', cat:'star', el:['lumen'], tier:1, inst:'bell', vol:0.41, rate:10, time:180, price:800, lvl:3,
-    sound:'Glassy music-box bells', desc:'Twinkla glows a little brighter with every note. Its bells drift over the island like fireflies.',
+    sound:'Glassy music-box bells', desc:'Twinkla glows a little brighter every time someone smiles at it. At night it drifts around like a giant firefly.',
     look:{ body:'#ffd84a', body2:'#e09a12', eyes:2, eye:'sparkle', mouth:'o', acc:['twinkle'], pat:'none', legs:0, size:0.95 },
     pat: [...atBar(0,[[0,7,3,.9],[4,9,3,.7],[8,11,3,.8],[12,9,3,.6]]),
           ...atBar(1,[[0,7,3,.9],[4,9,3,.7],[8,11,4,.8]]),
           ...atBar(2,[[0,7,3,.9],[4,9,3,.7],[8,11,3,.8],[12,14,3,.6]]),
           ...atBar(3,[[0,11,3,.9],[4,9,3,.7],[8,7,6,.8]])] },
   { id:'zephyx', sec:'VCB', name:'Zephyx', cat:'diamond', el:['gust'], tier:1, inst:'pad', vol:0.181, rate:12, time:240, price:1200, lvl:4,
-    sound:'Airy warm synth pad', desc:'A drifting diamond that spins on the breeze. Zephyx breathes long chords that glue the song together.',
+    sound:'Airy warm synth pad', desc:'A drifting diamond that spins on the breeze. Zephyx has never touched the ground and has no plans to start.',
     look:{ body:'#c2acff', body2:'#7a5fd8', eyes:1, eye:'calm', mouth:'small', acc:['wisps'], pat:'facets', legs:0, size:1 },
     pat: rep4([[0,CH,16,.8]]) },
 
   // ---------- DOUBLES ----------
   { id:'clackle', sec:'C', name:'Clackle', cat:'triangle', el:['moss','ember'], tier:2, inst:'snare', vol:0.828, rate:25, time:300,
-    sound:'Snappy snare and claps', desc:'Clackle snaps its pointy jaw on beats two and four. It cannot be convinced to clap on one.',
+    sound:'Snappy snare and claps', desc:'Clackle snaps its pointy jaw at anything that moves. It means it as a greeting. Mostly.',
     look:{ body:'#c9d84a', body2:'#7d8f1c', eyes:2, eye:'angry', mouth:'teeth', acc:['horns'], pat:'zigzag', legs:2, size:1 },
     pat: [...rep4([[4,'s',1,1],[12,'p',1,1]]), ...atBar(3,[[13,'s',1,.45],[14,'s',1,.6],[15,'s',1,.8]])] },
   { id:'gloobo', sec:'VB', name:'Gloobo', cat:'circle', el:['moss','tide'], tier:2, inst:'voiceLow', vol:0.456, rate:28, time:420,
-    sound:'Deep "doom-doom" bass singer', desc:'Gloobo lives at the bottom of puddles and sings from its belly. Its voice is so low the grass shivers.',
+    sound:'Deep "doom-doom" bass singer', desc:'Gloobo lives at the bottom of puddles and only comes up for snacks. It is squishier than it looks, and it looks very squishy.',
     look:{ body:'#43c2a6', body2:'#1e7a6b', eyes:2, eye:'big', mouth:'singer', acc:['lilypad'], pat:'spots', legs:2, size:1.15 },
     pat: [...rep4([[0,0,5,.9],[8,4,4,.75]]), ...atBar(3,[[12,5,3,.7]])] },
   { id:'hexbloom', sec:'VC', name:'Hexbloom', cat:'hexagon', el:['moss','lumen'], tier:2, inst:'marimba', vol:0.531, rate:30, time:480,
-    sound:'Wooden marimba riff', desc:'Petals grow from every corner of Hexbloom. It drums on them like a marimba whenever the sun is out.',
+    sound:'Wooden marimba riff', desc:'Petals grow from every corner of Hexbloom. Bees follow it everywhere, and it is far too polite to tell them to leave.',
     look:{ body:'#9be05a', body2:'#4d9a2a', eyes:2, eye:'happy', mouth:'grin', acc:['petals'], pat:'none', legs:2, size:1 },
     pat: rep4([[0,0,2,.9],[3,2,2,.6],[6,4,2,.8],[8,2,2,.6],[10,4,2,.7],[13,7,2,.8],[14,4,2,.5]]) },
   { id:'rumbletum', sec:'C', name:'Rumbletum', cat:'square', el:['moss','gust'], tier:2, inst:'tom', vol:0.326, rate:26, time:360,
-    sound:'Booming tom drums', desc:'Rumbletum drums on its own hollow tummy. The bigger the fill, the bigger its grin.',
+    sound:'Booming tom drums', desc:'Rumbletum is always hungry, and its tummy lets everyone know. The bigger the meal, the bigger its grin.',
     look:{ body:'#8fbf9a', body2:'#4b7a57', eyes:2, eye:'big', mouth:'grin', acc:['ears','drumbelly'], pat:'none', legs:2, size:1.1 },
     pat: [...rep4([[7,'m',1,.5],[14,'l',1,.7]]), ...atBar(3,[[10,'h',1,.7],[11,'h',1,.6],[12,'m',1,.75],[13,'m',1,.7],[14,'l',1,.85],[15,'l',1,.9]])] },
   { id:'fizzwick', sec:'VB', name:'Fizzwick', cat:'hexagon', el:['ember','tide'], tier:2, inst:'shaker', vol:1.6, rate:27, time:390,
-    sound:'Fizzy shaker groove', desc:'Half fire, half water, all steam. Fizzwick rattles with bubbles that pop in perfect sixteenths.',
+    sound:'Fizzy shaker groove', desc:'Half fire, half water, all steam. Fizzwick bubbles and pops whenever it laughs, leaving little clouds everywhere it goes.',
     look:{ body:'#ff9aa0', body2:'#c0525e', eyes:3, eye:'big', mouth:'o', acc:['steam'], pat:'bubbles', legs:2, size:0.9 },
     pat: rep4([[0,'x',1,.5],[1,'x',1,.22],[2,'x',1,.38],[3,'x',1,.25],[4,'x',1,.55],[5,'x',1,.22],[6,'x',1,.4],[7,'x',1,.28],[8,'x',1,.5],[9,'x',1,.22],[10,'x',1,.38],[11,'x',1,.25],[12,'x',1,.55],[13,'x',1,.22],[14,'x',1,.45],[15,'x',1,.3]]) },
   { id:'solara', sec:'C', name:'Solara', cat:'star', el:['ember','lumen'], tier:2, inst:'lead', vol:0.513, rate:34, time:600,
-    sound:'Bright lead-synth melody', desc:'Solara is the lead singer and knows it. It plays the main tune on a blazing solar synth.',
+    sound:'Bright lead-synth melody', desc:'Solara is the brightest Shape on the island and knows it. It strikes a pose every time someone walks past.',
     look:{ body:'#ffb02e', body2:'#e0561a', eyes:2, eye:'cool', mouth:'singer', acc:['rays'], pat:'none', legs:2, size:1.05 },
     pat: [...atBar(0,[[0,4,2,.9],[2,4,2,.7],[4,5,2,.8],[6,4,2,.7],[8,2,4,.9],[12,0,4,.7]]),
           ...atBar(1,[[0,2,2,.8],[2,4,2,.7],[4,2,2,.7],[6,0,2,.6],[8,1,4,.8],[12,2,4,.7]]),
           ...atBar(2,[[0,4,3,.9],[3,5,1,.6],[4,4,2,.8],[6,2,2,.7],[8,4,6,.9],[14,7,2,.7]]),
           ...atBar(3,[[0,6,2,.8],[2,4,2,.7],[4,2,4,.8],[8,1,2,.7],[10,2,2,.7],[12,4,4,.85]])] },
   { id:'whirlo', sec:'VB', name:'Whirlo', cat:'triangle', el:['ember','gust'], tier:2, inst:'pluck', vol:0.649, rate:30, time:540,
-    sound:'Spinning pluck arpeggio', desc:'Whirlo is a little tornado of a triangle. It spins chords into a twinkly pluck arpeggio.',
+    sound:'Spinning pluck arpeggio', desc:'Whirlo is a little tornado of a triangle. It spins in circles until it gets dizzy, then spins the other way to fix it.',
     look:{ body:'#ff9d7a', body2:'#b0503a', eyes:2, eye:'dizzy', mouth:'o', acc:['swirl'], pat:'stripes', legs:0, size:0.95 },
     pat: rep4([[0,0,1,.8],[1,2,1,.5],[2,4,1,.6],[3,7,1,.5],[4,9,1,.7],[5,7,1,.5],[6,4,1,.6],[7,2,1,.5],[8,0,1,.75],[9,2,1,.5],[10,4,1,.6],[11,7,1,.5],[12,9,1,.7],[13,11,1,.5],[14,9,1,.6],[15,7,1,.5]]) },
   { id:'lulla', sec:'V', name:'Lulla', cat:'circle', el:['tide','lumen'], tier:2, inst:'voiceHigh', vol:0.648, rate:32, time:660,
-    sound:'Soaring "ahh" vocal', desc:'Lulla floats like a soap bubble and sings like one too: high, clear and a little bit dreamy.',
+    sound:'Soaring "ahh" vocal', desc:'Lulla floats like a soap bubble and is just as delicate. A gentle breeze can carry it halfway across the island.',
     look:{ body:'#9fd6ff', body2:'#4f8fd8', eyes:2, eye:'lashes', mouth:'singer', acc:['bow'], pat:'none', legs:0, size:0.95 },
     pat: [...atBar(0,[[4,7,4,.8],[8,9,8,.9]]), ...atBar(1,[[4,7,4,.8],[8,4,8,.85]]),
           ...atBar(2,[[4,9,4,.85],[8,11,4,.9],[12,9,4,.8]]), ...atBar(3,[[4,7,4,.8],[8,6,8,.85]])] },
   { id:'cubbit', sec:'CB', name:'Cubbit', cat:'square', el:['tide','gust'], tier:2, inst:'voiceHarm', vol:0.501, rate:30, time:570,
-    sound:'Doo-wop vocal harmonies', desc:'Cubbit has three mouths... no, wait, it just harmonizes with itself. Doo-wop is its whole personality.',
+    sound:'Doo-wop vocal harmonies', desc:'Cubbit has three faces... no, wait, it just moves really fast. It loves copying whatever the Shape next to it is doing.',
     look:{ body:'#7ec8e8', body2:'#3a7fa8', eyes:2, eye:'happy', mouth:'singer', acc:['quiff'], pat:'none', legs:2, size:1 },
     pat: rep4([[0,[2,4,7],3,.8],[6,[2,4,7],2,.65],[10,[2,4,7],4,.75]]) },
   { id:'prismo', sec:'C', name:'Prismo', cat:'diamond', el:['lumen','gust'], tier:2, inst:'arp', vol:0.592, rate:33, time:630,
-    sound:'Sparkling synth arpeggio', desc:'Light bends strangely around Prismo. It fires off rainbow arpeggios that echo across the sky.',
+    sound:'Sparkling synth arpeggio', desc:'Light bends strangely around Prismo. When the sun hits it just right, rainbows splash across the whole island.',
     look:{ body:'#fff07a', body2:'#b8a6ff', eyes:2, eye:'sparkle', mouth:'small', acc:['shine'], pat:'facets', legs:0, size:0.95 },
     pat: rep4([[0,7,1,.8],[2,9,1,.6],[4,11,1,.7],[6,14,1,.6],[8,11,1,.7],[10,9,1,.6],[12,7,1,.7],[14,9,1,.6]]) },
 
   // ---------- TRIPLES ----------
   { id:'bongaroo', sec:'VC', name:'Bongaroo', cat:'hexagon', el:['moss','ember','tide'], tier:3, inst:'bongo', vol:0.55, rate:75, time:2700,
-    sound:'Tropical bongos', desc:'Bongaroo carries two bongos built into its own head. It plays them with its ears.',
+    sound:'Tropical bongos', desc:'Bongaroo has two round bumps on its head that it loves to pat. Nobody knows why, and Bongaroo is not telling.',
     look:{ body:'#e0a35a', body2:'#8f5a26', eyes:2, eye:'big', mouth:'grin', acc:['bongos'], pat:'stripes', legs:2, size:1.1 },
     pat: rep4([[0,'h',1,.9],[3,'l',1,.7],[6,'h',1,.8],[7,'h',1,.5],[10,'l',1,.8],[12,'h',1,.7],[14,'l',1,.6],[15,'h',1,.5]]) },
   { id:'clocktri', sec:'VB', name:'Clocktri', cat:'triangle', el:['moss','ember','lumen'], tier:3, inst:'block', vol:0.581, rate:72, time:2400,
-    sound:'Tick-tock woodblocks and cowbell', desc:'Clocktri has a clock face where its belly should be. It is never, ever late for a beat.',
+    sound:'Tick-tock woodblocks and cowbell', desc:'Clocktri has a clock face where its belly should be. It is never, ever late, and gets grumpy when anyone else is.',
     look:{ body:'#f2d36b', body2:'#a37d22', eyes:2, eye:'monocle', mouth:'mustache', acc:['clock'], pat:'none', legs:2, size:1.05 },
     pat: [...rep4([[0,'w',1,.8],[3,'w',1,.6],[6,'w',1,.7],[10,'w',1,.6],[12,'w',1,.7]]), ...atBar(1,[[8,'b',1,.7]]), ...atBar(3,[[8,'b',1,.7],[14,'b',1,.5]])] },
   { id:'novastar', sec:'C', name:'Novastar', cat:'star', el:['ember','tide','lumen'], tier:3, inst:'stab', vol:0.433, rate:85, time:3600,
-    sound:'Punchy choir stabs', desc:'A star that went supernova and decided it liked it. Novastar shouts chords in a choir of one.',
+    sound:'Punchy choir stabs', desc:'A star that went supernova and decided it liked it. Novastar gets a little bigger every time it gets excited.',
     look:{ body:'#ff6f91', body2:'#a8326a', eyes:3, eye:'big', mouth:'singer', acc:['crown'], pat:'none', legs:2, size:1.1 },
     pat: [...rep4([[0,CH,2,.85],[3,CH,1,.6],[8,[2,4,7],2,.75]]), ...atBar(3,[[12,[2,4,7],1,.7],[14,[4,7,9],2,.85]])] },
   { id:'aurielle', sec:'CB', name:'Aurielle', cat:'diamond', el:['tide','lumen','gust'], tier:3, inst:'choir', vol:0.38, rate:80, time:3300,
-    sound:'Angelic "ooh" choir', desc:'Aurielle wears the northern lights like a scarf. Its choir hangs over the island like mist.',
+    sound:'Angelic "ooh" choir', desc:'Aurielle wears the northern lights like a scarf. It glows softly through the night and keeps the other Shapes cozy.',
     look:{ body:'#a6f0e6', body2:'#5a8fe0', eyes:2, eye:'closed', mouth:'singer', acc:['halo','aurora'], pat:'facets', legs:0, size:1.1 },
     pat: [...atBar(0,[[0,CH,16,.8]]), ...atBar(1,[[0,CH,16,.8]]), ...atBar(2,[[0,[0,2,4,7],16,.85]]), ...atBar(3,[[0,[0,2,4,6],16,.85]])] },
   { id:'grumblox', sec:'C', name:'Grumblox', cat:'square', el:['moss','tide','gust'], tier:3, inst:'wobble', vol:0.224, rate:78, time:3000,
-    sound:'Wobbly growl bass', desc:'Grumblox grumbles in a wub-wub voice no one can understand. It is a lot happier than it sounds.',
+    sound:'Wobbly growl bass', desc:'Grumblox grumbles at everyone in a voice no one can understand. It is a lot happier than it sounds.',
     look:{ body:'#6b8f8a', body2:'#2e4d4a', eyes:1, eye:'angry', mouth:'teeth', acc:['spikes'], pat:'cracks', legs:2, size:1.2 },
     pat: rep4([[0,0,6,.9],[8,0,4,.8],[12,4,4,.8]]) },
 
   // ---------- QUADS ----------
   { id:'hexapella', sec:'VB', name:'Hexapella', cat:'hexagon', el:['moss','ember','tide','lumen'], tier:4, inst:'beatbox', vol:0.474, rate:160, time:10800,
-    sound:'Beatboxing vocals', desc:'Six sides, one mouth, infinite beats. Hexapella beatboxes kicks, snares and hats all by itself.',
+    sound:'Beatboxing vocals', desc:'Six sides, one mouth and a thousand funny faces. Hexapella can pull any expression you can think of.',
     look:{ body:'#ff8f5a', body2:'#3a9a8a', eyes:2, eye:'cool', mouth:'singer', acc:['headphones','cap'], pat:'none', legs:2, size:1.15 },
     pat: rep4([[0,'b',1,.9],[2,'t',1,.5],[4,'k',1,.85],[6,'t',1,.5],[7,'b',1,.6],[8,'b',1,.8],[10,'t',1,.55],[12,'k',1,.9],[14,'t',1,.5],[15,'t',1,.35]]) },
   { id:'polyphon', sec:'C', name:'Polyphon', cat:'star', el:['moss','tide','lumen','gust'], tier:4, inst:'vocalSynth', vol:0.789, rate:165, time:10800,
-    sound:'Robo-vocal counter-melody', desc:'Polyphon sings through a crystal throat that splits its voice into a shimmering robot harmony.',
+    sound:'Robo-vocal counter-melody', desc:'Polyphon has a crystal body that splits sunlight into shimmering patterns. It moves in stiff, careful robot steps.',
     look:{ body:'#8ff0b0', body2:'#5a6fe0', eyes:2, eye:'visor', mouth:'small', acc:['antenna','rings'], pat:'circuits', legs:2, size:1.1 },
     pat: [...atBar(0,[[0,9,1,.8],[1,7,1,.6],[2,9,2,.8],[6,11,2,.7],[8,9,2,.8],[12,7,4,.7]]),
           ...atBar(1,[[0,7,1,.8],[1,4,1,.6],[2,7,2,.8],[6,9,2,.7],[8,7,2,.8],[12,4,4,.7]]),
@@ -578,82 +581,82 @@ const SHAPES = [
 
   // ---------- LEGENDARY ----------
   { id:'dodecadon', sec:'C', name:'Dodecadon', cat:'special', el:['ruin'], tier:5, inst:'opera', vol:0.519, rate:260, time:14400, shardPrice:40,
-    sound:'Operatic lead vocals', desc:'Twelve sides and one enormous voice. The Ruin of Shape Island only performs for islands worthy of an encore.',
+    sound:'Operatic lead vocals', desc:'Twelve sides and one enormous presence. The Ruin of Shape Island only appears for islands worthy of it.',
     look:{ body:'#ffe28a', body2:'#c86a2a', eyes:2, eye:'closed', mouth:'singer', acc:['crown','cape'], pat:'gems', legs:2, size:1.35, shape:'dodeca' },
     pat: [...atBar(0,[[0,4,6,.85],[6,5,2,.7],[8,7,8,.95]]), ...atBar(1,[[0,4,6,.85],[6,2,2,.7],[8,4,8,.9]]),
           ...atBar(2,[[0,7,4,.9],[4,9,4,.85],[8,7,8,.9]]), ...atBar(3,[[0,6,4,.85],[4,4,4,.8],[8,7,8,.95]])] },
 
   // ---------- RARE SPECIALS ----------
   { id:'oddball', sec:'VB', name:'Oddball', cat:'special', el:['ruin'], tier:5, inst:'theremin', vol:0.284, rate:240, time:14400, shardPrice:25,
-    sound:'Wailing theremin glides', desc:'Nobody knows what shape Oddball is, including Oddball. It wobbles and wails like a haunted theremin.',
+    sound:'Wailing theremin glides', desc:'Nobody knows what shape Oddball is, including Oddball. It wobbles through the air like a friendly little ghost.',
     look:{ body:'#ff9ae0', body2:'#7a5af0', eyes:3, eye:'odd', mouth:'o', acc:['antenna'], pat:'swirls', legs:0, size:1.05, shape:'blob' },
     pat: [...atBar(0,[[0,7,8,.8],[8,9,8,.8]]), ...atBar(1,[[0,7,6,.8],[6,4,10,.8]]), ...atBar(2,[[0,9,8,.8],[8,11,8,.8]]), ...atBar(3,[[0,8,8,.8],[8,6,8,.8]])] },
   { id:'mobius', sec:'VB', name:'Möbius', cat:'special', el:['ruin'], tier:5, inst:'swell', vol:0.319, rate:240, time:14400, shardPrice:25,
-    sound:'Backwards shimmer swells', desc:'Möbius only has one side, which makes hugging it very confusing. Its notes play in reverse.',
+    sound:'Backwards shimmer swells', desc:'Möbius only has one side, which makes hugging it very confusing. It is never quite sure which way is up.',
     look:{ body:'#9ef0ff', body2:'#e07aff', eyes:2, eye:'calm', mouth:'small', acc:[], pat:'none', legs:0, size:1.05, shape:'ring' },
     pat: rep4([[8,[0,4],8,.8]]) },
   { id:'glitchling', sec:'CB', name:'Glitchling', cat:'special', el:['ruin'], tier:5, inst:'glitch', vol:0.658, rate:240, time:14400, shardPrice:25,
-    sound:'Glitchy digital stutters', desc:'Glitchling fell out of a broken video game. It stutters, zaps and buffers right on the beat.',
+    sound:'Glitchy digital stutters', desc:'Glitchling fell out of a broken video game. It stutters, zaps and sometimes teleports a few steps to the left.',
     look:{ body:'#5ce0c0', body2:'#3a2a7a', eyes:2, eye:'pixel', mouth:'pixel', acc:['pixels'], pat:'scan', legs:2, size:1, shape:'pixel' },
     pat: [...atBar(0,[[14,0,1,.7],[15,7,1,.6]]), ...atBar(1,[[6,4,1,.6],[14,2,1,.7],[15,9,1,.6]]), ...atBar(2,[[14,0,1,.7],[15,7,1,.6]]), ...atBar(3,[[10,4,1,.6],[11,4,1,.5],[12,7,1,.7],[13,7,1,.5],[14,9,1,.8],[15,11,1,.7]])] },
 
   // ---------- NEW TRIPLES ----------
   { id:'kelpsong', sec:'VC', name:'Kelpsong', cat:'circle', el:['moss','tide','lumen'], tier:3, inst:'steeldrum', vol:0.466, rate:74, time:2700,
-    sound:'Sunny steel-drum melody', desc:'Kelpsong grew up in a tide pool and still wears the seaweed. It taps out sunny steel-drum tunes on its own belly.',
+    sound:'Sunny steel-drum melody', desc:'Kelpsong grew up in a tide pool and still wears the seaweed. It smells faintly of the sea and is proud of it.',
     look:{ body:'#5fd0b0', body2:'#1f7a8a', eyes:2, eye:'big', mouth:'o', acc:['kelp'], pat:'spots', legs:2, size:1.05 },
     pat: [...atBar(0,[[0,4,2,.9],[3,2,1,.6],[4,4,2,.8],[6,7,2,.8],[10,4,2,.7],[12,2,4,.8]]), ...atBar(1,[[0,4,2,.9],[3,2,1,.6],[4,4,2,.8],[6,7,2,.8],[10,9,2,.7],[12,7,4,.8]]),
           ...atBar(2,[[0,7,2,.9],[3,4,1,.6],[4,7,2,.8],[6,9,2,.8],[10,7,2,.7],[12,4,4,.8]]), ...atBar(3,[[0,4,2,.9],[2,2,2,.7],[4,1,2,.7],[6,2,2,.7],[8,4,8,.85]])] },
   { id:'didgeroo', sec:'C', name:'Didgeroo', cat:'square', el:['moss','ember','gust'], tier:3, inst:'didg', vol:0.77, rate:72, time:2400,
-    sound:'Growling didgeridoo drone', desc:'Didgeroo blows through a hollow branch it found and never gave back. The drone rattles every pebble on the island.',
+    sound:'Growling didgeridoo drone', desc:'Didgeroo found a hollow branch and never gave it back. It puffs its cheeks out whenever it is thinking hard.',
     look:{ body:'#d0884a', body2:'#7a3a1a', eyes:2, eye:'sleepy', mouth:'wide', acc:['didg'], pat:'stripes', legs:2, size:1.15 },
     pat: rep4([[0,0,3,.9],[4,0,2,.7],[7,0,1,.6],[8,0,4,.85],[13,0,3,.7]]) },
   { id:'flutterby', sec:'V', name:'Flutterby', cat:'star', el:['moss','lumen','gust'], tier:3, inst:'flute', vol:0.303, rate:76, time:3000,
-    sound:'Breezy wooden flute', desc:'Flutterby drifts from flower to flower humming through the holes in its wings. It sounds exactly like a flute.',
+    sound:'Breezy wooden flute', desc:'Flutterby drifts from flower to flower on paper-thin wings. The holes in them let the breeze carry it wherever it likes.',
     look:{ body:'#b8f08a', body2:'#5aa0d0', eyes:2, eye:'lashes', mouth:'small', acc:['wings'], pat:'dots', legs:0, size:1 },
     pat: [...atBar(0,[[0,7,4,.85],[4,9,4,.8],[8,11,6,.9],[14,9,2,.7]]), ...atBar(1,[[0,9,4,.85],[4,7,4,.8],[8,4,8,.85]]),
           ...atBar(2,[[0,9,3,.85],[3,11,1,.7],[4,14,4,.9],[8,11,8,.85]]), ...atBar(3,[[0,11,4,.85],[4,9,4,.8],[8,8,8,.85]])] },
   { id:'steamtrom', sec:'C', name:'Steamtrom', cat:'diamond', el:['ember','tide','gust'], tier:3, inst:'brass', vol:0.486, rate:78, time:3300,
-    sound:'Punchy brass stabs', desc:'Steamtrom builds up steam until it has to let it out through its horn. Luckily it always does it on the beat.',
+    sound:'Punchy brass stabs', desc:'Steamtrom builds up steam until it has to let it out in one big puff. Everyone nearby learns to step back.',
     look:{ body:'#ff9a6a', body2:'#4a7ac0', eyes:2, eye:'big', mouth:'o', acc:['trumpet'], pat:'facets', legs:0, size:1.05 },
     pat: [...rep4([[2,CH,1,.8],[6,CH,2,.85],[14,[2,4,7],2,.75]]), ...atBar(3,[[10,[2,4,7],1,.7],[11,[4,7,9],1,.8]])] },
   { id:'sparkplug', sec:'VC', name:'Sparkplug', cat:'triangle', el:['ember','lumen','gust'], tier:3, inst:'clav', vol:0.384, rate:75, time:2700,
-    sound:'Funky clavinet riff', desc:'Sparkplug is powered by its own groove. If it stops playing its lightning bolt flickers out, so it never stops.',
+    sound:'Funky clavinet riff', desc:'Sparkplug runs on pure energy. If it ever stops moving its lightning bolt flickers out, so it never stops.',
     look:{ body:'#ffe06a', body2:'#e0602a', eyes:2, eye:'cool', mouth:'grin', acc:['bolt'], pat:'zigzag', legs:2, size:1 },
     pat: rep4([[0,0,1,.9],[3,4,1,.7],[5,7,1,.6],[6,4,1,.8],[8,0,1,.85],[10,2,1,.6],[11,4,1,.7],[14,7,1,.75]]) },
 
   // ---------- NEW QUADS ----------
   { id:'celestar', sec:'CB', name:'Celestar', cat:'star', el:['ember','tide','lumen','gust'], tier:4, inst:'whistle', vol:0.3, rate:165, time:10800,
-    sound:'Sky-high whistling', desc:'Celestar fell from the sky and kept the twinkle. It whistles tunes so high the clouds hum along.',
+    sound:'Sky-high whistling', desc:'Celestar fell from the sky and kept the twinkle. It cartwheels across the island and leaves stardust behind.',
     look:{ body:'#ffc0f0', body2:'#6a5ae0', eyes:3, eye:'sparkle', mouth:'singer', acc:['halo','wisps'], pat:'none', legs:0, size:1.15 },
     pat: [...atBar(0,[[0,4,2,.8],[2,7,2,.8],[4,9,4,.9],[8,7,8,.85]]), ...atBar(1,[[0,4,2,.8],[2,5,2,.8],[4,4,4,.85],[8,2,8,.8]]),
           ...atBar(2,[[0,4,2,.8],[2,7,2,.8],[4,9,2,.85],[6,11,2,.85],[8,14,8,.9]]), ...atBar(3,[[0,13,4,.85],[4,11,4,.8],[8,9,8,.85]])] },
   { id:'organon', sec:'CB', name:'Organon', cat:'square', el:['moss','ember','lumen','gust'], tier:4, inst:'organ', vol:0.205, rate:160, time:10800,
-    sound:'Grand pipe-organ chords', desc:'Organon carries a cathedral’s worth of pipes on its back. Every chord it plays echoes around the dunes for miles.',
+    sound:'Grand pipe-organ chords', desc:'Organon carries a tower of shiny pipes on its back. Nobody has ever seen it put them down, not even to sleep.',
     look:{ body:'#e0c0a0', body2:'#8a5a3a', eyes:2, eye:'closed', mouth:'singer', acc:['pipes'], pat:'none', legs:2, size:1.25 },
     pat: rep4([[0,CH,6,.85],[6,CH,2,.6],[8,[0,2,4,7],8,.8]]) },
   { id:'bassoonix', sec:'VC', name:'Bassoonix', cat:'circle', el:['moss','ember','tide','gust'], tier:4, inst:'tuba', vol:0.198, rate:165, time:10800,
-    sound:'Oom-pah tuba', desc:'Bassoonix swallowed a tuba as a baby and has been oom-pah-ing ever since. It is the life of every lagoon party.',
+    sound:'Oom-pah tuba', desc:'Bassoonix bounces twice wherever it goes, once to start and once to land. It is the life of every lagoon party.',
     look:{ body:'#7ab0ff', body2:'#3a3aa0', eyes:2, eye:'big', mouth:'singer', acc:['tuba'], pat:'spots', legs:2, size:1.3 },
     pat: [...rep4([[0,0,2,.9],[4,4,2,.75],[8,0,2,.85],[12,4,2,.75]]), ...atBar(3,[[12,5,1,.7],[14,6,2,.8]])] },
 
   // ---------- NEW RUIN ----------
   { id:'monolith', sec:'VB', name:'Monolith', cat:'special', el:['ruin'], tier:5, inst:'gong', vol:0.376, rate:240, time:14400, shardPrice:25,
-    sound:'Ancient temple gong', desc:'Monolith has stood in the dunes longer than anyone can remember. When its runes glow, the whole desert hums.',
+    sound:'Ancient temple gong', desc:'Monolith has stood in the dunes longer than anyone can remember. When its runes glow, the whole desert goes quiet.',
     look:{ body:'#a8a8c8', body2:'#4a4a6a', eyes:1, eye:'calm', mouth:'small', acc:['runes'], pat:'cracks', legs:0, size:1.15, shape:'mono' },
     pat: [...atBar(0,[[0,[0,4],16,.9]]), ...atBar(2,[[0,[0,4],16,.85]]), ...atBar(3,[[12,7,4,.6]])] },
 ];
 // ---------- ISLANDS ----------
 const ISLANDS = [
   { id:'shape', name:'Shape Island', theme:'grass', els:['moss','ember','tide','lumen'], ruin:'dodecadon', bpm:104, root:48, scale:[0,2,4,5,7,9,11], prog:[0,5,3,4], swing:0, rev:0.22, bright:1,
-    tag:'Bouncy · C major · 104 BPM', desc:'A sunny meadow island where every Shape song begins.', req:{ level:1, coins:0 } },
+    tag:'Bouncy · C major · 104 BPM', desc:'A sunny meadow island where every Shape\'s story begins.', req:{ level:1, coins:0 } },
   { id:'prism', name:'Prism Peaks', theme:'snow', els:['moss','tide','lumen','gust'], ruin:'mobius', bpm:88, root:45, scale:[0,2,3,5,7,8,10], prog:[0,5,2,6], swing:0.14, rev:0.42, bright:0.8,
-    tag:'Dreamy · A minor · 88 BPM · swung', desc:'Frozen crystal mountains that ring like glass.', req:{ level:6, coins:20000 } },
+    tag:'Dreamy · A minor · 88 BPM · swung', desc:'Frozen crystal mountains that sparkle in the cold light.', req:{ level:6, coins:20000 } },
   { id:'volt', name:'Volt Grotto', theme:'cave', els:['ember','tide','lumen','gust'], ruin:'glitchling', bpm:122, root:50, scale:[0,2,3,5,7,9,10], prog:[0,6,5,6], swing:0, rev:0.18, bright:1.35,
-    tag:'Electric · D dorian · 122 BPM', desc:'A neon-lit cavern humming with static.', req:{ level:9, coins:50000 } },
+    tag:'Electric · D dorian · 122 BPM', desc:'A neon-lit cavern crackling with static.', req:{ level:9, coins:50000 } },
   { id:'dunes', name:'Sunscorch Dunes', theme:'desert', els:['moss','ember','lumen','gust'], ruin:'monolith', bpm:96, root:52, scale:[0,1,4,5,7,8,10], prog:[0,1,0,6], swing:0.08, rev:0.3, bright:1.1,
-    tag:'Mysterious · E phrygian · 96 BPM', desc:'Golden sands, ancient stones and a song that shimmers in the heat.', req:{ level:12, coins:120000 } },
+    tag:'Mysterious · E phrygian · 96 BPM', desc:'Golden sands, ancient stones and a heat that shimmers on the horizon.', req:{ level:12, coins:120000 } },
   { id:'lagoon', name:'Bubble Lagoon', theme:'lagoon', els:['moss','ember','tide','gust'], ruin:'oddball', bpm:112, root:53, scale:[0,2,4,5,7,9,11], prog:[0,4,5,3], swing:0.18, rev:0.28, bright:1.05,
-    tag:'Breezy · F major · 112 BPM · swung', desc:'A tropical lagoon of coral, palms and bubbles with a laid-back groove.', req:{ level:15, coins:250000 } },
+    tag:'Breezy · F major · 112 BPM · swung', desc:'A tropical lagoon of coral, palms and bubbles with a laid-back vibe.', req:{ level:15, coins:250000 } },
 ];
 const ISLAND = {}; ISLANDS.forEach(i => ISLAND[i.id] = i);
 // each island: 4 singles, 6 doubles, 4 triples, 1 quad (all from its 4 elements) + its Ruin
@@ -673,10 +676,10 @@ const BASE_COUNT = SHAPES.length;
 for (let i = 0; i < BASE_COUNT; i++) {
   const b = SHAPES[i];
   const rare = { ...b, id: 'rare_' + b.id, base: b.id, variant: 'rare', name: 'Rare ' + b.name, rate: Math.round(b.rate * 1.5), time: Math.round(b.time * 1.5),
-    desc: `A rare ${b.name}, recolored by a once-in-a-blue-moon breeding and wearing a fluffy mane. It plays the same part as ${b.name}.`,
+    desc: `A rare ${b.name}, recolored by a once-in-a-blue-moon breeding and wearing a fluffy mane. Underneath, it is still the same ${b.name}.`,
     look: { ...b.look, body: recolor(b.look.body, 150, 0.05, 0.02), body2: recolor(b.look.body2, 150, 0.05, 0), acc: [...b.look.acc, 'fluff'], pat: b.look.pat === 'none' ? 'sparkle' : b.look.pat } };
   const epic = { ...b, id: 'epic_' + b.id, base: b.id, variant: 'epic', name: 'Epic ' + b.name, rate: b.rate * 2, time: b.time * 2,
-    desc: `An epic ${b.name}, crowned in gold and glowing with old Ruin magic. It plays the same part as ${b.name}.`,
+    desc: `An epic ${b.name}, crowned in gold and glowing with old Ruin magic. Underneath, it is still the same ${b.name}.`,
     look: { ...b.look, body: recolor(b.look.body, 235, 0.1, -0.12), body2: recolor(b.look.body2, 235, 0.1, -0.14), acc: ['epicaura', ...b.look.acc, 'goldtrim'], pat: 'sparkle' } };
   SHAPES.push(rare, epic);
 }
@@ -1374,13 +1377,13 @@ const ANIM = {
   monolith: (P, k) => { P.jump = 12 + Math.sin(k.t * 0.8 + k.seed) * 4; const e = k.pl ? Math.exp(-k.since * 1.5) * k.vel : 0; P.jx = Math.sin(k.t * 40) * 3 * e; },
 };
 const ANIM_DESC = {
-  bobble: 'Bounces high with a squash on every kick', tikki: 'Taps alternating feet', blocco: 'Stomps down hard and springs back', twinkla: 'Pulses and twirls', zephyx: 'Spins like a top on the breeze',
-  clackle: 'Snaps forward like a jaw', gloobo: 'Jiggles like jelly', hexbloom: 'Clicks a sixth of a turn every beat', rumbletum: 'Rattles with every belly-drum', fizzwick: 'Fizzes with a bubbly shiver',
-  solara: 'Leans back like a rock star', whirlo: 'Whirls round like a tornado', lulla: 'Drifts upward on high notes', cubbit: 'Doo-wop side-steps', prismo: 'Flips like a prism catching light',
-  bongaroo: 'Nods with each bongo hit', clocktri: 'Swings like a metronome', novastar: 'Bursts bigger on every stab', aurielle: 'Floats and breathes with the choir', grumblox: 'Wobbles with the wub-wub',
-  hexapella: 'Nods like a beatboxer', polyphon: 'Moves in stiff robot steps', dodecadon: 'Sways grandly, chest swelling', oddball: 'Wanders lazily through the air', mobius: 'Twists over itself',
-  glitchling: 'Glitches and teleports', kelpsong: 'Sways like seaweed', didgeroo: 'Puffs up as it blows', flutterby: 'Flutters in little loops', steamtrom: 'Recoils with each brass blast',
-  sparkplug: 'Twitches like electricity', celestar: 'Cartwheels through the sky', organon: 'Rises with every grand chord', bassoonix: 'Oom-pah double bounces', monolith: 'Hovers and rumbles with the gong',
+  bobble: 'Bounces high with a big squash', tikki: 'Taps alternating feet', blocco: 'Stomps down hard and springs back', twinkla: 'Pulses and twirls', zephyx: 'Spins like a top on the breeze',
+  clackle: 'Snaps forward like a jaw', gloobo: 'Jiggles like jelly', hexbloom: 'Clicks a sixth of a turn at a time', rumbletum: 'Rattles its round tummy', fizzwick: 'Fizzes with a bubbly shiver',
+  solara: 'Leans back and strikes a pose', whirlo: 'Whirls round like a tornado', lulla: 'Drifts up and floats back down', cubbit: 'Side-steps back and forth', prismo: 'Flips like a prism catching light',
+  bongaroo: 'Nods and pats its head', clocktri: 'Swings like a pendulum', novastar: 'Bursts bigger with excitement', aurielle: 'Floats and breathes slowly', grumblox: 'Wobbles while it grumbles',
+  hexapella: 'Nods its head along', polyphon: 'Moves in stiff robot steps', dodecadon: 'Sways grandly, chest swelling', oddball: 'Wanders lazily through the air', mobius: 'Twists over itself',
+  glitchling: 'Glitches and teleports', kelpsong: 'Sways like seaweed', didgeroo: 'Puffs up its cheeks', flutterby: 'Flutters in little loops', steamtrom: 'Recoils with each puff of steam',
+  sparkplug: 'Twitches like electricity', celestar: 'Cartwheels through the sky', organon: 'Rises up tall and proud', bassoonix: 'Double bounces', monolith: 'Hovers and rumbles',
 };
 
 // Main monster renderer. Origin = ground point under the monster.
@@ -1397,7 +1400,9 @@ function drawShape(c, def, o) {
   const idleB = Math.sin(t * 2.2 + seed) * 0.025;
   sy += idleB; sx -= idleB * 0.6;
   const cat = def.cat, A = ANIM[def.baseId || def.id];
-  if (A) { const P = { jump, sx, sy, rot, bodyRot, skew, spinX, jx }; A(P, { t, env, sus, since, vel: hi.vel || 0, beat, seed, pl: playing, R }); ({ jump, sx, sy, rot, bodyRot, skew, spinX, jx } = P); }
+  if (o.muted) { // asleep: slow deep breathing and a drowsy head tilt instead of its dance
+    const br = Math.sin(t * 1.4 + seed); sy += br * 0.045; sx -= br * 0.03; rot = 0.07 + Math.sin(t * 0.7 + seed) * 0.02;
+  } else if (A) { const P = { jump, sx, sy, rot, bodyRot, skew, spinX, jx }; A(P, { t, env, sus, since, vel: hi.vel || 0, beat, seed, pl: playing, R }); ({ jump, sx, sy, rot, bodyRot, skew, spinX, jx } = P); }
   else if (cat === 'circle') {
     if (playing && since < 0.4) { const p = since / 0.4; jump = Math.sin(p * Math.PI) * 18 * (0.4 + hi.vel); if (since < 0.05) { sy -= 0.16 * (1 - since / 0.05); sx += 0.14 * (1 - since / 0.05); } }
     if (playing) { const bp = (beat % 1); if (bp < 0.12) { sy -= 0.05; sx += 0.04; } }
@@ -1430,7 +1435,6 @@ function drawShape(c, def, o) {
   c.save();
   if (o.flip) c.scale(-1, 1);
   if (o.ghost) c.globalAlpha = 0.55;
-  if (o.muted) c.globalAlpha *= 0.55;
   // shadow
   const shScale = Math.max(0.45, 1 - (jump + lift) / 80);
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, R * 1.0 * shScale, R * 0.28 * shScale, 0, 0, TAU); c.fill();
@@ -1476,8 +1480,8 @@ function drawShape(c, def, o) {
 
   // face
   const fy = geo.faceY * R;
-  if (L.shape === 'ring') { c.save(); c.translate(0, R * 0.28); drawFace(c, def, R * 0.78, t, env, sus, seed, playing); c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 4; c.beginPath(); c.moveTo(-R * 0.9, -R * 0.55); c.bezierCurveTo(-R * 0.3, -R * 0.05, R * 0.3, -R * 0.95, R * 0.9, -R * 0.35); c.stroke(); c.restore(); }
-  else { c.save(); c.translate(0, fy); drawFace(c, def, R, t, env, sus, seed, playing); c.restore(); }
+  if (L.shape === 'ring') { c.save(); c.translate(0, R * 0.28); drawFace(c, o.muted ? sleepyDef(def) : def, R * 0.78, t, env, sus, seed, playing); c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 4; c.beginPath(); c.moveTo(-R * 0.9, -R * 0.55); c.bezierCurveTo(-R * 0.3, -R * 0.05, R * 0.3, -R * 0.95, R * 0.9, -R * 0.35); c.stroke(); c.restore(); }
+  else { c.save(); c.translate(0, fy); drawFace(c, o.muted ? sleepyDef(def) : def, R, t, env, sus, seed, playing); c.restore(); }
 
   drawAcc(c, def, R, t, env, sus, beat, 'front', seed, geo);
 
@@ -1520,6 +1524,19 @@ function eye(c, x, y, r, style, blink, look, t, env) {
   c.restore();
 }
 
+const _sleepy = {};
+function sleepyDef(def) { return _sleepy[def.id] || (_sleepy[def.id] = { ...def, look: { ...def.look, eye: 'closed', mouth: def.look.mouth === 'none' ? 'none' : 'small' } }); }
+// floating "z z Z" above a sleeping Shape
+function drawZzz(c, x, y, t, seed) {
+  c.save(); c.textAlign = 'center'; c.lineJoin = 'round';
+  for (let i = 0; i < 3; i++) {
+    const p = ((t * 0.45 + seed * 0.13 + i / 3) % 1), sz = 14 + p * 14;
+    c.globalAlpha = Math.min(1, p * 4) * (1 - p); c.font = `900 ${sz}px sans-serif`;
+    const px = x + 8 + p * 26 + Math.sin(p * 6 + i) * 5, py = y - p * 46;
+    c.strokeStyle = '#2a1f3d'; c.lineWidth = 4; c.strokeText('z', px, py); c.fillStyle = '#eaf4ff'; c.fillText('z', px, py);
+  }
+  c.restore();
+}
 function drawFace(c, def, R, t, env, sus, seed, playing) {
   const L = def.look, n = L.eyes || 2, st = L.eye;
   const blinkT = (t + seed * 1.37) % 4.3, blink = blinkT < 0.12 && !['cool', 'visor', 'closed', 'happy', 'pixel', 'dizzy'].includes(st);
@@ -2543,7 +2560,7 @@ const Render = (() => {
       const by = res.top - 14 + Math.sin(t * 3 + r.seed) * 3; c.fillStyle = '#fff'; c.strokeStyle = OUTLINE; c.lineWidth = 3; c.beginPath(); c.arc(0, by, 15, 0, TAU); c.fill(); c.stroke();
       coinIcon(0, by, 9, bank >= cap);
     }
-    if (m.muted) { c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#fff'; c.strokeStyle = OUTLINE; c.lineWidth = 4; c.strokeText('🔇', 0, res.top - 10); c.fillText('🔇', 0, res.top - 10); }
+    if (m.muted) drawZzz(c, 0, res.top + 6, t, m.uid);
     c.restore();
   }
   function coinIcon(x, y, r, full) { c.fillStyle = full ? '#ffb000' : '#ffd23a'; c.strokeStyle = '#a06a00'; c.lineWidth = 2.5; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff3b0'; c.beginPath(); c.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, TAU); c.fill(); }
@@ -2704,7 +2721,6 @@ const UI = (() => {
       for (const el of timerEls) { const end = +el.dataset.end; const left = end - now(); if (left <= 0 && !el.dataset.doneShown) { el.dataset.doneShown = 1; rerender(); return; } el.textContent = fmtTime(left); if (el.dataset.start) { const bar = el.parentElement.querySelector('.bar i'); if (bar) bar.style.width = Math.min(100, (now() - el.dataset.start) / (end - el.dataset.start) * 100) + '%'; } }
       if (modal) modal.querySelectorAll('[data-cost]').forEach(el => { el.textContent = (el.dataset.cm === 'min' ? speedCostMin : speedCost)(+el.dataset.cost); });
       if (sheetFor) updateSheet();
-      if (modalKind === 'mixer') updateMixer();
     }
   }
   function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
@@ -2777,9 +2793,9 @@ const UI = (() => {
   // ---------- CASTLE ----------
   function openCastle(keep) {
     const I0 = isl(), d = islDef(), keyNames = { 48: 'C', 45: 'A', 50: 'D' };
-    const body = `<div class="info" style="margin-bottom:12px"><div class="sec" style="margin-top:0">${ic('note')} Island Song</div><div class="kv"><b>Style</b><span>${d.tag}</span><b>Players</b><span>${I0.monsters.length} Shapes (${I0.monsters.filter(m => !m.muted).length} unmuted)</span><b>Coin bonus</b><span>+${decoBonus()}% from decorations</span></div><div class="row"><button class="btn green sm" data-collectall>${ic('coin')} Collect all coins</button><button class="btn blue sm" data-mixer>Open Mixer</button></div></div>` + upgradesHTML();
+    const body = `<div class="info" style="margin-bottom:12px"><div class="sec" style="margin-top:0">🏝️ ${d.name}</div><div class="muted" style="margin-bottom:6px">${d.desc}</div><div class="kv"><b>Shapes</b><span>${I0.monsters.length}</span><b>Coin bonus</b><span>+${decoBonus()}% from decorations</span></div><div class="row"><button class="btn green sm" data-collectall>${ic('coin')} Collect all coins</button></div></div>` + upgradesHTML();
     if (keep && modalKind === 'castle') setBody(body); else open('castle', islDef().name, '', 'castle', body);
-    wireUpgrades(); modal.querySelector('[data-mixer]').onclick = openMixer; modal.querySelector('[data-collectall]').onclick = () => { collectAll(); refreshHUD(); };
+    wireUpgrades(); modal.querySelector('[data-collectall]').onclick = () => { collectAll(); refreshHUD(); };
   }
 
   // ---------- STRUCTURE FOOTER (upgrade / move) ----------
@@ -2974,16 +2990,16 @@ const UI = (() => {
     if (m) closeSheet();
     const d = SHAPE[id], k = (knownHere != null ? knownHere : S.discovered[id]) || !!m, secret = d.variant !== 'common';
     const isles = ISLANDS.filter(i => i.shapes.includes(id)).map(i => i.name).join(', ');
-    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Sound</b><span>${k ? d.sound : '???'}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span><b>Incubation</b><span>${k ? fmtTime(d.time * 1000) : '???'}</span><b>Movement</b><span>${ANIM_DESC[d.baseId] || CATS[d.cat].anim}</span><b>How to get</b><span>${recipeText(d)}</span><b>Likes</b><span>${k ? (() => { const L = likesOf(d.id); return [SHAPE[L.shape].name, ...L.decos.map(x => DECO[x].name)].join(', '); })() : '???'}</span>${m ? `<b>Happiness</b><span>${(() => { const ls = likeStatus(m); return `${ls.n}/3 likes nearby · +${Math.round(LIKE_BONUS * 100 * ls.happy)}% coins`; })()}</span>` : ''}</div>`;
+    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span><b>Incubation</b><span>${k ? fmtTime(d.time * 1000) : '???'}</span><b>Movement</b><span>${ANIM_DESC[d.baseId] || CATS[d.cat].anim}</span><b>How to get</b><span>${recipeText(d)}</span></div>`;
     const bio = k ? `<p class="bio">${d.desc}</p>` : `<p class="bio">Not discovered yet.</p>`;
+    const likesTab = !k ? `<p class="bio">Not discovered yet.</p>` : `<p class="bio" style="margin-bottom:8px">${d.name} is happier, and earns up to <b>+${Math.round(LIKE_BONUS * 100)}%</b> coins, when the things it likes are close by.</p>${likesHTML(m, id)}${m ? '' : '<p class="muted" style="margin-top:8px">Tap a placed Shape and open its Info to see which likes are nearby.</p>'}`;
     const body = `<div class="infoscr"><div class="icard"><div class="iname">${k ? d.name : '???'}</div><div class="iart"><div data-portrait="${id}" data-size="${Math.round(180 * VIEW.u)}" data-sil="${k ? 0 : 1}" ${k ? 'data-anim="solo"' : ''}></div></div><div class="medals">${(k || !secret ? d.el : []).map(e => `<span class="medal" style="background:${ELEMENTS[e].color}">${ELEMENTS[e].icon}</span>`).join('')}</div></div>
-      <div class="ipanel"><div class="itabs"><button class="itab ${tab === 'bio' ? 'on' : ''}" data-itab="bio">Bio</button><button class="itab ${tab === 'stats' ? 'on' : ''}" data-itab="stats">Stats</button></div><div class="itext">${tab === 'bio' ? bio : stats}</div>
-      <div class="ibottom">${k ? `<button class="btn pink sm" data-listen>${ic('note')} ${Audio.previewing === id ? 'Stop' : 'Listen'}</button>` : ''}
+      <div class="ipanel"><div class="itabs"><button class="itab ${tab === 'bio' ? 'on' : ''}" data-itab="bio">Bio</button><button class="itab ${tab === 'stats' ? 'on' : ''}" data-itab="stats">Stats</button><button class="itab ${tab === 'likes' ? 'on' : ''}" data-itab="likes">Likes</button></div><div class="itext">${tab === 'bio' ? bio : tab === 'likes' ? likesTab : stats}</div>
+      <div class="ibottom">
       ${m ? `<div class="ilevel"><div class="ilvl">Level ${m.level}</div><div class="bar"><i style="width:${m.level >= MAX_LEVEL ? 100 : m.feeds / FEEDS_PER_LEVEL * 100}%"></i></div></div>${m.level < MAX_LEVEL ? `<button class="sqbtn" data-ifeed><span class="cost">-${feedCost(m)}</span>${ICONS.food}</button>` : ''}` : ''}</div></div></div>`;
     open('bookdetail', k ? d.name : '???', '', null, body);
     modal.classList.add('wide');
     modal.querySelectorAll('[data-itab]').forEach(b => b.onclick = () => { Audio.sfx('tap'); bookDetail(id, m, b.dataset.itab, knownHere); });
-    const l = modal.querySelector('[data-listen]'); if (l) l.onclick = () => { if (Audio.previewing === id) { Audio.stopPreview(); l.innerHTML = `${ic('note')} Listen`; } else { Audio.startPreview(d); l.innerHTML = `${ic('note')} Stop`; } };
     const f = modal.querySelector('[data-ifeed]'); if (f) f.onclick = () => { feed(m); bookDetail(id, m, tab); };
   }
 
@@ -3012,7 +3028,7 @@ const UI = (() => {
     const right = $('#map-main'); right.innerHTML = `<div class="mplaque">${I.name}</div><div class="mprev"></div>
       <div class="mtext">${un ? `Castle: ${I0.monsters.length}/${capacity(I0)}` : `Requires level ${I.req.level} · ${fmt(I.req.coins)} coins`}</div>
       <div class="mcounts"><span style="color:#2f7a25">Commons ${cnt(I.commons)}/${I.commons.length}</span><span style="color:#1f6ac0">Rares ${cnt(I.rares)}/${I.rares.length}</span><span style="color:#b8650a">Epics ${cnt(I.epics)}/${I.epics.length}</span></div>
-      <div class="mdesc">${I.tag}</div>
+      <div class="mdesc">${I.desc}</div>
       ${S.current === I.id ? '<button class="btn gray" disabled>You are here</button>' : un ? '<button class="btn green mgo" data-mgo>GO</button>' : `<button class="btn green mgo" data-munlock ${S.level >= I.req.level ? '' : 'disabled'}>Unlock ${ic('coin')} ${fmt(I.req.coins)}</button>`}`;
     right.querySelector('.mprev').appendChild(islePreview(I));
     mapEl.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { Audio.sfx('tap'); openIslands(b.dataset.mi); });
@@ -3024,19 +3040,17 @@ const UI = (() => {
   // ---------- SETTINGS ----------
   function openSettings() {
     const body = `<div class="info"><div class="sec" style="margin-top:0">🎵 Music volume <span class="muted" id="mv">${Math.round(S.settings.music * 100)}%</span></div><input type="range" min="0" max="100" value="${S.settings.music * 100}" id="r-music">
-      <div class="sec">🔔 Sound effects <span class="muted" id="sv">${Math.round(S.settings.sfx * 100)}%</span></div><input type="range" min="0" max="100" value="${S.settings.sfx * 100}" id="r-sfx">
-      <div style="margin-top:12px" class="row"><button class="btn pink sm" data-mixer>Open Mixer (mute individual Shapes)</button></div></div>
+      <div class="sec">🔔 Sound effects <span class="muted" id="sv">${Math.round(S.settings.sfx * 100)}%</span></div><input type="range" min="0" max="100" value="${S.settings.sfx * 100}" id="r-sfx"></div>
       <div class="sec">📊 Progress</div><div class="info kv" style="margin:0"><b>Level</b><span>${S.level}</span><b>Shapes discovered</b><span>${discoveredCount()} / ${SHAPES.length}</span><b>Shapes bred</b><span>${S.stats.bred}</span><b>Eggs hatched</b><span>${S.stats.hatched}</span><b>Treats fed</b><span>${S.stats.fed}</span></div>
       <div class="sec">👤 Account</div><div class="info">${NET.user ? `<div>Logged in as <b>${NET.user.username}</b> · Friend code <b>${NET.user.code}</b></div><div class="muted">Your progress saves to the server automatically.</div><div class="row" style="margin-top:8px"><button class="btn sm wood" data-logout>Log out</button></div>` : `<div class="muted">Playing offline on this device. Open the game from your server to log in, sync your progress and add friends.</div>`}</div>
       <div class="sec">🛠️ Admin</div><div class="info"><div class="muted">Cheats and testing tools: currency, levels, timers, spawning Shapes and more.</div><div class="row" style="margin-top:8px"><button class="btn purple sm" data-admin>Open Admin Panel</button></div></div>
       <div class="sec">💾 Save</div><div class="info"><div class="muted">Progress saves automatically on this device.</div><div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save now</button><button class="btn red sm" data-reset>Reset progress</button></div></div>
-      <div class="sec">❓ How to play</div><div class="info" style="font-size:14px;font-weight:600;line-height:1.5">Buy eggs at the <b>Market</b>, hatch them in the <b>Hatchery</b> and place them on the island. Each Shape adds its own part to the island's song. Shapes earn coins over time, so tap them to collect. <b>Feed</b> Shapes to level them up, then pair two level ${BREED_MIN_LEVEL}+ Shapes in the <b>Breeding Structure</b> to discover new ones. Drag to pan, and pinch or scroll to zoom.</div>`;
+      <div class="sec">❓ How to play</div><div class="info" style="font-size:14px;font-weight:600;line-height:1.5">Buy eggs at the <b>Market</b>, hatch them in the <b>Hatchery</b> and place them on the island. Shapes earn coins over time, so tap them to collect. <b>Feed</b> Shapes to level them up, then pair two level ${BREED_MIN_LEVEL}+ Shapes in the <b>Breeding Structure</b> to discover new ones. Drag to pan, and pinch or scroll to zoom.</div>`;
     open('settings', 'Settings', '#7a6a9a', 'gear', body);
     const rm = modal.querySelector('#r-music'), rs = modal.querySelector('#r-sfx');
     rm.oninput = () => { S.settings.music = rm.value / 100; Audio.setMusicVol(S.settings.music); modal.querySelector('#mv').textContent = rm.value + '%'; markDirty(); };
     rs.oninput = () => { S.settings.sfx = rs.value / 100; Audio.setSfxVol(S.settings.sfx); modal.querySelector('#sv').textContent = rs.value + '%'; markDirty(); };
     rs.onchange = () => Audio.sfx('coin');
-    modal.querySelector('[data-mixer]').onclick = openMixer;
     modal.querySelector('[data-admin]').onclick = openAdmin;
     const lo = modal.querySelector('[data-logout]'); if (lo) lo.onclick = async () => { lo.disabled = true; save(); await NET.logout(); location.reload(); };
     modal.querySelector('[data-save]').onclick = async () => { save(); if (NET.user) await NET.pushNow(); toast(NET.user ? 'Saved to the server' : 'Game saved', 'good'); };
@@ -3127,21 +3141,6 @@ const UI = (() => {
   let curObst = null;
 
   // ---------- MIXER ----------
-  function openMixer() {
-    const I0 = isl();
-    const body = `<div class="row" style="justify-content:space-between;margin-bottom:10px"><div class="muted">${islDef().name} · ${islDef().tag}</div><div class="row"><button class="btn sm green" data-all="0">Unmute all</button><button class="btn sm gray" data-all="1">Mute all</button></div></div>
-      <div class="info" style="margin-bottom:10px"><b>Music volume</b><input type="range" min="0" max="100" value="${S.settings.music * 100}" id="mx-vol"></div>
-      <div class="list">${I0.monsters.length ? I0.monsters.map(m => `<div class="mixrow" data-uid="${m.uid}"><div data-portrait="${m.id}" data-size="54"></div><div style="min-width:110px"><b>${SHAPE[m.id].name}</b><div class="muted" style="font-size:12px">${SHAPE[m.id].sound}</div></div><div class="meter"><i></i></div><button class="toggle ${m.muted ? 'off' : ''}" data-mute="${m.uid}" title="Mute / unmute"></button></div>`).join('') : '<p class="muted">No Shapes on this island yet.</p>'}</div>`;
-    open('mixer', 'Mixer', '#3a3050', 'mixer', body);
-    const v = modal.querySelector('#mx-vol'); v.oninput = () => { S.settings.music = v.value / 100; Audio.setMusicVol(S.settings.music); markDirty(); };
-    modal.querySelectorAll('[data-mute]').forEach(b => b.onclick = () => { const m = I0.monsters.find(x => x.uid === +b.dataset.mute); toggleMute(m); b.classList.toggle('off', m.muted); Audio.sfx('tap'); });
-    modal.querySelectorAll('[data-all]').forEach(b => b.onclick = () => { const mu = b.dataset.all === '1'; I0.monsters.forEach(m => m.muted = mu); syncAudio(); markDirty(); openMixer(); });
-  }
-  function updateMixer() {
-    modal.querySelectorAll('.mixrow').forEach(r => { const h = Audio.hitInfo(+r.dataset.uid); const lvl = Math.max(h.env, (h.sustain || 0) * 0.8); r.querySelector('.meter i').style.width = Math.min(100, lvl * 110) + '%'; r.classList.toggle('resting', Audio.isResting(+r.dataset.uid)); });
-  }
-  // the mixer meters need fast refresh
-  setInterval(() => { if (modalKind === 'mixer') updateMixer(); }, 60);
 
   // ---------- STRUCT ----------
   function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'castle') openCastle(); }
@@ -3153,7 +3152,7 @@ const UI = (() => {
     sheet.innerHTML = `<div class="sh-card"><button class="xbtn" data-x>✕</button>
       <div class="sh-name"><div class="sh-lv">${ICONS.star}<span id="sh-lv">${m.level}</span></div><span class="nm">${d.name}</span>${elBadges(d.el)}</div>
       <div class="sh-pp" id="sheet-pp"></div>
-      <div class="sh-mid"><div class="muted">${d.sound}</div><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div><div id="sh-likes"></div></div>
+      <div class="sh-mid"><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div></div>
       <div class="sh-btns">
         <button class="rbtn c-green" id="sh-feed"><span>${ICONS.food}</span><span class="rlbl" id="sh-feedcost"></span></button>
         <button class="rbtn ${m.muted ? 'c-gray' : 'c-blue'}" id="sh-mute"><span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span></button>
@@ -3174,7 +3173,7 @@ const UI = (() => {
   }
   function updateSheet() {
     if (!sheetFor || sheetFor.type !== 'mon') return; const m = isl().monsters.find(x => x.uid === sheetFor.uid); if (!m) { closeSheet(); return; }
-    $('#sh-lv').textContent = m.level; $('#sh-likes').innerHTML = likesHTML(m, m.id); $('#sh-rate').textContent = `${fmt(monRate(m))}/min · ${fmt(monBank(m))}/${fmt(monCap(m))}`;
+    $('#sh-lv').textContent = m.level; $('#sh-rate').textContent = `${fmt(monRate(m))}/min · ${fmt(monBank(m))}/${fmt(monCap(m))}`;
     $('#sh-pips').innerHTML = m.level >= MAX_LEVEL ? '<span class="lvnext">MAX LEVEL</span>' : Array.from({ length: FEEDS_PER_LEVEL }, (_, i) => `<i class="${i < m.feeds ? 'on' : ''}"></i>`).join('') + `<span class="lvnext">→ Lv ${m.level + 1}</span>`;
     const f = $('#sh-feed'), fc = $('#sh-feedcost'); if (m.level >= MAX_LEVEL) { f.disabled = true; f.style.filter = 'grayscale(.8)'; fc.textContent = 'Max'; } else fc.innerHTML = `${ic('food')}-${fmt(feedCost(m))}`;
   }
@@ -3256,7 +3255,7 @@ const Tut = (() => {
 
   const STEPS = [
     { // 1
-      targets: [W(() => mon('bobble'), 'Welcome to <b>My Singing Shapes</b>! This is <b>Bobble</b>, your first Shape. Every Shape plays its own part in the island song.')],
+      targets: [W(() => mon('bobble'), 'Welcome to <b>My Singing Shapes</b>! This is <b>Bobble</b>, your first Shape. Let\'s fill Shape Island with friends!')],
       btn: "Let's go!",
     },
     { // 2 build a bakery
@@ -3288,7 +3287,7 @@ const Tut = (() => {
     { // 7 collect coins
       done: () => flag('collect'),
       enter: () => { const m = mon('bobble'); if (m && monBank(m) < 60) m.last = now() - Math.ceil(120 / monRate(m)) * 60000; }, // give Bobble some coins to collect
-      targets: [W(() => mon('bobble'), 'Shapes make coins while they sing. Tap <b>Bobble</b> to collect.')],
+      targets: [W(() => mon('bobble'), 'Shapes make coins over time. Tap <b>Bobble</b> to collect.')],
     },
     { // 8 feed to level 2
       done: () => ['bobble', 'tikki'].every(id => mon(id) && mon(id).level >= BREED_MIN_LEVEL),
