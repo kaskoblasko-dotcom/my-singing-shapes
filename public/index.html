@@ -298,6 +298,9 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 #dtray svg{width:62%;height:62%;}
 #dtray .dot{top:-10px;right:-10px;}
 @keyframes trayBob{50%{transform:translate(-50%,-5px);}}
+.relicbar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:10px;font-weight:900;}
+.relic{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;border:2px solid var(--rc);background:rgba(0,0,0,0.35);color:#fff;font-weight:900;}
+.relic.short{opacity:.55;border-style:dashed;}
 </style>
 </head>
 <body>
@@ -840,7 +843,7 @@ const STRUCTS = {
   bakery:   { name:'Bakery', r:80, max:4, buy:{ coins:200, lvl:1 },
               up:[{}, { gems:50 }], info: l => l > 1 ? 'Enhanced: all 5 recipes' : '3 recipes', next: () => 'Enhanced: unlocks all 5 recipes' },
   synth:    { name:'Synthesizer', r:95, max:2, buy:{ coins:50000, lvl:1 },
-              up:[{}, { gems:75 }], info: l => l > 1 ? 'Enhanced: synthesis is 25% faster' : 'Fuses two Ruins into a bigger one (if you are lucky)', next: () => 'Enhanced: 25% faster synthesis' },
+              up:[{}, { gems:75 }], info: l => l > 1 ? 'Enhanced: synthesis is 25% faster' : 'Turns one Ruin plus Relics into a bigger Ruin', next: () => 'Enhanced: 25% faster synthesis' },
   mine:     { name:'Gem Mine', r:78, max:1, buy:{ gems:20, lvl:1 },
               up:[{}], info: () => 'Digs up 1 gem every 24 hours', next: () => '' },
 };
@@ -848,7 +851,10 @@ const MINE_TIME = 24 * 3600; // seconds per gem
 const RUIN_TELEPORT_TIME = 10 * 3600; // a teleported Ruin re-hatches on Ruin Island in 10 hours
 const RUIN_GEM_PRICE = { 1: 5000, 2: 10000 }; // Ruin Island: singles and doubles; Shattered Island sells triples
 const SHATTER_TRIPLE_PRICE = 15000;
-const SYNTH_CHANCE = { 4: 0.3, 5: 0.15 }; // chance a synthesis makes the bigger Ruin
+const RELIC_COST = { 4: 12, 5: 30 }; // relics of the added element needed to synthesize a quad / the quint
+const SYNTH_TIME = { 4: 12 * 3600, 5: 24 * 3600 };
+const SYNTH_MIN_LEVEL = 5;
+const RELIC_DROP = 0.2; // chance to find a relic when collecting coins on Ruin or Shattered Island
 const RECIPES = [
   { id:'toast',  name:'Tune Toast',      food:30,   coins:50,    time:30 },
   { id:'snack',  name:'Shape Snacks',    food:150,  coins:250,   time:300 },
@@ -1960,20 +1966,36 @@ function drawMine(c, t, ready, progress) {
   else { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(0, -28, 14, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
 }
 
-// Synthesizer (Shattered Island): two crystal pylons with an energy orb between them
+// Synthesizer (Shattered Island): a brass machine with a hopper, gears, a glass chamber and a smokestack
 function drawSynth(c, t, busy, progress, ready, beat) {
   c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
-  c.fillStyle = 'rgba(20,10,40,0.25)'; c.beginPath(); c.ellipse(0, 0, 92, 20, 0, 0, TAU); c.fill();
-  c.fillStyle = '#4a3a6a'; c.beginPath(); c.ellipse(0, -6, 86, 22, 0, 0, TAU); c.fill(); c.stroke();
-  c.fillStyle = '#6a5a90'; c.beginPath(); c.ellipse(0, -12, 70, 15, 0, 0, TAU); c.fill(); c.stroke();
-  const glow = busy ? 0.6 + 0.4 * Math.sin(t * 6) : 0.3;
-  [-1, 1].forEach(sd => { c.save(); c.translate(sd * 56, -14); c.fillStyle = sd < 0 ? '#ff8ae8' : '#6ae8ff'; c.beginPath(); c.moveTo(-14, 0); c.lineTo(-10, -70); c.lineTo(0, -98); c.lineTo(10, -70); c.lineTo(14, 0); c.closePath(); c.fill(); c.stroke();
-    c.fillStyle = 'rgba(255,255,255,0.5)'; c.beginPath(); c.moveTo(-10, -70); c.lineTo(0, -98); c.lineTo(-2, 0); c.lineTo(-12, 0); c.closePath(); c.fill(); c.restore(); });
-  if (busy && !ready) { c.save(); c.strokeStyle = `rgba(255,255,255,${glow})`; c.lineWidth = 3; c.shadowColor = '#c08aff'; c.shadowBlur = 14; [-1, 1].forEach(sd => { c.beginPath(); c.moveTo(sd * 56, -100); for (let i = 1; i <= 6; i++) { const f = i / 6; c.lineTo(sd * 56 * (1 - f) + Math.sin(t * 30 + i * 2) * 5, -100 + f * 30 + Math.cos(t * 25 + i) * 5); } c.stroke(); }); c.restore(); }
-  const oy = -72 + Math.sin(t * 2) * 4, orbR = 22 + (busy ? Math.sin(t * 8) * 2 : 0);
-  const g = c.createRadialGradient(-6, oy - 6, 3, 0, oy, orbR); g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, ready ? '#7aff9a' : '#c08aff'); g.addColorStop(1, ready ? '#2a9a4a' : '#5a2aa0');
-  c.save(); c.shadowColor = ready ? '#7aff9a' : '#c08aff'; c.shadowBlur = busy ? 24 : 8; c.fillStyle = g; c.beginPath(); c.arc(0, oy, orbR, 0, TAU); c.fill(); c.restore(); c.stroke();
-  if (busy && !ready) { c.strokeStyle = '#fff'; c.lineWidth = 4; c.beginPath(); c.arc(0, oy, orbR + 7, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
+  c.fillStyle = 'rgba(20,10,40,0.25)'; c.beginPath(); c.ellipse(0, 0, 96, 20, 0, 0, TAU); c.fill();
+  const spin = busy && !ready ? t * 2.2 : 0;
+  const gear = (x, y, r, n, col, rot) => { c.save(); c.translate(x, y); c.rotate(rot); c.fillStyle = col; c.beginPath(); for (let i = 0; i < n * 2; i++) { const a = i * Math.PI / n, rr = i % 2 ? r : r * 1.22; c.lineTo(Math.cos(a - 0.12) * rr, Math.sin(a - 0.12) * rr); c.lineTo(Math.cos(a + 0.12) * rr, Math.sin(a + 0.12) * rr); } c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#4a3020'; c.beginPath(); c.arc(0, 0, r * 0.35, 0, TAU); c.fill(); c.stroke(); c.restore(); };
+  // smokestack + puffs
+  c.fillStyle = '#6a5a6a'; c.beginPath(); c.rect(44, -150, 22, 60); c.fill(); c.stroke(); c.fillStyle = '#8a7a8a'; c.beginPath(); c.rect(40, -158, 30, 12); c.fill(); c.stroke();
+  if (busy && !ready) for (let i = 0; i < 4; i++) { const p = (t * 0.6 + i / 4) % 1; c.fillStyle = `rgba(${i % 2 ? '255,170,240' : '170,230,255'},${0.7 * (1 - p)})`; c.beginPath(); c.arc(55 + Math.sin(p * 5 + i) * 8, -162 - p * 60, 6 + p * 12, 0, TAU); c.fill(); }
+  // side gears
+  gear(-74, -58, 22, 8, '#d8a040', spin); gear(-62, -22, 14, 6, '#c08a30', -spin * 1.6);
+  // machine body
+  c.fillStyle = '#b07a3a'; c.beginPath(); c.roundRect(-62, -104, 124, 104, 12); c.fill(); c.stroke();
+  c.fillStyle = '#8a5a28'; c.beginPath(); c.roundRect(-62, -24, 124, 24, [0, 0, 12, 12]); c.fill(); c.stroke();
+  c.fillStyle = '#e8c070'; [-50, 50].forEach(x => [-92, -36].forEach(y => { c.beginPath(); c.arc(x, y, 4, 0, TAU); c.fill(); c.stroke(); }));
+  // hopper on top
+  c.fillStyle = '#9a9aaa'; c.beginPath(); c.moveTo(-34, -104); c.lineTo(-46, -138); c.lineTo(10, -138); c.lineTo(-2, -104); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#5a5a6a'; c.beginPath(); c.ellipse(-18, -138, 28, 7, 0, 0, TAU); c.fill(); c.stroke();
+  // glass chamber with swirling energy
+  const cx = 0, cy = -62, cr = 30;
+  c.save(); c.beginPath(); c.arc(cx, cy, cr, 0, TAU); c.clip();
+  const g = c.createRadialGradient(cx, cy, 2, cx, cy, cr); g.addColorStop(0, ready ? '#d8ffe0' : busy ? '#ffd8f8' : '#3a2a5a'); g.addColorStop(1, ready ? '#3ab05a' : busy ? '#8a3ac0' : '#1a1030'); c.fillStyle = g; c.fillRect(cx - cr, cy - cr, cr * 2, cr * 2);
+  if (busy && !ready) { c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 3; for (let k = 0; k < 3; k++) { c.beginPath(); for (let i = 0; i < 20; i++) { const a = t * 4 + k * 2.1 + i * 0.3, r = i * 1.4; c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } c.stroke(); } }
+  c.restore(); c.lineWidth = 6; c.strokeStyle = '#e8c070'; c.beginPath(); c.arc(cx, cy, cr + 2, 0, TAU); c.stroke(); c.lineWidth = 3; c.strokeStyle = OUTLINE; c.beginPath(); c.arc(cx, cy, cr + 5, 0, TAU); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.45)'; c.beginPath(); c.ellipse(cx - 11, cy - 12, 8, 4, -0.6, 0, TAU); c.fill();
+  // pressure dial
+  c.fillStyle = '#fff4d8'; c.beginPath(); c.arc(40, -84, 11, 0, TAU); c.fill(); c.stroke(); const da = -Math.PI * 0.8 + (busy ? progress : 0) * Math.PI * 1.6; c.strokeStyle = '#d8323e'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(40, -84); c.lineTo(40 + Math.cos(da) * 8, -84 + Math.sin(da) * 8); c.stroke();
+  // output pipe
+  c.strokeStyle = OUTLINE; c.lineWidth = 4; c.fillStyle = '#9a9aaa'; c.beginPath(); c.rect(62, -46, 22, 14); c.fill(); c.stroke(); c.beginPath(); c.rect(80, -50, 8, 22); c.fill(); c.stroke();
+  if (busy && !ready) { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(cx, cy, cr + 12, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
 }
 
 function drawMarket(c, t, beat) {
@@ -2113,7 +2135,7 @@ function hatchTime(id, I0 = isl()) { const h = structsOf('hatchery', I0)[I0.hatc
 function addEgg(id, I0 = isl()) { I0.hatch.push({ id, start: now(), end: now() + (tutOn() ? 3000 : hatchTime(id, I0)) }); }
 function defaultState() {
   const s = { v: 3, obstV: 1, found: { shape: { bobble: true } }, food: 100, coins: 600, shards: 5, xp: 0, level: 1, discovered: { bobble: true }, unlocked: { shape: true }, current: 'shape',
-    islands: {}, claimed: [], settings: { music: 0.8, sfx: 0.7 }, uid: 1, stats: { bred: 0, hatched: 0, fed: 0, col: 0 }, seenIntro: false, tut: 0 };
+    islands: {}, claimed: [], settings: { music: 0.8, sfx: 0.7 }, uid: 1, stats: { bred: 0, hatched: 0, fed: 0, col: 0 }, seenIntro: false, tut: 0, relics: { regal: 5, twist: 5, glitch: 5, rune: 5, odd: 5 } };
   s.islands.shape = newIsland(s, 'shape');
   s.islands.shape.monsters.push({ uid: s.uid++, id: 'bobble', x: -80, y: 70, level: 1, feeds: 0, last: Date.now(), muted: false });
   genObstacles(s.islands.shape, 'shape', s);
@@ -2133,6 +2155,8 @@ function normalizeSave(src) {
   }
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.lvl > 2) st.lvl = 2; }));
   if (d.tut == null) d.tut = d.seenIntro ? TUT_DONE : 0;
+  Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.kind === 'synth' && st.br && !st.br.from) st.br = null; }));
+  if (!d.relics) d.relics = { regal: 5, twist: 5, glitch: 5, rune: 5, odd: 5 };
   if (d.unlocked && d.unlocked.ruins && !d.unlocked.shattered) { d.found = d.found || {}; d.discovered = d.discovered || {}; openShattered(d); }
   if (d.islands && d.islands.diamond && !d.islands.diamond.bigV) { const D = d.islands.diamond; D.bigV = 1; D.noPlat = true; genObstacles(D, 'diamond', d); } // existing players skip the tutorial
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.kind === 'mine' && !st.mine) st.mine = Date.now(); }));
@@ -2196,7 +2220,8 @@ function addXP(n) {
 function collect(m, silent) {
   const b = monBank(m); m.last = now();
   if (b <= 0) return 0;
-  addCoins(b); Tut.ev('collect'); track('coins', b); addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
+  addCoins(b); Tut.ev('collect'); track('coins', b);
+  if ((islDef().special === 'ruin' || islDef().special === 'shattered') && !VISIT && Math.random() < RELIC_DROP) { const els = SHAPE[SHAPE[m.id].baseId].el.filter(e => ELEMENTS[e].ruinEl); if (els.length) { const e = els[Math.floor(Math.random() * els.length)]; addRelic(e); if (!silent) UI.toast(`Found a ${ELEMENTS[e].name} Relic! ${ELEMENTS[e].icon}`, 'good'); } } addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
   const sp = worldPosOf(m); FX.coinText(sp.x, sp.y - 90, b);
   if (!silent) Audio.sfx('coin');
   markDirty(); return b;
@@ -2436,24 +2461,31 @@ function placeCopy(iid, uid, x, y) {
   D.monsters.push({ uid: S.uid++, id: src.id, x, y, level: MAX_LEVEL, feeds: 0, last: now(), muted: false, orig: { iid, uid } });
   markFound(src.id, 'diamond'); syncAudio(); Audio.sfx('discover'); FX.burst(x, y - 60, 'spark', 18); UI.toast(`${SHAPE[src.id].name} copied to Diamond Island!`, 'good'); markDirty(); return true;
 }
-// ---------- Shattered Island synthesizer ----------
-function synthOutcome(a, b) { // { target, chance, specials[] }
-  const A = SHAPE[SHAPE[a].baseId], B = SHAPE[SHAPE[b].baseId], I = ISLAND.shattered, union = [...new Set([...A.el, ...B.el])];
-  const top = Math.max(A.el.length, B.el.length), target = I.commons.map(id => SHAPE[id]).find(s => s.el.length === top + 1 && sameSet(s.el, union));
-  const specials = (I.recipes[pairKey(A.id, B.id)] || []);
-  return { target: target ? target.id : null, chance: target ? SYNTH_CHANCE[target.el.length] : 0, specials };
+// ---------- Shattered Island synthesizer: one Ruin + Relics of a new element -> the next bigger Ruin ----------
+function relicCount(el) { return (S.relics && S.relics[el]) || 0; }
+function addRelic(el, n = 1) { S.relics = S.relics || {}; S.relics[el] = (S.relics[el] || 0) + n; markDirty(); }
+function synthOptions(id) { // every bigger Ruin this one can become, one per missing element
+  const d = SHAPE[id], base = SHAPE[d.baseId], pre = d.variant === 'rare' ? 'rare_' : d.variant === 'epic' ? 'epic_' : '';
+  if (!ISLAND.shattered.commons.includes(base.id) || base.el.length >= 5) return [];
+  return ['regal', 'twist', 'glitch', 'rune', 'odd'].filter(e => !base.el.includes(e)).map(e => {
+    const t = ISLAND.shattered.commons.map(x => SHAPE[x]).find(x => sameSet(x.el, [...base.el, e])); if (!t) return null;
+    const n = t.el.length; return { el: e, res: pre + t.id, cost: RELIC_COST[n], time: SYNTH_TIME[n] }; }).filter(Boolean);
 }
-function startSynth(ua, ub, sid) {
+function startSynth(uid, el, sid) {
   const I0 = isl(), st = structById(sid); if (!st || st.br) return;
-  const a = I0.monsters.find(m => m.uid === ua), b = I0.monsters.find(m => m.uid === ub); if (!a || !b || a === b) return UI.toast('Pick two different Ruins');
-  if (a.level < BREED_MIN_LEVEL || b.level < BREED_MIN_LEVEL) return UI.toast(`Both Ruins must be level ${BREED_MIN_LEVEL}+ (feed them!)`, 'bad');
-  const o = synthOutcome(a.id, b.id); if (!o.target && !o.specials.length) { Audio.sfx('error'); return UI.toast('These two Ruins can\'t make anything bigger', 'bad'); }
-  let res = null, r = Math.random(); for (const sp of o.specials) { if (r < sp.chance) { res = sp.id; break; } r -= sp.chance; } if (!res && o.target && r < o.chance) res = o.target;
-  const t = SHAPE[o.target || a.id].time * 1500 * (st.lvl > 1 ? 0.75 : 1);
-  st.br = { a: a.id, b: b.id, ua: a.uid, ub: b.uid, res, synth: true, start: now(), end: now() + t };
-  S.stats.bred++; track('synth'); addXP(40); Audio.sfx('breed'); FX.burst(st.x, st.y - 130, 'spark', 14); markDirty();
+  const m = I0.monsters.find(x => x.uid === uid); if (!m) return;
+  if (m.level < SYNTH_MIN_LEVEL) { Audio.sfx('error'); return UI.toast(`${SHAPE[m.id].name} must be level ${SYNTH_MIN_LEVEL}+ to synthesize`, 'bad'); }
+  const o = synthOptions(m.id).find(x => x.el === el); if (!o) return;
+  if (relicCount(el) < o.cost) { Audio.sfx('error'); return UI.toast(`You need ${o.cost} ${ELEMENTS[el].name} Relics`, 'bad'); }
+  S.relics[el] -= o.cost; I0.monsters = I0.monsters.filter(x => x !== m); pruneCopies(); syncAudio();
+  st.br = { synth: true, from: m.id, el, res: o.res, start: now(), end: now() + o.time * 1000 * (st.lvl > 1 ? 0.75 : 1) };
+  S.stats.bred++; track('synth'); addXP(60); Audio.sfx('breed'); FX.burst(st.x, st.y - 120, 'spark', 16); markDirty();
 }
-function clearSynth(sid) { const st = structById(sid); if (st && st.br && !st.br.res && now() >= st.br.end) { st.br = null; markDirty(); } }
+function collectSynth(sid) {
+  const I0 = isl(), st = structById(sid), br = st && st.br; if (!br || now() < br.end) return false;
+  if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); UI.toast('Hatchery is full! Hatch an egg first.', 'bad'); return false; }
+  I0.hatch.push({ id: br.res, start: now(), end: now() }); st.br = null; Audio.sfx('place'); UI.toast('Your new Ruin is waiting in the Hatchery!', 'good'); markDirty(); return true;
+}
 function findFreeSpot(big) {
   const { rx, ry } = islandRadius();
   if (isl().noPlat && !big) { // Diamond Island: spread Shapes out evenly (pick the open spot farthest from everyone)
@@ -2565,7 +2597,7 @@ function currentGoal() {
   if (!S.unlocked.volt) return S.level >= 9 ? 'Volt Grotto is ready to unlock on the island map!' : 'Reach level 9 to unlock Volt Grotto.';
   if (islDef().special === 'diamond') return 'Tap the arrow at the bottom of the screen to copy your level 15 Shapes here.';
   if (islDef().special === 'ruin') return 'Buy Ruins here with gems, teleport level 15 Ruins from other islands, and breed two Ruins for a double.';
-  if (islDef().special === 'shattered') return 'Use the Synthesizer: two triples can make a quad, and two quads can make the quint.';
+  if (islDef().special === 'shattered') return 'Put a Ruin and some Relics in the Synthesizer to turn it into a bigger Ruin. Relics drop when you collect coins here.';
   if (discoveredCount() < SHAPES.length) return `Collection: ${discoveredCount()}/${SHAPES.length} Shapes found. Rares and Epics come from secret pairings!`;
   if (!S.unlocked.diamond) return S.level >= 18 ? 'Diamond Island is ready to unlock on the island map!' : 'Reach level 18 to unlock Diamond Island, where level 15 Shapes can be copied.';
   return 'Every Shape found! Copy your level 15 Shapes onto Diamond Island.';
@@ -2894,7 +2926,7 @@ const Render = (() => {
 
   function drawPlaced(st, t, beat, ghost) {
     const I0 = isl(); c.save(); c.translate(st.x, st.y); if (ghost) c.globalAlpha = 0.6;
-    if (st.kind === 'synth') { const b = st.br, ready = b && now() >= b.end; drawSynth(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label(b.res ? 'Ready!' : 'Done', 22, !!b.res); }
+    if (st.kind === 'synth') { const b = st.br, ready = b && now() >= b.end; drawSynth(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label('Ready!', 22, true); }
     else if (st.kind === 'breeder') { const b = st.br, ready = b && now() >= b.end; drawBreeder(c, t, !!b, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, ready, beat); if (ready && !ghost) label('Ready!', 22, true); }
     else if (st.kind === 'hatchery') {
       const hs = structsOf('hatchery'), idx = hs.indexOf(st), off = Math.max(0, idx), n = 1;
@@ -3052,7 +3084,7 @@ const UI = (() => {
       ${st.ok ? `<button class="btn green sm wbuy" data-buy="${id}">Buy</button>` : ''}
       <div class="medals">${d.el.map(e => `<span class="medal" style="background:${ELEMENTS[e].color}">${ELEMENTS[e].icon}</span>`).join('')}</div></div>`;
   }
-  const CUR_TRADES = [{ g: 5, c: 5000 }, { g: 20, c: 25000 }, { g: 60, c: 100000 }, { g: 5, f: 500 }, { g: 20, f: 2500 }, { g: 60, f: 9000 }];
+  const CUR_TRADES = [{ g: 5, c: 5000 }, { g: 20, c: 25000 }, { g: 60, c: 100000 }, { g: 5, f: 500 }, { g: 20, f: 2500 }, { g: 60, f: 9000 }, ...['regal', 'twist', 'glitch', 'rune', 'odd'].map(e => ({ g: 60, r: e, n: 10 }))];
   function openMarket(tab = null, keep) {
     const prevRow = keep && modalKind === 'market' && tab === currentTab && modal.querySelector('.hrow'), prevX = prevRow ? prevRow.scrollLeft : 0;
     currentTab = tab;
@@ -3072,7 +3104,7 @@ const UI = (() => {
         return `<div class="wcard ${st.ok ? '' : 'locked'}"><div class="wname">${d.name}</div><div class="wprice"><span>${d.buy.gems ? ic('shard') + ' ' + fmt(d.buy.gems) : ic('coin') + ' ' + fmt(d.buy.coins)}</span><span>${have}/${d.max}</span></div><div class="wart"><div data-struct="${k}"></div>${st.ok ? '' : `<div class="req">${st.owned ? 'All built' : st.why.replace(/(\d+)$/, '<b>$1</b>')}</div>`}</div>${st.ok ? `<button class="btn green sm wbuy" data-sbuy="${k}">Build</button>` : ''}</div>`; }).join('')}</div>`;
     } else {
       title = 'Currency';
-      body = `<div class="muted center" style="margin-bottom:8px">Trade gems for coins or food</div><div class="wgrid hrow scrollx">${CUR_TRADES.map((t, i) => `<div class="wcard"><div class="wname">${t.c ? fmt(t.c) + ' coins' : fmt(t.f) + ' food'}</div><div class="wprice"><span>${ic('shard')} ${t.g}</span><span></span></div><div class="wart"><div style="width:${70 + (i % 3) * 14}px;height:${70 + (i % 3) * 14}px">${ICONS[t.c ? 'coin' : 'food']}</div></div><button class="btn green sm wbuy" data-trade="${i}">Buy</button></div>`).join('')}</div>`;
+      body = `<div class="muted center" style="margin-bottom:8px">Trade gems for coins, food${S.unlocked.ruins ? ' or Relics' : ''}</div><div class="wgrid hrow scrollx">${CUR_TRADES.filter(t => !t.r || S.unlocked.ruins).map((t, i) => `<div class="wcard"><div class="wname">${t.r ? `${t.n} ${ELEMENTS[t.r].name} Relics` : t.c ? fmt(t.c) + ' coins' : fmt(t.f) + ' food'}</div><div class="wprice"><span>${ic('shard')} ${t.g}</span><span>${t.r ? 'have ' + relicCount(t.r) : ''}</span></div><div class="wart">${t.r ? `<div style="font-size:64px">${ELEMENTS[t.r].icon}</div>` : `<div style="width:${70 + (i % 3) * 14}px;height:${70 + (i % 3) * 14}px">${ICONS[t.c ? 'coin' : 'food']}</div>`}</div><button class="btn green sm wbuy" data-trade="${i}">Buy</button></div>`).join('')}</div>`;
     }
     const tabs = tab ? `<div class="backrow"><button class="btn sm wood" data-back>◀ Market</button></div>` : '';
     if (keep && modalKind === 'market') { modal.querySelector('.plaque h2').textContent = title; const br = modal.querySelector('.backrow'); if (br) br.remove(); if (tabs) modal.querySelector('.panel-head').insertAdjacentHTML('afterend', tabs); setBody(body); }
@@ -3085,7 +3117,7 @@ const UI = (() => {
     modal.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (buyShape(b.dataset.buy)) openMarket('shapes', true); });
     modal.querySelectorAll('[data-deco-buy]').forEach(b => b.onclick = () => { const d = DECO[b.dataset.decoBuy]; if (S.coins < (d.cost || 0) || S.shards < (d.shards || 0)) { Audio.sfx('error'); toast('Not enough ' + (d.shards ? 'gems' : 'coins'), 'bad'); return; } beginPlace({ kind: 'deco', id: d.id }); });
     modal.querySelectorAll('[data-sbuy]').forEach(b => b.onclick = () => { const k = b.dataset.sbuy, bc = STRUCTS[k].buy; if (S.coins < (bc.coins || 0)) { Audio.sfx('error'); toast('Not enough coins', 'bad'); return; } if (S.shards < (bc.gems || 0)) { Audio.sfx('error'); toast('Not enough gems', 'bad'); return; } beginPlace({ kind: 'buystruct', skind: k }); });
-    modal.querySelectorAll('[data-trade]').forEach(b => b.onclick = () => { const t = CUR_TRADES[+b.dataset.trade]; if (!spend(0, t.g)) return; if (t.c) addCoins(t.c); else S.food += t.f; Audio.sfx('buy'); toast(t.c ? `+${fmt(t.c)} coins` : `+${fmt(t.f)} food`, 'good'); refreshHUD(); });
+    modal.querySelectorAll('[data-trade]').forEach(b => b.onclick = () => { const t = CUR_TRADES.filter(t => !t.r || S.unlocked.ruins)[+b.dataset.trade]; if (!spend(0, t.g)) return; if (t.r) { addRelic(t.r, t.n); Audio.sfx('buy'); toast(`+${t.n} ${ELEMENTS[t.r].name} Relics`, 'good'); refreshHUD(); openMarket('currency', true); return; } if (t.c) addCoins(t.c); else S.food += t.f; Audio.sfx('buy'); toast(t.c ? `+${fmt(t.c)} coins` : `+${fmt(t.f)} food`, 'good'); refreshHUD(); });
   }
   function upgradesHTML() {
     const I0 = isl(), cl = CASTLE_LEVELS[I0.castle], nx = CASTLE_LEVELS[I0.castle + 1];
@@ -3229,7 +3261,7 @@ const UI = (() => {
   // ---------- BOOK ----------
   function recipeText(d) {
     if (d.variant === 'ruin' && RUIN_DOUBLES.includes(d.id)) return `Breed Ruins with ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')} on Ruin Island, or buy one there.`;
-    if (d.variant === 'ruin' && SHATTER_IDS.includes(d.id)) return d.el.length === 3 ? 'Buy on Shattered Island.' : `Synthesize Ruins with ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')} on Shattered Island.`;
+    if (d.variant === 'ruin' && SHATTER_IDS.includes(d.id)) return d.el.length === 3 ? 'Buy on Shattered Island.' : `Synthesize on Shattered Island: a smaller Ruin plus ${RELIC_COST[d.el.length]} Relics of the missing element.`;
     if (d.variant === 'rare' || d.variant === 'epic' || d.variant === 'ruin') return 'Bred from a secret pairing. Nobody knows the recipe... yet.';
     if (d.tier === 1) return `Buy at the Market from level ${d.lvl}.`;
     return `Breed Shapes that together have ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')}.`;
@@ -3525,39 +3557,35 @@ const UI = (() => {
   }
 
   // ---------- SYNTHESIZER ----------
-  let synSid = null, synA = null, synB = null;
+  let synSid = null, synPick = null;
+  const relicChip = (e, n, need) => `<span class="relic ${need != null && n < need ? 'short' : ''}" style="--rc:${ELEMENTS[e].color}">${ELEMENTS[e].icon} ${need != null ? `${fmt(n)}/${need}` : fmt(n)}</span>`;
+  function relicBar() { return `<div class="relicbar"><b>Relics</b>${['regal', 'twist', 'glitch', 'rune', 'odd'].map(e => relicChip(e, relicCount(e))).join('')}</div>`; }
   function openSynth(keep, sid) {
     if (sid != null) synSid = sid;
     const I0 = isl(), st = structById(synSid); if (!st || st.kind !== 'synth') return;
     const br = st.br; let body;
     if (br) {
-      const ready = now() >= br.end;
-      body = `<div class="center"><div class="breedrow"><div class="mini"><div data-portrait="${br.a}" data-size="60"></div><b>${SHAPE[br.a].name}</b></div><div class="plus">+</div><div class="mini"><div data-portrait="${br.b}" data-size="60"></div><b>${SHAPE[br.b].name}</b></div></div>
-        ${!ready ? `<div class="big-name" style="margin-top:12px">Synthesizing...</div><div style="max-width:320px;margin:10px auto"><div class="bar"><i style="width:${(now() - br.start) / (br.end - br.start) * 100}%"></i></div><div class="timer" data-end="${br.end}" data-start="${br.start}">${fmtTime(br.end - now())}</div></div><button class="btn purple" data-synspeed>⚡ Finish now ${ic('shard')} <span data-cost="${br.end}" data-cm="min">${speedCostMin(br.end)}</span></button>`
-          : br.res ? `<div style="margin:14px auto;display:inline-block" class="stage"><div data-egg="${br.res}" data-size="130" data-ready="1"></div></div><div class="big-name">Synthesis worked!</div><p class="muted">${S.discovered[br.res] ? SHAPE[br.res].name : 'A brand new Ruin'} is ready for the Hatchery.</p><button class="btn green" data-syncol>Move to Hatchery</button>`
-          : `<div class="big-name" style="margin-top:14px">Synthesis failed</div><p class="muted">The crystals cracked apart this time. Both Ruins are fine. Try again!</p><button class="btn blue" data-synclear>OK</button>`}</div>`;
+      const ready = now() >= br.end, known = S.discovered[br.res];
+      body = `<div class="center"><div class="breedrow"><div class="mini"><div data-portrait="${br.from}" data-size="70"></div><b>${SHAPE[br.from].name}</b></div><div class="plus">+</div><div class="mini" style="justify-content:center"><div style="font-size:42px">${ELEMENTS[br.el].icon}</div><b>${ELEMENTS[br.el].name} Relics</b></div></div>
+        ${!ready ? `<div class="big-name" style="margin-top:12px">Synthesizing ${known ? SHAPE[br.res].name : 'a new Ruin'}...</div><div style="max-width:320px;margin:10px auto"><div class="bar"><i style="width:${(now() - br.start) / (br.end - br.start) * 100}%"></i></div><div class="timer" data-end="${br.end}" data-start="${br.start}">${fmtTime(br.end - now())}</div></div><button class="btn purple" data-synspeed>⚡ Finish now ${ic('shard')} <span data-cost="${br.end}" data-cm="min">${speedCostMin(br.end)}</span></button>`
+          : `<div style="margin:14px auto;display:inline-block" class="stage"><div data-egg="${br.res}" data-size="130" data-ready="1"></div></div><div class="big-name">Synthesis complete!</div><p class="muted">${known ? SHAPE[br.res].name : 'A brand new Ruin'} is ready.</p><button class="btn green" data-syncol>Move to Hatchery</button>`}</div>`;
     } else {
-      const mons = I0.monsters, a = mons.find(m => m.uid === synA), b = mons.find(m => m.uid === synB); if (!a) synA = null; if (!b) synB = null;
-      const slot = (m, lbl) => m ? `<div class="slot filled"><div data-portrait="${m.id}" data-size="92"></div><b>${SHAPE[m.id].name}</b><span class="muted">Lv ${m.level}</span></div>` : `<div class="slot"><div style="font-size:44px;opacity:.4">?</div>${lbl}</div>`;
-      let info = '';
-      if (a && b) { const o = synthOutcome(a.id, b.id); info = o.target ? `<div class="muted center" style="margin-top:8px">${Math.round(o.chance * 100)}% chance of ${S.discovered[o.target] ? `<b>${SHAPE[o.target].name}</b>` : 'a <b>new Ruin</b>'}${o.specials.length ? ', plus a tiny chance of something rarer' : ''}</div>` : o.specials.length ? '<div class="muted center" style="margin-top:8px">Only a tiny chance of something rare...</div>' : '<div class="muted center" style="margin-top:8px;color:#ff9a9a">These two can\'t make anything bigger. Their elements must add up to one more.</div>'; }
-      body = `<div class="breedrow">${slot(a, 'Pick a Ruin')}<div class="plus">+</div>${slot(b, 'Pick another')}</div>${info}
-        <div class="center" style="margin:12px 0"><button class="btn green" data-syngo ${a && b ? '' : 'disabled'}>Synthesize!</button></div>
-        <div class="muted center" style="margin-bottom:8px">Two triples make a quad, and two quads make the quint. Synthesis can fail.</div>
-        <div class="wgrid small-cards">${mons.length ? mons.map(m => { const ok = m.level >= BREED_MIN_LEVEL; return `<div class="wcard pick ${m.uid === synA || m.uid === synB ? 'sel' : ''} ${ok ? '' : 'locked'}" data-spick="${m.uid}"><div class="wname">${SHAPE[m.id].name}</div><div class="wart"><div data-portrait="${m.id}" data-size="76"></div></div><div class="muted">Level ${m.level}</div></div>`; }).join('') : '<div class="muted">No Ruins here yet.</div>'}</div>`;
+      const mons = I0.monsters.filter(m => synthOptions(m.id).length), m = mons.find(x => x.uid === synPick); if (!m) synPick = null;
+      let detail = '<div class="muted center" style="padding:14px">Pick a Ruin below. It goes into the Synthesizer and comes out as a bigger Ruin with one more element.</div>';
+      if (m) { const ok = m.level >= SYNTH_MIN_LEVEL;
+        detail = `<div class="center" style="margin-bottom:6px"><b>${SHAPE[m.id].name}</b> can become:</div><div class="row" style="justify-content:center;gap:12px;flex-wrap:wrap">${synthOptions(m.id).map(o => { const k = S.discovered[o.res], have = relicCount(o.el), can = ok && have >= o.cost;
+          return `<div class="wcard" style="width:190px;padding-bottom:12px"><div class="wname">${k ? SHAPE[o.res].name : '???'}</div><div class="wart"><div data-portrait="${o.res}" data-size="90" data-sil="${k ? 0 : 1}"></div></div><div style="margin:6px 0">${relicChip(o.el, have, o.cost)}</div><div class="muted">${fmtTime(o.time * 1000 * (st.lvl > 1 ? 0.75 : 1))}</div><button class="btn green sm" data-synel="${o.el}" ${can ? '' : 'disabled'} style="margin-top:6px">Synthesize</button></div>`; }).join('')}</div>
+          ${ok ? '' : `<div class="muted center" style="margin-top:6px;color:#ff9a9a">${SHAPE[m.id].name} must be level ${SYNTH_MIN_LEVEL}+ first.</div>`}`; }
+      body = `${relicBar()}${detail}<div class="sec">Your Ruins</div><div class="wgrid small-cards">${mons.length ? mons.map(x => `<div class="wcard pick ${x.uid === synPick ? 'sel' : ''}" data-spick="${x.uid}"><div class="wname">${SHAPE[x.id].name}</div><div class="wart"><div data-portrait="${x.id}" data-size="76"></div></div><div class="muted">Level ${x.level}</div></div>`).join('') : '<div class="muted">No Ruins here can grow any bigger.</div>'}</div>
+        <div class="muted center" style="margin-top:8px">The Ruin is used up and comes back bigger. Find Relics by collecting coins on Ruin and Shattered Island, or buy them in the Market.</div>`;
     }
     body += structFooter(st);
     if (keep && modalKind === 'synth') setBody(body); else open('synth', 'Synthesizer', '#7a4ae0', null, body);
     wireFooter(st, openSynth);
-    const go = modal.querySelector('[data-syngo]'); if (go) go.onclick = () => { startSynth(synA, synB, st.uid); if (st.br) { synA = synB = null; } openSynth(true); };
     const sp = modal.querySelector('[data-synspeed]'); if (sp) sp.onclick = () => { speedBreed(st.uid); openSynth(true); };
-    const co = modal.querySelector('[data-syncol]'); if (co) co.onclick = () => { collectBreed(st.uid); if (!st.br) openHatch(); };
-    const cl = modal.querySelector('[data-synclear]'); if (cl) cl.onclick = () => { clearSynth(st.uid); openSynth(true); };
-    modal.querySelectorAll('[data-spick]').forEach(el => el.onclick = () => {
-      const u = +el.dataset.spick, m = isl().monsters.find(x => x.uid === u); Audio.sfx('tap');
-      if (m.level < BREED_MIN_LEVEL) { toast(`${SHAPE[m.id].name} needs level ${BREED_MIN_LEVEL}. Feed it first!`, 'bad'); return; }
-      if (synA === u) synA = null; else if (synB === u) synB = null; else if (!synA) synA = u; else synB = u; openSynth(true);
-    });
+    const co = modal.querySelector('[data-syncol]'); if (co) co.onclick = () => { if (collectSynth(st.uid)) openHatch(); };
+    modal.querySelectorAll('[data-spick]').forEach(el => el.onclick = () => { Audio.sfx('tap'); synPick = +el.dataset.spick; openSynth(true); });
+    modal.querySelectorAll('[data-synel]').forEach(b => b.onclick = () => { startSynth(synPick, b.dataset.synel, st.uid); if (st.br) synPick = null; refreshHUD(); openSynth(true); });
   }
 
   // ---------- DIAMOND ISLAND: copy level 15 Shapes ----------
