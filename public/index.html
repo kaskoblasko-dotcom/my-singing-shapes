@@ -788,7 +788,7 @@ const RECIPES = [
   { id:'cake',   name:'Harmony Cake',    food:2500, coins:3500,  time:7200 },
   { id:'feast',  name:'Grand Finale Feast', food:9000, coins:11000, time:28800 },
 ];
-const ISLAND_RX = 840, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
+const ISLAND_RX = 840, DIAMOND_RX = 1500, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
 const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 }, mine:{ x:-440, y:170 } };
 // obstacles: sizes (cost, time in seconds, XP, chance of a gem, footprint) and the kinds found on each island theme
 const OBST_SIZE = {
@@ -808,6 +808,7 @@ const OBST_KINDS = {
 const OBST_NAME = {}; Object.values(OBST_KINDS).forEach(l => l.forEach(([k, , n]) => OBST_NAME[k] = n));
 const BREED_MIN_LEVEL = 2;
 const FEEDS_PER_LEVEL = 4;
+const DIAMOND_CAP = 105; // one spot for every Shape (35 Commons + 35 Rares + 35 Epics)
 const MAX_LEVEL = 15;
 
 
@@ -1943,7 +1944,7 @@ const STRUCT = { // fixed buildings
   castle:   { x: 0,    y: -150, r: 150, name: 'Castle' },
 };
 function newStruct(kind, x, y, st) { const o = { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; if (kind === 'mine') o.mine = now(); return o; }
-function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: (ISLAND[id || 'shape'].special === 'diamond' ? [] : ['breeder', 'hatchery']).map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; if (ISLAND[id || 'shape'].special === 'diamond') I0.noPlat = true; genObstacles(I0, id || 'shape', st); return I0; }
+function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: (ISLAND[id || 'shape'].special === 'diamond' ? [] : ['breeder', 'hatchery']).map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; if (ISLAND[id || 'shape'].special === 'diamond') { I0.noPlat = true; I0.bigV = 1; } genObstacles(I0, id || 'shape', st); return I0; }
 // ---------- platforms (fixed, joined to the island edge) ----------
 function platforms(I0) { if (I0.noPlat) return []; const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
 function onPlatform(x, y, I0, pad = 0.72) { return platforms(I0).some(p => ((x - p.x) / (p.rx * pad)) ** 2 + ((y - p.y) / (p.ry * pad)) ** 2 < 1); }
@@ -1963,7 +1964,7 @@ function genObstacles(I0, id, st) {
     if (Math.abs(x) < 320 && y < -60) return false; // nothing hiding behind the castle
     return true;
   };
-  for (let i = 0, tries = 0; i < 12 && tries < 900; tries++) {
+  for (let i = 0, tries = 0, want = I0.noPlat ? 20 : 12; i < want && tries < 1500; tries++) {
     const [kind, size] = kinds[Math.floor(rnd() * kinds.length)], r = OBST_SIZE[size].r, a = rnd() * TAU, d = 0.25 + Math.sqrt(rnd()) * 0.75;
     const x = Math.cos(a) * rx * d, y = Math.sin(a) * ry * d;
     if (ok(x, y, r)) { I0.obstacles.push({ uid: (st || S).uid++, kind, size, x: Math.round(x), y: Math.round(y), clr: null }); i++; }
@@ -2007,7 +2008,8 @@ function normalizeSave(src) {
     for (const I0 of Object.values(d.islands)) { const mk = k => ({ uid: d.uid++, kind: k, x: P[k].x, y: P[k].y, lvl: 1, br: null, bake: null }); I0.structs = [mk('breeder'), mk('hatchery'), mk('bakery')]; I0.structs[0].br = I0.breeder || null; delete I0.breeder; }
   }
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.lvl > 2) st.lvl = 2; }));
-  if (d.tut == null) d.tut = d.seenIntro ? TUT_DONE : 0; // existing players skip the tutorial
+  if (d.tut == null) d.tut = d.seenIntro ? TUT_DONE : 0;
+  if (d.islands && d.islands.diamond && !d.islands.diamond.bigV) { const D = d.islands.diamond; D.bigV = 1; D.noPlat = true; genObstacles(D, 'diamond', d); } // existing players skip the tutorial
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.kind === 'mine' && !st.mine) st.mine = Date.now(); }));
   if (!d.found) { d.found = {}; for (const [iid, I0] of Object.entries(d.islands)) { d.found[iid] = {}; I0.monsters.forEach(m => d.found[iid][m.id] = true); } }
   if (!d.obstV) { // bigger islands: put the original Breeding Structure + Hatchery on their platforms and add obstacles
@@ -2046,8 +2048,8 @@ function monRate(m, I0 = isl()) { const d = SHAPE[m.id]; return d.rate * (1 + 0.
 function monCap(m, I0) { return Math.round(monRate(m, I0) * 180); }
 function monBank(m, I0) { return Math.min(monCap(m, I0), Math.floor(monRate(m, I0) * (now() - m.last) / 60000)); }
 function feedCost(m) { return 5 * SHAPE[m.id].tier * m.level; } // food per treat
-function capacity(I0 = isl()) { return CASTLE_LEVELS[I0.castle].cap; }
-function islandRadius(I0 = isl()) { const rx = ISLAND_RX + I0.expand * EXPAND_RX; return { rx, ry: rx * 0.45 }; }
+function capacity(I0 = isl()) { return I0.noPlat ? DIAMOND_CAP : CASTLE_LEVELS[I0.castle].cap; } // Diamond Island fits every Shape
+function islandRadius(I0 = isl()) { const rx = (I0.noPlat ? DIAMOND_RX : ISLAND_RX) + (I0.expand || 0) * EXPAND_RX; return { rx, ry: rx * 0.45 }; } // expand only exists on old saves
 function discoveredCount() { return SHAPES.filter(s => S.discovered[s.id]).length; }
 
 function addCoins(n) { S.coins += n; markDirty(); }
@@ -2157,7 +2159,7 @@ const Admin = {
   discoverAll() { SHAPES.forEach(s => S.discovered[s.id] = true); ISLANDS.forEach(I => I.shapes.forEach(id => markFound(id, I.id))); markDirty(); UI.toast('All Shapes discovered', 'good'); },
   resetCollection() { S.discovered = {}; S.found = {}; Object.entries(S.islands).forEach(([iid, I0]) => { I0.monsters.forEach(m => { S.discovered[m.id] = true; markFound(m.id, iid); }); }); markDirty(); UI.toast('Collection reset (placed Shapes stay known)'); },
   unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id]) { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S, i.id); } }); markDirty(); UI.toast('All islands unlocked', 'good'); },
-  maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; const dE = EXPANSIONS.length - 1 - I0.expand; I0.structs.forEach(st => { if (onPlatform(st.x, st.y, I0, 1)) st.x += Math.sign(st.x) * EXPAND_RX * dE; }); I0.expand = EXPANSIONS.length - 1; Render.resetCam(); markDirty(); UI.toast('Castle and island maxed', 'good'); },
+  maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; I0.castleUp = null; markDirty(); UI.toast('Castle maxed', 'good'); },
   maxLevels() { isl().monsters.forEach(m => { m.level = MAX_LEVEL; m.feeds = 0; }); markDirty(); UI.toast(`All Shapes here set to level ${MAX_LEVEL}`, 'good'); },
   spawnEgg(id) { const I0 = isl(); if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); return UI.toast('Hatchery is full', 'bad'); } I0.hatch.push({ id, start: now() - 1000, end: now() }); markDirty(); UI.toast(`${SHAPE[id].name} egg added (ready to hatch)`, 'good'); },
   spawnNow(id) { const I0 = isl(); const p = findFreeSpot(); I0.monsters.push({ uid: S.uid++, id, x: p.x, y: p.y, level: 1, feeds: 0, last: now(), muted: false }); const first = !S.discovered[id]; S.discovered[id] = true; markFound(id); syncAudio(); FX.burst(p.x, p.y - 50, 'spark', 14); Audio.sfx(first ? 'discover' : 'place'); markDirty(); UI.toast(`${SHAPE[id].name} placed`, 'good'); },
@@ -2294,6 +2296,12 @@ function claimTask(i) {
 }
 function findFreeSpot(big) {
   const { rx, ry } = islandRadius();
+  if (isl().noPlat && !big) { // Diamond Island: spread Shapes out evenly (pick the open spot farthest from everyone)
+    let best = null, bestD = -1; const ms = isl().monsters;
+    for (let k = 0, got = 0; k < 900 && got < 60; k++) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 0.86, x = Math.cos(a) * rx * d, y = Math.sin(a) * ry * d; if (!validSpot(x, y, null, false)) continue; got++;
+      const md = ms.reduce((m, o) => Math.min(m, Math.hypot(o.x - x, (o.y - y) * 2.2)), 1e9); if (md > bestD) { bestD = md; best = { x, y }; } }
+    if (best) return best;
+  }
   for (let r = 0; r < 600; r++) { const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * 0.85; const x = Math.cos(a) * rx * d, y = Math.sin(a) * ry * d; if (validSpot(x, y, null, big)) return { x, y }; }
   return { x: 0, y: ry * 0.6 };
 }
@@ -2336,7 +2344,7 @@ function sellDeco(uid) { const I0 = isl(), d = I0.decos.find(x => x.uid === uid)
 
 // ---------- upgrades / islands ----------
 function upgradeCastle() {
-  const I0 = isl(), nx = CASTLE_LEVELS[I0.castle + 1]; if (!nx || I0.castleUp) return;
+  const I0 = isl(), nx = CASTLE_LEVELS[I0.castle + 1]; if (!nx || I0.castleUp || I0.noPlat) return;
   if (!spend(nx.cost)) return; I0.castleUp = { start: now(), end: now() + nx.time * 1000 }; addXP(nx.cost / 40); Audio.sfx('buy'); UI.toast('Castle upgrade started!', 'good'); track('castle'); markDirty();
 }
 function speedCastle() { const I0 = isl(), u = I0.castleUp; if (!u) return; const c = speedCostMin(u.end); if (c && !spend(0, c)) return; u.end = now(); checkCastles(); }
@@ -2344,10 +2352,6 @@ function checkCastles() { // finish castle upgrades whose timer ran out (on ever
   for (const [id, I0] of Object.entries(S.islands)) { const u = I0.castleUp; if (!u || now() < u.end) continue;
     I0.castleUp = null; I0.castle = Math.min(CASTLE_LEVELS.length - 1, I0.castle + 1); markDirty();
     if (!VISIT) { Audio.sfx('levelup'); UI.toast(`${ISLAND[id].name}: castle upgraded! Room for ${CASTLE_LEVELS[I0.castle].cap} Shapes`, 'good'); if (id === S.current && !VISIT) FX.burst(0, -200, 'spark', 20); } }
-}
-function expandIsland() {
-  const I0 = isl(), nx = EXPANSIONS[I0.expand + 1]; if (!nx) return;
-  if (!spend(0, nx.shards)) return; I0.structs.forEach(st => { if (onPlatform(st.x, st.y, I0, 1)) st.x += Math.sign(st.x) * EXPAND_RX; }); I0.expand++; Audio.sfx('levelup'); UI.toast('Island expanded!', 'good'); Render.resetCam(); markDirty();
 }
 function unlockIsland(id) {
   const d = ISLAND[id]; if (S.unlocked[id]) return;
@@ -2905,14 +2909,14 @@ const UI = (() => {
     modal.querySelectorAll('[data-trade]').forEach(b => b.onclick = () => { const t = CUR_TRADES[+b.dataset.trade]; if (!spend(0, t.g)) return; if (t.c) addCoins(t.c); else S.food += t.f; Audio.sfx('buy'); toast(t.c ? `+${fmt(t.c)} coins` : `+${fmt(t.f)} food`, 'good'); refreshHUD(); });
   }
   function upgradesHTML() {
-    const I0 = isl(), cl = CASTLE_LEVELS[I0.castle], nx = CASTLE_LEVELS[I0.castle + 1], ex = EXPANSIONS[I0.expand + 1];
+    const I0 = isl(), cl = CASTLE_LEVELS[I0.castle], nx = CASTLE_LEVELS[I0.castle + 1];
+    if (I0.noPlat) return `<div class="sec">${ic('castle')} Castle</div><div class="info">Holds <b>${DIAMOND_CAP}</b> Shapes (${I0.monsters.length} placed), room for every Shape in the game.</div>`;
     const cu = I0.castleUp, castleRight = cu ? `<div style="min-width:200px;text-align:center"><div class="bar"><i style="width:${Math.min(100, (now() - cu.start) / (cu.end - cu.start) * 100)}%"></i></div><div class="timer" data-end="${cu.end}" data-start="${cu.start}">${fmtTime(cu.end - now())}</div><button class="btn purple sm" data-castlespeed style="margin-top:6px">⚡ Finish ${ic('shard')} <span data-cost="${cu.end}" data-cm="min">${speedCostMin(cu.end)}</span></button></div>`
       : nx ? `<button class="btn blue" data-up="castle">${ic('coin')} ${fmt(nx.cost)} · ${fmtTime(nx.time * 1000)}</button>` : '';
-    return `<div class="sec">${ic('castle')} Castle — level ${I0.castle + 1}</div><div class="info"><div class="row" style="justify-content:space-between"><div>Holds <b>${cl.cap}</b> Shapes (${I0.monsters.length} placed)${cu ? `<br><span class="muted">Upgrading to ${nx.cap} Shapes...</span>` : nx ? `<br><span class="muted">Next level: ${nx.cap} Shapes · takes ${fmtTime(nx.time * 1000)} to build</span>` : '<br><span class="muted">Fully upgraded!</span>'}</div>${castleRight}</div></div>
-    <div class="sec">🏝️ Expand Island — size ${I0.expand + 1}/${EXPANSIONS.length}</div><div class="info"><div class="row" style="justify-content:space-between"><div>More room for Shapes and decorations.</div>${ex ? `<button class="btn purple" data-up="expand">${ic('shard')} ${ex.shards}</button>` : '<span class="muted">Max size</span>'}</div></div>`;
+    return `<div class="sec">${ic('castle')} Castle — level ${I0.castle + 1}</div><div class="info"><div class="row" style="justify-content:space-between"><div>Holds <b>${cl.cap}</b> Shapes (${I0.monsters.length} placed)${cu ? `<br><span class="muted">Upgrading to ${nx.cap} Shapes...</span>` : nx ? `<br><span class="muted">Next level: ${nx.cap} Shapes · takes ${fmtTime(nx.time * 1000)} to build</span>` : '<br><span class="muted">Fully upgraded!</span>'}</div>${castleRight}</div></div>`;
   }
   function wireUpgrades() {
-    modal.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { if (b.dataset.up === 'castle') upgradeCastle(); else expandIsland(); openCastle(true); });
+    modal.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { upgradeCastle(); openCastle(true); });
     const cs = modal.querySelector('[data-castlespeed]'); if (cs) cs.onclick = () => { speedCastle(); openCastle(true); };
   }
 
@@ -3375,7 +3379,7 @@ const UI = (() => {
   function openGemInfo() {
     const n = discoveredCount();
     const body = `<div class="info" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><b>Level up</b> to earn gems: +1 every level, +4 on every 5th level.</div><div style="min-width:200px"><div class="bar"><i style="width:${Math.min(100, S.xp / xpForLevel(S.level) * 100)}%"></i></div><div class="muted" style="text-align:center;margin-top:4px">${fmt(S.xp)} / ${fmt(xpForLevel(S.level))} XP to level ${S.level + 1}</div></div></div></div>
-      <div class="muted" style="margin-top:12px;text-align:center">Spend gems to finish breeding and hatching instantly, buy rare Shapes and decorations, expand islands, or trade them for coins.</div>`;
+      <div class="muted" style="margin-top:12px;text-align:center">Spend gems to finish breeding and hatching instantly, buy Shapes and decorations, or trade them for coins.</div>`;
     open('gems', 'Gems', '#7a4ae0', 'shard', body);
   }
   $('#plus-coins').onclick = () => openMarket('currency'); $('#plus-gems').onclick = openGemInfo; $('#plus-food').onclick = () => { const b = structsOf('bakery')[0]; if (b) openBakery(false, b.uid); else openMarket('currency'); };
