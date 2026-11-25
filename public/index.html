@@ -441,7 +441,7 @@ const NET = (() => {
   setInterval(tick, 3000);
 
   const friends = () => api('GET', '/api/friends').then(r => { likes = r.likes || likes; return r; });
-  const request = query => api('POST', '/api/friends/request', { query });
+  const request = (query, invite) => api('POST', '/api/friends/request', { query, invite: !!invite });
   const respond = (id, accept) => api('POST', '/api/friends/respond', { id, accept });
   const cancel = id => api('POST', '/api/friends/cancel', { id });
   const remove = id => api('POST', '/api/friends/remove', { id });
@@ -3579,6 +3579,7 @@ const UI = (() => {
   }
 
   // ---------- FRIENDS ----------
+  const inviteLink = code => location.origin + location.pathname + '?friend=' + encodeURIComponent(code);
   async function openFriends() {
     if (!NET.user) { open('friends', 'Friends', '', 'friends', `<div class="info center"><p><b>Friends need an account.</b></p><p class="muted">Open the game from your server and log in to add friends, visit their islands, like them and send gifts.</p></div>`); return; }
     if (modalKind !== 'friends') open('friends', 'Friends', '', 'friends', `<div class="center muted">Loading friends…</div>`);
@@ -3586,7 +3587,7 @@ const UI = (() => {
     if (modalKind !== 'friends') return;
     const gifted = new Set(r.giftedToday), likesTotal = Object.values(r.likes || {}).reduce((a, b) => a + b, 0);
     const row = (name, sub, btns) => `<div class="mixrow" style="padding:6px 10px"><div style="flex:1"><b style="font-size:16px">${name}</b>${sub ? ` <span class="muted">· ${sub}</span>` : ''}</div>${btns}</div>`;
-    let body = `<div class="info row" style="justify-content:space-between"><div><div class="muted">You are</div><b style="font-size:18px">${r.me.username}</b> <span class="muted">· ❤ ${likesTotal} likes</span></div><div class="center"><div class="muted">Your friend code</div><b style="font-size:20px;letter-spacing:2px;color:#a8f04a">${r.me.code}</b></div></div>
+    let body = `<div class="info row" style="justify-content:space-between"><div><div class="muted">You are</div><b style="font-size:18px">${r.me.username}</b> <span class="muted">· ❤ ${likesTotal} likes</span></div><div class="center"><div class="muted">Your friend code</div><b style="font-size:20px;letter-spacing:2px;color:#a8f04a">${r.me.code}</b><div><button class="btn green sm" data-invite style="margin-top:6px">🔗 Share invite link</button></div></div></div><div id="inv-box" class="hidden" style="margin-top:8px"><div class="muted" style="margin-bottom:4px">Send this link to a friend. When they open it and log in, you become friends.</div><input id="inv-link" readonly style="width:100%;font:inherit;font-weight:800;padding:8px 12px;border-radius:10px;border:3px solid var(--wood);background:var(--deep);color:#fff"></div>
       <div class="sec">Add a friend</div><div class="row"><input id="fr-q" placeholder="Username or friend code" maxlength="24" style="flex:1;min-width:160px;font:inherit;font-weight:800;padding:8px 12px;border-radius:10px;border:3px solid var(--wood);background:var(--plum2);color:#fff"><button class="btn green" data-fadd>Send request</button></div>`;
     if (r.gifts.length) body += `<div class="sec">🎁 Gifts for you</div><div class="list">${r.gifts.map(g => row(g.from_name, 'sent you a gift', `<span style="font-weight:900">${ic(g.kind === 'food' ? 'food' : 'coin')} ${fmt(g.amount)}</span><button class="btn green sm" data-claim-gift="${g.id}">Claim</button>`)).join('')}</div>`;
     if (r.incoming.length) body += `<div class="sec">Friend requests</div><div class="list">${r.incoming.map(u => row(u.username, 'level ' + u.level, `<button class="btn green sm" data-acc="${u.id}">Accept</button><button class="btn gray sm" data-dec="${u.id}">Decline</button>`)).join('')}</div>`;
@@ -3596,6 +3597,11 @@ const UI = (() => {
     setBody(body);
     const act = async (fn, okMsg) => { try { const x = await fn(); if (okMsg) toast(typeof okMsg === 'function' ? okMsg(x) : okMsg, 'good'); Audio.sfx('buy'); } catch (e) { Audio.sfx('error'); toast(e.message, 'bad'); } openFriends(); };
     const q = modal.querySelector('#fr-q'), add = () => { const v = q.value.trim(); if (v) act(() => NET.request(v), x => x.friended ? `You and ${x.friended} are now friends!` : `Request sent to ${x.sent}`); };
+    modal.querySelector('[data-invite]').onclick = async () => {
+      const link = inviteLink(r.me.code), box = modal.querySelector('#inv-box'), inp = modal.querySelector('#inv-link'); inp.value = link; box.classList.remove('hidden'); Audio.sfx('tap');
+      if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { try { await navigator.share({ title: 'My Singing Shapes', text: `Be my friend on My Singing Shapes! I'm ${r.me.username}.`, url: link }); return; } catch (e) {} }
+      try { await navigator.clipboard.writeText(link); toast('Invite link copied! Paste it to your friends.', 'good'); } catch (e) { inp.focus(); inp.select(); toast('Copy the link below and send it to your friends'); }
+    };
     modal.querySelector('[data-fadd]').onclick = add; q.onkeydown = e => { if (e.key === 'Enter') add(); };
     modal.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => act(() => NET.respond(+b.dataset.acc, true), 'Friend added!'));
     modal.querySelectorAll('[data-dec]').forEach(b => b.onclick = () => act(() => NET.respond(+b.dataset.dec, false)));
@@ -3998,6 +4004,14 @@ const Tut = (() => {
   requestAnimationFrame(titleFrame);
 
   const titleEl = document.getElementById('title'), tapMsg = document.getElementById('tap-msg'), authEl = document.getElementById('auth');
+  // friend invite links: ?friend=CODE is remembered until the player is logged in, then a friend request is sent
+  try { const inv = new URLSearchParams(location.search).get('friend'); if (inv) { localStorage.setItem('mss_invite', inv.trim().slice(0, 24)); history.replaceState(null, '', location.pathname); } } catch (e) {}
+  async function useInvite() {
+    let code = null; try { code = localStorage.getItem('mss_invite'); } catch (e) {} if (!code || !NET.user) return;
+    try { localStorage.removeItem('mss_invite'); } catch (e) {}
+    try { const x = await NET.request(code, true); UI.toast(x.friended ? `You and ${x.friended} are now friends!` : `Friend request sent to ${x.sent}! They'll see it in their Friends tab.`, 'good'); }
+    catch (e) { if (!/that's you/i.test(e.message || '')) UI.toast(e.message || 'Could not use the invite link', 'bad'); }
+  }
   function startGame() {
     titleOn = false;
     Audio.init(); Audio.setMusicVol(S.settings.music); Audio.setSfxVol(S.settings.sfx);
@@ -4005,6 +4019,7 @@ const Tut = (() => {
     titleEl.classList.add('hidden');
     document.querySelector('#hud').classList.remove('hidden');
     UI.refreshHUD(); Audio.sfx('open');
+    setTimeout(useInvite, 1200);
     const away = now() - (S.savedAt || now());
     if (!S.seenIntro || tutOn()) {
       S.seenIntro = true; markDirty(); Tut.start();
