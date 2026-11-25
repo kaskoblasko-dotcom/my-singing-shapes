@@ -854,7 +854,7 @@ const SHATTER_TRIPLE_PRICE = 15000;
 const RELIC_COST = { 4: 12, 5: 30 }; // relics of the added element needed to synthesize a quad / the quint
 const SYNTH_TIME = { 4: 12 * 3600, 5: 24 * 3600 };
 const SYNTH_MIN_LEVEL = 5;
-const RELIC_DROP = 0.2; // chance to find a relic when collecting coins on Ruin or Shattered Island
+const RELIC_DROP = 0.2, RELIC_PERIOD = 30 * 60; // up to a 20% chance per Shape, reached after 30 minutes since its last roll
 const RECIPES = [
   { id:'toast',  name:'Tune Toast',      food:30,   coins:50,    time:30 },
   { id:'snack',  name:'Shape Snacks',    food:150,  coins:250,   time:300 },
@@ -2221,7 +2221,7 @@ function collect(m, silent) {
   const b = monBank(m); m.last = now();
   if (b <= 0) return 0;
   addCoins(b); Tut.ev('collect'); track('coins', b);
-  if ((islDef().special === 'ruin' || islDef().special === 'shattered') && !VISIT && Math.random() < RELIC_DROP) { const els = SHAPE[SHAPE[m.id].baseId].el.filter(e => ELEMENTS[e].ruinEl); if (els.length) { const e = els[Math.floor(Math.random() * els.length)]; addRelic(e); if (!silent) UI.toast(`Found a ${ELEMENTS[e].name} Relic! ${ELEMENTS[e].icon}`, 'good'); } } addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
+  if ((islDef().special === 'ruin' || islDef().special === 'shattered') && !VISIT && relicRoll(m)) { const els = SHAPE[SHAPE[m.id].baseId].el.filter(e => ELEMENTS[e].ruinEl); if (els.length) { const e = els[Math.floor(Math.random() * els.length)]; addRelic(e); if (!silent) UI.toast(`Found a ${ELEMENTS[e].name} Relic! ${ELEMENTS[e].icon}`, 'good'); } } addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
   const sp = worldPosOf(m); FX.coinText(sp.x, sp.y - 90, b);
   if (!silent) Audio.sfx('coin');
   markDirty(); return b;
@@ -2462,6 +2462,8 @@ function placeCopy(iid, uid, x, y) {
   markFound(src.id, 'diamond'); syncAudio(); Audio.sfx('discover'); FX.burst(x, y - 60, 'spark', 18); UI.toast(`${SHAPE[src.id].name} copied to Diamond Island!`, 'good'); markDirty(); return true;
 }
 // ---------- Shattered Island synthesizer: one Ruin + Relics of a new element -> the next bigger Ruin ----------
+// relic chance grows with the time since that Shape's last roll, so spam-tapping can't farm Relics
+function relicRoll(m) { const el = now() - (m.relicAt || 0); m.relicAt = now(); return Math.random() < RELIC_DROP * Math.min(1, el / (RELIC_PERIOD * 1000)); }
 function relicCount(el) { return (S.relics && S.relics[el]) || 0; }
 function addRelic(el, n = 1) { S.relics = S.relics || {}; S.relics[el] = (S.relics[el] || 0) + n; markDirty(); }
 function synthOptions(id) { // every bigger Ruin this one can become, one per missing element
