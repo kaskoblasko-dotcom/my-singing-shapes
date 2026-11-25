@@ -1643,6 +1643,10 @@ function drawShape(c, def, o) {
     else if (L.shape === 'pixel') { if (playing && env > 0.25) { jx = (Math.floor(t * 30) % 3 - 1) * 4 * env; jump = (Math.floor(t * 23) % 2) * 4 * env; } }
     else if (L.shape === 'dodeca') { rot = playing ? Math.sin(beat * Math.PI) * 0.06 : Math.sin(t) * 0.02; const p = 1 + env * 0.06 + sus * 0.04; sx *= p; sy *= p; }
   }
+  if (playing && !o.statue) { // more expressive: exaggerate squash/stretch and hops while singing, plus a groove on the beat
+    sx = 1 + (sx - 1) * 1.4; sy = 1 + (sy - 1) * 1.4; jump *= 1.25; rot += Math.sin(beat * Math.PI) * 0.035 * (0.5 + env);
+    const g = Math.pow(Math.abs(Math.sin(beat * Math.PI)), 6) * 0.035; sy -= g; sx += g * 0.8;
+  }
   if (playing && !o.statue && since < 0.9) { const sp = Math.exp(-since * 8) * Math.cos(since * 26) * 0.055 * (0.5 + (hi.vel || 0.6)); sy += sp; sx -= sp * 0.8; } // jelly wobble after each note
   rot += jx * 0.004; // lean into sideways moves
   if (o.state && !o.statue) { // smooth out snaps between sections and squash on landing
@@ -1766,7 +1770,7 @@ function drawFace(c, def, R, t, env, sus, seed, playing) {
   const blinkT = (t + seed * 1.37) % 4.3, blink = (blinkT < 0.12 || (seed % 3 === 0 && blinkT > 0.24 && blinkT < 0.34)) && !['cool', 'visor', 'closed', 'happy', 'pixel', 'dizzy'].includes(st);
   const gz = t * 0.42 + seed * 0.31, gk = Math.floor(gz), gf = Math.min(1, (gz - gk) * 7), ge = 1 - Math.pow(1 - gf, 3), hsh = n => { const x = Math.sin(n * 127.1 + seed * 3.7) * 43758.5; return x - Math.floor(x); };
   const look = [(hsh(gk - 1) - 0.5) * 1.6 * (1 - ge) + (hsh(gk) - 0.5) * 1.6 * ge, (hsh(gk + 50 - 1) - 0.5) * 0.8 * (1 - ge) + (hsh(gk + 50) - 0.5) * 0.8 * ge];
-  const er = R * (n === 1 ? 0.34 : n === 3 ? 0.18 : 0.24), gap = R * (n === 3 ? 0.42 : 0.4), ey = -R * 0.22;
+  const er = R * (n === 1 ? 0.34 : n === 3 ? 0.18 : 0.24) * (playing ? 1 + env * 0.16 - sus * 0.06 : 1), gap = R * (n === 3 ? 0.42 : 0.4), ey = -R * 0.22 - (playing ? env * R * 0.04 : 0); // eyes widen and lift on each note
   const xs = n === 1 ? [0] : n === 3 ? [-gap, 0, gap] : [-gap, gap];
   const ys = n === 3 ? [ey + R * 0.04, ey - R * 0.12, ey + R * 0.04] : xs.map(() => ey);
   const sings = sus > 0.25 && ['singer'].includes(L.mouth);
@@ -1805,7 +1809,8 @@ function drawFace(c, def, R, t, env, sus, seed, playing) {
   // cheeks
   if (!['pixel'].includes(st)) { c.fillStyle = 'rgba(255,90,120,0.32)'; const cx = n === 1 ? R * 0.5 : gap + er * 0.6; c.beginPath(); c.ellipse(-cx, ey + er * 1.2, er * 0.55, er * 0.32, 0, 0, TAU); c.ellipse(cx, ey + er * 1.2, er * 0.55, er * 0.32, 0, 0, TAU); c.fill(); }
   // mouth
-  const my = ey + er + R * 0.28, open = Math.min(1, L.mouth === 'singer' ? sus * 1.1 + env * 0.3 : env * 0.9);
+  const vow = playing ? 0.8 + 0.45 * Math.abs(Math.sin(Math.floor((t - (env > 0 ? 0 : 1)) * 5.3 + seed) * 12.9898)) : 1; // a different vowel shape per note
+  const my = ey + er + R * 0.28, open = playing ? Math.min(1, (L.mouth === 'singer' ? sus * 1.1 + env * 0.45 : env * 1.15 + sus * 0.85) * vow) : 0;
   c.strokeStyle = OUTLINE; c.lineWidth = 3.5; c.lineCap = 'round'; c.lineJoin = 'round';
   const mw = R * 0.32;
   const darkMouth = () => { c.fillStyle = '#5a1530'; c.fill(); c.stroke(); };
@@ -1858,10 +1863,23 @@ const ACC2 = {
   witchhat: { f(c, L, R, t, env, seed, topY) { c.save(); c.translate(0, topY + R * 0.15); c.rotate(-0.08); const col = L.acol || '#5a3aa0'; c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, R * 0.7, R * 0.14, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.moveTo(-R * 0.4, -R * 0.04); c.quadraticCurveTo(-R * 0.1, -R * 0.6, R * 0.25 + Math.sin(t * 2) * 3, -R * 1.0); c.quadraticCurveTo(R * 0.1, -R * 0.5, R * 0.4, -R * 0.04); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 2; _star(c, 0, -R * 0.28, R * 0.1, '#ffd23a'); c.restore(); c.lineWidth = 3; } },
   headband: { f(c, L, R, t, env, seed, topY) { const col = L.acol || '#e0405a'; c.save(); c.fillStyle = col; c.beginPath(); c.ellipse(0, topY + R * 0.42, R * 0.72, R * 0.12, 0, Math.PI, TAU); c.ellipse(0, topY + R * 0.5, R * 0.72, R * 0.12, 0, 0, Math.PI, true); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 2; _star(c, 0, topY + R * 0.43, R * 0.12, '#ffffff'); c.restore(); c.lineWidth = 3; } },
 };
+
+// accessories move with the music: head-top items tilt and bounce, auras pulse, capes and fronds sway
+const ACC_TOP = new Set(['crown', 'sprout', 'antenna', 'horns', 'ears', 'tophat', 'tiara', 'feather', 'witchhat', 'quiff', 'cap', 'flowercrown', 'antlers', 'headband', 'bow', 'headphones', 'bunny', 'twinkle', 'crystals', 'clock', 'swirl', 'flame', 'drip', 'petals', 'lilypad', 'spikes']);
+const ACC_PULSE = new Set(['mane', 'rays', 'glow', 'halo', 'rings', 'aurora', 'epicaura', 'fluff', 'goldtrim', 'shine', 'gemcore', 'runes']);
+const ACC_SWAY = new Set(['cape', 'kelp', 'wisps', 'scarf', 'leafwings', 'wings', 'steam', 'bowtie', 'bongos', 'didg', 'trumpet', 'tuba', 'pipes', 'drumbelly']);
+function accMotion(c, a, R, t, env, sus, beat, seed, topY) {
+  const side = Math.floor(beat * 2) % 2 ? 1 : -1;
+  if (ACC_TOP.has(a)) { // pivot at the top of the head
+    const rot = Math.sin(t * 2.6 + seed) * 0.05 + env * 0.24 * side, lift = env * R * 0.1 + Math.max(0, Math.sin(t * 5.2 + seed)) * R * 0.015;
+    c.translate(0, topY - lift); c.rotate(rot); const st = 1 + env * 0.14; c.scale(1 / Math.sqrt(st), st); c.translate(0, -topY);
+  } else if (ACC_PULSE.has(a)) { const p = 1 + env * 0.14 + sus * 0.07 + Math.sin(t * 2 + seed) * 0.02; c.translate(0, -R * 0.2); c.scale(p, p); c.translate(0, R * 0.2); }
+  else if (ACC_SWAY.has(a)) { const rot = Math.sin(t * 2.1 + seed) * 0.05 + env * 0.12 * side + sus * 0.05; c.translate(0, -R * 0.3); c.rotate(rot); c.translate(0, R * 0.3); }
+}
 function drawAcc(c, def, R, t, env, sus, beat, layer, seed, geo) {
   const L = def.look, acc = L.acc || [], topY = -(L.shape === 'ring' ? R : L.shape === 'mono' ? 1.35 * R : (def.cat === 'triangle' ? 1.3 : def.cat === 'star' ? 1.25 : def.cat === 'diamond' ? 1.2 : def.cat === 'hexagon' ? 1.0 : 0.95) * R);
   c.lineWidth = 3; c.strokeStyle = OUTLINE; c.lineJoin = 'round'; c.lineCap = 'round';
-  for (const a of acc) {
+  for (const a of acc) { c.save(); accMotion(c, a, R, t, env, sus, beat, seed, topY); try {
     const X = ACC2[a]; if (X) { if (!!X.back === (layer === 'back')) { c.save(); X.f(c, L, R, t, env, seed, topY); c.restore(); c.lineWidth = 3; c.strokeStyle = OUTLINE; } continue; }
     if (layer === 'back') switch (a) {
       case 'epicaura': { c.save(); const p = 0.5 + 0.5 * Math.sin(t * 2.4 + seed); const g = c.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 1.9); g.addColorStop(0, 'rgba(255,210,80,0.55)'); g.addColorStop(1, 'rgba(255,210,80,0)'); c.fillStyle = g; c.globalAlpha = 0.6 + 0.4 * p; c.beginPath(); c.arc(0, 0, R * 1.9, 0, TAU); c.fill(); c.globalAlpha = 1;
@@ -1910,7 +1928,7 @@ function drawAcc(c, def, R, t, env, sus, beat, layer, seed, geo) {
       case 'runes': { c.save(); const glow = 0.4 + 0.6 * Math.max(env, sus, 0.25 + 0.25 * Math.sin(t * 2)); c.strokeStyle = `rgba(120,240,255,${glow})`; c.shadowColor = '#7af0ff'; c.shadowBlur = 10 * glow; c.lineWidth = 3; [[-0.4, 0.35], [0.4, 0.35], [0, 0.7], [-0.35, -0.95], [0.35, -0.95]].forEach(([x, y], i) => { c.beginPath(); const cx = x * R, cy = y * R, u = R * 0.1; if (i % 3 === 0) { c.moveTo(cx, cy - u); c.lineTo(cx, cy + u); c.moveTo(cx - u, cy); c.lineTo(cx + u * 0.4, cy - u); } else if (i % 3 === 1) { c.arc(cx, cy, u, 0.3, TAU - 0.3); } else { c.moveTo(cx - u, cy + u); c.lineTo(cx, cy - u); c.lineTo(cx + u, cy + u); } c.stroke(); }); c.restore(); break; }
       case 'pixels': { c.fillStyle = L.body; for (let i = 0; i < 4; i++) { const p = (t * 0.5 + i / 4 + seed) % 1; c.globalAlpha = 1 - p; const s = 6; c.fillRect((i - 1.5) * R * 0.5, topY - p * R, s, s); } c.globalAlpha = 1; break; }
     }
-  }
+  } finally { c.restore(); c.lineWidth = 3; c.strokeStyle = OUTLINE; } }
 }
 
 // ---------- eggs ----------
