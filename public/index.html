@@ -117,6 +117,11 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 /* wooden cards */
 .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(170px*var(--u)),1fr));gap:calc(18px*var(--u)) calc(14px*var(--u));padding:4px 4px 18px;}
 .small .wgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
+.wgrid.hrow{display:grid;grid-auto-flow:column;grid-template-columns:none;grid-template-rows:auto;grid-auto-columns:calc(170px*var(--u));overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;touch-action:pan-x;padding:4px 4px 14px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:var(--wood) transparent;}
+.wgrid.hrow>.wcard{scroll-snap-align:start;}
+.small .wgrid.hrow{grid-auto-columns:150px;grid-template-columns:none;}
+.rot .wgrid.hrow{touch-action:none;}
+.wgrid.hrow::-webkit-scrollbar{height:10px;}.wgrid.hrow::-webkit-scrollbar-thumb{background:var(--wood);border-radius:6px;}
 .wgrid.small-cards{grid-template-columns:repeat(auto-fill,minmax(calc(120px*var(--u)),1fr));}
 .wcard{position:relative;background:var(--deep);border:4px solid var(--wood);box-shadow:0 0 0 2px var(--woodD),inset 0 0 0 2px var(--woodD);border-radius:14px;display:flex;flex-direction:column;align-items:center;padding-bottom:calc(22px*var(--u));text-align:center;}
 .wcard.pick{cursor:pointer;padding-bottom:8px;}
@@ -2728,28 +2733,30 @@ const UI = (() => {
   }
   const CUR_TRADES = [{ g: 5, c: 5000 }, { g: 20, c: 25000 }, { g: 60, c: 100000 }, { g: 5, f: 500 }, { g: 20, f: 2500 }, { g: 60, f: 9000 }];
   function openMarket(tab = null, keep) {
+    const prevRow = keep && modalKind === 'market' && tab === currentTab && modal.querySelector('.hrow'), prevX = prevRow ? prevRow.scrollLeft : 0;
     currentTab = tab;
     let body = '', title = 'Market';
     if (!tab) {
       body = `<div class="cats">${MARKET_CATS.map(([k, n]) => `<button class="cat" data-cat="${k}"><div class="catart" data-catart="${k}"></div><div class="catname">${n}</div></button>`).join('')}</div>`;
     } else if (tab === 'shapes') {
       title = 'Shapes';
-      body = `<div class="muted center" style="margin-bottom:8px">Eggs go to the Hatchery (${isl().hatch.length}/${hatchSlots()} slots used)</div><div class="wgrid">${islDef().commons.map(shapeCard).join('')}</div>`;
+      body = `<div class="muted center" style="margin-bottom:8px">Eggs go to the Hatchery (${isl().hatch.length}/${hatchSlots()} slots used)</div><div class="wgrid hrow scrollx">${islDef().commons.map(shapeCard).join('')}</div>`;
     } else if (tab === 'decor') {
       title = 'Decorations';
-      body = `<div class="muted center" style="margin-bottom:8px">Decorations boost coin income on this island: <b>+${decoBonus()}%</b> (max 60%)</div><div class="wgrid">${DECOS.map(d => `<div class="wcard"><div class="wname">${d.name}</div><div class="wprice"><span>${d.shards ? ic('shard') + ' ' + d.shards : ic('coin') + ' ' + fmt(d.cost)}</span><span>+${d.bonus}%</span></div><div class="wart"><div data-deco="${d.id}"></div></div><button class="btn green sm wbuy" data-deco-buy="${d.id}">Buy</button></div>`).join('')}</div>`;
+      body = `<div class="muted center" style="margin-bottom:8px">Decorations boost coin income on this island: <b>+${decoBonus()}%</b> (max 60%)</div><div class="wgrid hrow scrollx">${DECOS.map(d => `<div class="wcard"><div class="wname">${d.name}</div><div class="wprice"><span>${d.shards ? ic('shard') + ' ' + d.shards : ic('coin') + ' ' + fmt(d.cost)}</span><span>+${d.bonus}%</span></div><div class="wart"><div data-deco="${d.id}"></div></div><button class="btn green sm wbuy" data-deco-buy="${d.id}">Buy</button></div>`).join('')}</div>`;
     } else if (tab === 'structures') {
       title = 'Structures';
-      body = `<div class="muted center" style="margin-bottom:8px">Tap a structure on the island to upgrade (once, with gems) or move it.</div><div class="wgrid">${Object.entries(STRUCTS).map(([k, d]) => { const st = buyStructStatus(k), have = structsOf(k).length;
+      body = `<div class="muted center" style="margin-bottom:8px">Tap a structure on the island to upgrade (once, with gems) or move it.</div><div class="wgrid hrow scrollx">${Object.entries(STRUCTS).map(([k, d]) => { const st = buyStructStatus(k), have = structsOf(k).length;
         return `<div class="wcard ${st.ok ? '' : 'locked'}"><div class="wname">${d.name}</div><div class="wprice"><span>${d.buy.gems ? ic('shard') + ' ' + fmt(d.buy.gems) : ic('coin') + ' ' + fmt(d.buy.coins)}</span><span>${have}/${d.max}</span></div><div class="wart"><div data-struct="${k}"></div>${st.ok ? '' : `<div class="req">${st.owned ? 'All built' : st.why.replace(/(\d+)$/, '<b>$1</b>')}</div>`}</div>${st.ok ? `<button class="btn green sm wbuy" data-sbuy="${k}">Build</button>` : ''}</div>`; }).join('')}</div>`;
     } else {
       title = 'Currency';
-      body = `<div class="muted center" style="margin-bottom:8px">Trade gems for coins or food</div><div class="wgrid">${CUR_TRADES.map((t, i) => `<div class="wcard"><div class="wname">${t.c ? fmt(t.c) + ' coins' : fmt(t.f) + ' food'}</div><div class="wprice"><span>${ic('shard')} ${t.g}</span><span></span></div><div class="wart"><div style="width:${70 + (i % 3) * 14}px;height:${70 + (i % 3) * 14}px">${ICONS[t.c ? 'coin' : 'food']}</div></div><button class="btn green sm wbuy" data-trade="${i}">Buy</button></div>`).join('')}</div>`;
+      body = `<div class="muted center" style="margin-bottom:8px">Trade gems for coins or food</div><div class="wgrid hrow scrollx">${CUR_TRADES.map((t, i) => `<div class="wcard"><div class="wname">${t.c ? fmt(t.c) + ' coins' : fmt(t.f) + ' food'}</div><div class="wprice"><span>${ic('shard')} ${t.g}</span><span></span></div><div class="wart"><div style="width:${70 + (i % 3) * 14}px;height:${70 + (i % 3) * 14}px">${ICONS[t.c ? 'coin' : 'food']}</div></div><button class="btn green sm wbuy" data-trade="${i}">Buy</button></div>`).join('')}</div>`;
     }
     const tabs = tab ? `<div class="backrow"><button class="btn sm wood" data-back>◀ Market</button></div>` : '';
     if (keep && modalKind === 'market') { modal.querySelector('.plaque h2').textContent = title; const br = modal.querySelector('.backrow'); if (br) br.remove(); if (tabs) modal.querySelector('.panel-head').insertAdjacentHTML('afterend', tabs); setBody(body); }
     else open('market', title, '', 'market', body, tabs);
     modal.querySelectorAll('[data-catart]').forEach(el => el.replaceWith(catArt(el.dataset.catart)));
+    const row = modal.querySelector('.hrow'); if (row) { row.scrollLeft = prevX; row.onwheel = e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); row.scrollLeft += e.deltaY; } }; }
     modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
     modal.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { Audio.sfx('open'); openMarket(b.dataset.cat, true); });
     const bk = modal.querySelector('[data-back]'); if (bk) bk.onclick = () => { Audio.sfx('close'); openMarket(null, true); };
