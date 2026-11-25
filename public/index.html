@@ -290,6 +290,10 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .itext .likes .like{padding:4px 12px;border-radius:12px;}
 .itext .likes .happy{font-size:calc(20px*var(--u));}
 .likes .happy{color:#e2407a;font-size:calc(14px*var(--u));margin-left:4px;}
+.taskrow{display:flex;gap:12px;align-items:center;background:var(--deep);border:3px solid var(--wood);border-radius:14px;padding:10px 14px;margin-bottom:10px;}
+.taskrow.done{border-color:#6ad04a;box-shadow:0 0 12px rgba(106,208,74,.4);}
+.tstars{color:#ffd23a;font-size:calc(18px*var(--u));letter-spacing:1px;text-shadow:var(--ol);white-space:nowrap;}
+.treward{text-align:right;font-weight:900;white-space:nowrap;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -299,7 +303,7 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 <div id="hud" class="hidden">
   <div id="tl">
     <div class="lvlbox" id="lvl-pill"><div class="star"><span data-ico="star"></span></div><div class="xpwrap"><div class="xpbar"><i id="xp"></i></div><div class="xptxt" id="xptxt">Level 1</div></div><span id="lvl"></span></div>
-    <button class="sbtn" id="b-goals"><span data-ico="scroll"></span><span class="slbl">Goals</span></button>
+    <button class="sbtn" id="b-goals"><span data-ico="scroll"></span><span class="slbl">Tasks</span></button>
     <div id="goal" class="hidden"></div>
   </div>
   <div id="tc"><div id="isle-name">Shape Island</div></div>
@@ -662,31 +666,45 @@ const ISLANDS = [
     tag:'Mysterious · E phrygian · 96 BPM', desc:'Golden sands, ancient stones and a heat that shimmers on the horizon.', req:{ level:12, coins:120000 } },
   { id:'lagoon', name:'Bubble Lagoon', theme:'lagoon', els:['moss','ember','tide','gust'], ruin:'oddball', bpm:112, root:53, scale:[0,2,4,5,7,9,11], prog:[0,4,5,3], swing:0.18, rev:0.28, bright:1.05,
     tag:'Breezy · F major · 112 BPM · swung', desc:'A tropical lagoon of coral, palms and bubbles with a laid-back vibe.', req:{ level:15, coins:250000 } },
+  // special islands: no buying, Shapes arrive by teleporting at level 15
+  { id:'diamond', name:'Diamond Island', theme:'diamond', special:'diamond', els:[], bpm:108, root:50, scale:[0,2,4,6,7,9,11], prog:[0,3,4,0], swing:0.06, rev:0.34, bright:1.2,
+    desc:'A glittering island where every Shape can live. Teleport your level 15 Shapes here.', req:{ level:18, coins:400000 } },
+  { id:'ruins', name:'Ruin Island', theme:'ruin', special:'ruin', els:[], bpm:80, root:45, scale:[0,2,3,5,7,8,11], prog:[0,5,4,0], swing:0, rev:0.5, bright:0.85,
+    desc:'Ancient floating stones where only Ruins live. Teleport level 15 Ruins here and breed them together.', req:{ level:20, coins:750000 } },
 ];
 const ISLAND = {}; ISLANDS.forEach(i => ISLAND[i.id] = i);
+const NORMAL_ISLANDS = ISLANDS.filter(i => !i.special);
 // each island: 4 singles, 6 doubles, 4 triples, 1 quad (all from its 4 elements) + its Ruin
 ISLANDS.forEach(I => {
+  if (I.special) return;
   const base = SHAPES.filter(s => s.tier <= 4 && s.el.every(e => I.els.includes(e)));
   base.sort((a, b) => a.tier - b.tier);
   I.commons = [...base.map(s => s.id), I.ruin];
   I.singles = base.filter(s => s.tier === 1).map(s => s.id); I.doubles = base.filter(s => s.tier === 2).map(s => s.id);
   I.triples = base.filter(s => s.tier === 3).map(s => s.id); I.quad = base.find(s => s.tier === 4).id;
 });
+ISLAND.diamond.commons = [...new Set(NORMAL_ISLANDS.flatMap(I => I.commons))].sort((a, b) => SHAPES.find(s => s.id === a).tier - SHAPES.find(s => s.id === b).tier);
+ISLAND.ruins.commons = NORMAL_ISLANDS.map(I => I.ruin);
+ISLANDS.filter(I => I.special).forEach(I => { I.singles = []; I.doubles = []; I.triples = []; });
 
 // ---------- RARE & EPIC VARIANTS (looks only) ----------
 function hexToHsl(h) { h = h.replace('#', ''); const n = parseInt(h, 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let H = 0, S = 0, L = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; S = L > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); H = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; H /= 6; } return [H * 360, S, L]; }
 function hslToHex(H, S, L) { H = ((H % 360) + 360) % 360 / 360; const f = (p, q, t) => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; let r, g, b; if (!S) r = g = b = L; else { const q = L < 0.5 ? L * (1 + S) : L + S - L * S, p = 2 * L - q; r = f(p, q, H + 1 / 3); g = f(p, q, H); b = f(p, q, H - 1 / 3); } return '#' + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join(''); }
 function recolor(hex, dh, ds = 0, dl = 0) { const [h, s, l] = hexToHsl(hex); return hslToHex(h + dh, Math.max(0, Math.min(1, s + ds)), Math.max(0.05, Math.min(0.92, l + dl))); }
+const VARIANT_LOOKS = {"bobble":{"rare":["#ffd36a","#d8902a","spots",["sprout","flowercrown","leafwings"],"#ff7ab0",null],"epic":["#2a6a4a","#0e3a2a","gems",["glow","crystals","sprout","tiara"],"#7affc0","sparkle"]},"tikki":{"rare":["#7ad0ff","#2a70c0","stripes",["flame","scarf"],"#ffffff",null],"epic":["#3a1a2a","#1a0a14","zigzag",["firering","flame","horns"],"#ff5a1a","angry"]},"blocco":{"rare":["#ff9ad0","#c0508a","dots",["drip","tophat"],"#3a2a4a",null],"epic":["#1a3a8a","#0a1a4a","facets",["frost","crystals","drip"],"#bfefff","cool"]},"twinkla":{"rare":["#b8f0ff","#5aa0e0","none",["starorbit","headband"],"#ff7ad9",null],"epic":["#3a2a8a","#1a1050","sparkle",["glow","starorbit","tiara"],"#ffd23a",null]},"zephyx":{"rare":["#ffe08a","#d0a030","facets",["wisps","feather"],"#ff6a9a",null],"epic":["#1a1a3a","#7a3aff","facets",["shards","wisps","glow"],"#b08aff",null]},"clackle":{"rare":["#ff8ad0","#a03a8a","zigzag",["horns","bowtie"],"#3ad0a0",null],"epic":["#2a2a2a","#7a1a1a","cracks",["firering","antlers","gemcore"],"#ff3a3a",null]},"gloobo":{"rare":["#c0a0ff","#6a4ac0","spots",["lilypad","bubbleorb"],"#bfe8ff",null],"epic":["#0a4a5a","#04202a","bubbles",["glow","bubbleorb","crystals","tiara"],"#6affe0",null]},"hexbloom":{"rare":["#ffb0d0","#c0507a","none",["petals","flowercrown"],"#fff07a",null],"epic":["#4a1a4a","#200a24","gems",["petals","glow","starorbit"],"#ff5ac8","sparkle"]},"rumbletum":{"rare":["#d0b0ff","#7a5ab0","stripes",["ears","drumbelly","scarf"],"#ff6a6a",null],"epic":["#5a3a1a","#2a1a0a","gems",["mane","drumbelly","gemcore"],"#ffd23a",null]},"fizzwick":{"rare":["#a0f0c0","#3a9a6a","bubbles",["steam","tophat"],"#2a2a3a",null],"epic":["#2a1a5a","#140a30","bubbles",["steam","bubbleorb","glow"],"#ff7af0",null]},"solara":{"rare":["#ff9ad8","#c04a8a","none",["rays","scarf"],"#ffe07a",null],"epic":["#3a0a0a","#a01a0a","zigzag",["firering","rays","tiara"],"#ff8a1a",null]},"whirlo":{"rare":["#9ae8ff","#3a8ad0","stripes",["swirl","feather"],"#ffd23a",null],"epic":["#2a0a3a","#0a0414","swirls",["shards","swirl","glow"],"#c05aff",null]},"lulla":{"rare":["#ffd0a0","#e08a4a","dots",["bow","starorbit"],"#fff6b0",null],"epic":["#1a2a5a","#0a1030","sparkle",["glow","wings","tiara"],"#9ad8ff",null]},"cubbit":{"rare":["#ffb08a","#c05a3a","zigzag",["quiff","bowtie"],"#3a8ad8",null],"epic":["#1a1a1a","#3a3a3a","stripes",["quiff","glow","gemcore","shards"],"#ffd23a","cool"]},"prismo":{"rare":["#a0ffd0","#ff8ad0","facets",["shine","tiara"],"#7ad8ff",null],"epic":["#0a0a1a","#ffffff","facets",["glow","shards","shine"],"#ffffff",null]},"bongaroo":{"rare":["#9ad070","#4a8a2a","stripes",["bongos","headband"],"#ff5a5a",null],"epic":["#3a2a6a","#1a103a","gems",["bongos","mane","gemcore"],"#ffb02e",null]},"clocktri":{"rare":["#c0d8ff","#5a7ab0","none",["clock","tophat"],"#2a2a3a",null],"epic":["#2a1a0a","#c8a040","gems",["clock","glow","shards"],"#ffd23a",null]},"novastar":{"rare":["#8ad0ff","#3a6ad8","none",["crown","starorbit"],"#ffffff",null],"epic":["#1a0a2a","#ff3a8a","sparkle",["glow","starorbit","crown","mane"],"#ff5ad0",null]},"aurielle":{"rare":["#ffd0f0","#c070d0","facets",["halo","leafwings"],"#a0ffb0",null],"epic":["#0a1a2a","#3affc0","facets",["aurora","halo","glow","starorbit"],"#7affe0",null]},"grumblox":{"rare":["#d0a070","#7a5030","cracks",["spikes","antlers"],"#ff8a3a",null],"epic":["#1a1a2a","#3aff8a","circuits",["spikes","glow","crystals"],"#3aff8a",null]},"hexapella":{"rare":["#a0e0ff","#d05a8a","none",["cap","scarf"],"#ffd23a",null],"epic":["#2a0a2a","#ff3ad0","zigzag",["cap","glow","shards","gemcore"],"#ff3ad0",null]},"polyphon":{"rare":["#ffd08a","#e07a3a","circuits",["antenna","bowtie"],"#3a6ad8",null],"epic":["#0a1a1a","#3affe0","circuits",["antenna","rings","glow","crystals"],"#3affe0",null]},"dodecadon":{"rare":["#c0e8ff","#4a7ad0","gems",["mane","tiara"],"#ffffff",null],"epic":["#1a0a2a","#ffd23a","gems",["glow","starorbit","crown","cape"],"#ffd23a",null]},"oddball":{"rare":["#a0ffb0","#3aa0ff","swirls",["antenna","tophat"],"#ff5a8a",null],"epic":["#0a0a1a","#ff5af0","swirls",["glow","bubbleorb","witchhat"],"#c05aff",null]},"mobius":{"rare":["#ffb0a0","#ffe07a","none",["starorbit"],"#ffffff",null],"epic":["#1a0a3a","#7affff","none",["glow","shards"],"#7affff",null]},"glitchling":{"rare":["#ff8ad0","#3a2a7a","scan",["pixels","headband"],"#7aff7a",null],"epic":["#0a0a0a","#3aff3a","scan",["pixels","glow","shards"],"#3aff3a",null]},"kelpsong":{"rare":["#ffc08a","#d06a3a","spots",["kelp","bubbleorb"],"#bfe8ff",null],"epic":["#0a2a4a","#3affd0","bubbles",["kelp","glow","tiara"],"#3affd0",null]},"didgeroo":{"rare":["#a0c0ff","#3a5ab0","stripes",["didg","feather"],"#ff5a5a",null],"epic":["#3a1a0a","#ff8a2a","zigzag",["didg","firering","antlers"],"#ff8a2a",null]},"flutterby":{"rare":["#ffe08a","#ff8a5a","dots",["wings","flowercrown"],"#ff7ab0",null],"epic":["#1a0a3a","#7a5aff","sparkle",["wings","glow","starorbit","tiara"],"#c0a0ff",null]},"steamtrom":{"rare":["#a0ffd0","#3a9a7a","facets",["trumpet","tophat"],"#2a2a3a",null],"epic":["#2a1a1a","#ffd23a","gems",["trumpet","glow","gemcore"],"#ffd23a",null]},"sparkplug":{"rare":["#a0d0ff","#3a5ad0","zigzag",["bolt","headband"],"#ffd23a",null],"epic":["#0a0a2a","#3affff","circuits",["bolt","glow","shards"],"#3affff","angry"]},"celestar":{"rare":["#c0ffd0","#3ab0a0","none",["halo","starorbit"],"#ffffff",null],"epic":["#0a0a2a","#ffd23a","sparkle",["glow","mane","halo","starorbit"],"#ffd23a",null]},"organon":{"rare":["#c0d8ff","#5a6ab0","none",["pipes","bowtie"],"#c4304a",null],"epic":["#2a0a1a","#ffd23a","gems",["pipes","glow","tiara"],"#ff5a8a",null]},"bassoonix":{"rare":["#ffb0d0","#c05a8a","spots",["tuba","scarf"],"#ffd23a",null],"epic":["#0a1a1a","#ffd23a","gems",["tuba","glow","crown"],"#ffd23a",null]},"monolith":{"rare":["#e0d0a0","#8a7040","cracks",["runes","flowercrown"],"#7ad0ff",null],"epic":["#0a0a1a","#7affd0","cracks",["runes","glow","shards","crystals"],"#7affd0",null]}};
+// each Rare and Epic has its own hand-picked colors and accessories: [body, body2, pattern, accessories, accent color, eye]
+const ACC_WORDS = { glow:'a shimmering glow', mane:'a wild mane', crystals:'crystal spikes', starorbit:'orbiting stars', bubbleorb:'floating bubbles', firering:'a ring of fire', leafwings:'leafy wings', frost:'icy frills', shards:'spinning shards', tophat:'a dapper top hat', tiara:'a jeweled tiara', scarf:'a cozy scarf', flowercrown:'a flower crown', bowtie:'a sharp bow tie', gemcore:'a glowing gem heart', feather:'a fancy feather', antlers:'antlers', witchhat:'a pointy hat', headband:'a star headband', crown:'a golden crown', halo:'a halo', wings:'shimmering wings', cape:'a royal cape' };
+function liftDark(hex, minL) { const [h, s0, l] = hexToHsl(hex); return l >= minL ? hex : hslToHex(h, Math.min(1, s0 + 0.15), minL); } // keep dark Epics readable
 const BASE_COUNT = SHAPES.length;
 for (let i = 0; i < BASE_COUNT; i++) {
-  const b = SHAPES[i];
-  const rare = { ...b, id: 'rare_' + b.id, base: b.id, variant: 'rare', name: 'Rare ' + b.name, rate: Math.round(b.rate * 1.5), time: Math.round(b.time * 1.5),
-    desc: `A rare ${b.name}, recolored by a once-in-a-blue-moon breeding and wearing a fluffy mane. Underneath, it is still the same ${b.name}.`,
-    look: { ...b.look, body: recolor(b.look.body, 150, 0.05, 0.02), body2: recolor(b.look.body2, 150, 0.05, 0), acc: [...b.look.acc, 'fluff'], pat: b.look.pat === 'none' ? 'sparkle' : b.look.pat } };
-  const epic = { ...b, id: 'epic_' + b.id, base: b.id, variant: 'epic', name: 'Epic ' + b.name, rate: b.rate * 2, time: b.time * 2,
-    desc: `An epic ${b.name}, crowned in gold and glowing with old Ruin magic. Underneath, it is still the same ${b.name}.`,
-    look: { ...b.look, body: recolor(b.look.body, 235, 0.1, -0.12), body2: recolor(b.look.body2, 235, 0.1, -0.14), acc: ['epicaura', ...b.look.acc, 'goldtrim'], pat: 'sparkle' } };
-  SHAPES.push(rare, epic);
+  const b = SHAPES[i], V = VARIANT_LOOKS[b.id];
+  const mk = (kind, v) => { const [body, body2, pat, acc, acol, eye] = v, extra = acc.filter(a => !b.look.acc.includes(a) && ACC_WORDS[a]).map(a => ACC_WORDS[a]);
+    const feats = extra.length > 1 ? extra.slice(0, -1).join(', ') + ' and ' + extra[extra.length - 1] : extra[0] || 'brand new colors';
+    return { ...b, id: kind + '_' + b.id, base: b.id, variant: kind, name: (kind === 'rare' ? 'Rare ' : 'Epic ') + b.name,
+      rate: kind === 'rare' ? Math.round(b.rate * 1.5) : b.rate * 2, time: kind === 'rare' ? Math.round(b.time * 1.5) : b.time * 2,
+      desc: kind === 'rare' ? `A rare ${b.name} with ${feats}. Underneath, it is still the same ${b.name}.` : `An epic ${b.name}, glowing with old Ruin magic and showing off ${feats}. Underneath, it is still the same ${b.name}.`,
+      look: { ...b.look, body: liftDark(body, 0.26), body2: liftDark(body2, 0.2), pat, acc, acol, ...(eye ? { eye } : {}) } }; };
+  SHAPES.push(mk('rare', V.rare), mk('epic', V.epic));
 }
 SHAPES.forEach(s => { if (!s.variant) s.variant = s.tier === 5 ? 'ruin' : 'common'; s.baseId = s.base || s.id; });
 const SHAPE = {}; SHAPES.forEach(s => SHAPE[s.id] = s);
@@ -697,6 +715,7 @@ ISLANDS.forEach(I => { I.rares = I.commons.map(id => 'rare_' + id); I.epics = I.
 function seededRand(seed) { let x = seed >>> 0 || 1; return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; }
 const pairKey = (a, b) => [a, b].sort().join('+');
 ISLANDS.forEach((I, ii) => {
+  if (I.special) { I.recipes = {}; return; }
   const rnd = seededRand(7919 * (ii + 3)), shuffle = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   I.recipes = {}; // pairKey -> [{id, chance}]
   const add = (a, b, id, chance) => { const k = pairKey(a, b); (I.recipes[k] = I.recipes[k] || []).push({ id, chance }); };
@@ -706,6 +725,11 @@ ISLANDS.forEach((I, ii) => {
   shuffle(I.commons).forEach((c, k) => add(epicPairs[k][0], epicPairs[k][1], 'epic_' + c, 0.06));
   const rt = shuffle(I.triples); add(rt[0], rt[1], I.ruin, 0.1);
 });
+{ // Ruin Island: two Ruins can make a Rare or Epic Ruin
+  const R = ISLAND.ruins, ru = R.commons, pairs = []; for (let i = 0; i < ru.length; i++) for (let j = i + 1; j < ru.length; j++) pairs.push([ru[i], ru[j]]);
+  const add = (a, b, id, chance) => { const k = pairKey(a, b); (R.recipes[k] = R.recipes[k] || []).push({ id, chance }); };
+  ru.forEach((id, k) => { add(...pairs[k], 'rare_' + id, 0.05); add(...pairs[k + 5], 'epic_' + id, 0.05); });
+}
 // ---------- DECORATIONS ----------
 const DECOS = [
   { id:'bush',     name:'Round Bush',     cost:80,    bonus:1, kind:'bush' },
@@ -737,12 +761,12 @@ SHAPES.filter(s => !s.base).forEach((s, i) => {
 });
 const likesOf = id => LIKES[SHAPE[id].baseId];
 
-const CASTLE_LEVELS = [ // capacity, cost, required level
-  { cap:6,  cost:0,      lvl:1 },
-  { cap:10, cost:3000,   lvl:3 },
-  { cap:14, cost:12000,  lvl:5 },
-  { cap:18, cost:40000,  lvl:8 },
-  { cap:24, cost:100000, lvl:11 },
+const CASTLE_LEVELS = [ // capacity, coin cost, build time (seconds)
+  { cap:6,  cost:0,      time:0 },
+  { cap:10, cost:3000,   time:300 },
+  { cap:14, cost:12000,  time:1800 },
+  { cap:18, cost:40000,  time:7200 },
+  { cap:24, cost:100000, time:21600 },
 ];
 const EXPANSIONS = [ { shards:0 }, { shards:5 }, { shards:12 }, { shards:25 } ];
 const GEM_PRICE = { 2: 40, 3: 220, 4: 1000, 5: 4000 }; // buy any non-single Shape with gems
@@ -778,20 +802,14 @@ const OBST_KINDS = {
   cave:   [['bigcrystal','l','Crystal Cluster'], ['stalag','m','Stalagmite'], ['cavestone','s','Glowstone']],
   desert: [['mesa','l','Sandstone Pillar'], ['cactus','m','Giant Cactus'], ['fossil','s','Old Fossil']],
   lagoon: [['palm','l','Leaning Palm'], ['coral','m','Coral Heap'], ['driftwood','s','Driftwood Pile']],
+  diamond:[['bigcrystal','l','Crystal Cluster'], ['boulder','m','Mossy Boulder'], ['cavestone','s','Glowstone']],
+  ruin:   [['bigcrystal','l','Crystal Cluster'], ['stalag','m','Stalagmite'], ['fossil','s','Old Fossil']],
 };
 const OBST_NAME = {}; Object.values(OBST_KINDS).forEach(l => l.forEach(([k, , n]) => OBST_NAME[k] = n));
 const BREED_MIN_LEVEL = 2;
 const FEEDS_PER_LEVEL = 4;
 const MAX_LEVEL = 15;
 
-const MILESTONES = [
-  { n:5,   coins:1000,   shards:3 },
-  { n:15,  coins:8000,   shards:8 },
-  { n:30,  coins:40000,  shards:15 },
-  { n:50,  coins:120000, shards:25 },
-  { n:75,  coins:300000, shards:40 },
-  { n:105, coins:1000000,shards:100 },
-];
 
 function xpForLevel(l){ return Math.round(60 * Math.pow(l, 1.6)); }
 
@@ -1610,10 +1628,39 @@ function drawFace(c, def, R, t, env, sus, seed, playing) {
   }
 }
 
+// ---------- extra accessories for Rare & Epic designs (colored by look.acol) ----------
+function _poly(c, pts) { c.beginPath(); pts.forEach((q, k) => k ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.closePath(); }
+function _gem(c, x, y, s, col) { c.fillStyle = col; _poly(c, [[x, y - s], [x + s * 0.75, y - s * 0.2], [x, y + s], [x - s * 0.75, y - s * 0.2]]); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.6)'; _poly(c, [[x, y - s], [x - s * 0.38, y - s * 0.2], [x, y]]); c.fill(); }
+function _star(c, x, y, ro, col) { c.fillStyle = col; _poly(c, starPts(5, ro, ro * 0.45, -Math.PI / 2).map(([a, b]) => [x + a, y + b])); c.fill(); c.stroke(); }
+const ACC2 = {
+  // ---- back layer ----
+  glow: { back: 1, f(c, L, R, t, env, seed) { const col = L.acol || '#ffd23a', p = 0.55 + 0.25 * Math.sin(t * 2.2 + seed) + env * 0.2; const g = c.createRadialGradient(0, -R * 0.2, R * 0.5, 0, -R * 0.2, R * 2); g.addColorStop(0, rgba(col, 0.55 * p)); g.addColorStop(1, rgba(col, 0)); c.fillStyle = g; c.beginPath(); c.arc(0, -R * 0.2, R * 2, 0, TAU); c.fill(); } },
+  mane: { back: 1, f(c, L, R, t, env) { const col = L.acol || '#ffb02e', n = 14; c.fillStyle = col; c.beginPath(); for (let i = 0; i <= n * 2; i++) { const a = i / (n * 2) * TAU, r = R * (i % 2 ? 1.08 : 1.45 + env * 0.1) + Math.sin(t * 3 + i) * 2; const x = Math.cos(a) * r, y = Math.sin(a) * r - R * 0.15; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); c.fill(); c.stroke(); c.fillStyle = shade(col, -0.2); c.beginPath(); c.arc(0, -R * 0.15, R * 1.08, 0, TAU); c.fill(); } },
+  crystals: { back: 1, f(c, L, R, t, env) { const col = L.acol || '#7ad8ff'; [[-0.75, -0.6, -0.5, 0.55], [0, -0.95, 0, 0.7], [0.75, -0.6, 0.5, 0.55]].forEach(([x, y, r, h], i) => { c.save(); c.translate(x * R, y * R); c.rotate(r); const s = R * h * (1 + (i === 1 ? env * 0.15 : 0)); c.fillStyle = i === 1 ? col : shade(col, -0.15); _poly(c, [[-s * 0.28, 0], [-s * 0.2, -s * 0.8], [0, -s * 1.15], [s * 0.2, -s * 0.8], [s * 0.28, 0]]); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.45)'; _poly(c, [[-s * 0.2, -s * 0.8], [0, -s * 1.15], [0, 0], [-s * 0.15, 0]]); c.fill(); c.restore(); }); } },
+  bunny: { back: 1, f(c, L, R, t) { [-1, 1].forEach(s => { c.save(); c.translate(s * R * 0.38, -R * 0.75); c.rotate(s * (0.25 + Math.sin(t * 2.5) * 0.06)); c.fillStyle = L.body; c.beginPath(); c.ellipse(0, -R * 0.55, R * 0.2, R * 0.62, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = L.acol || '#ffb0d0'; c.beginPath(); c.ellipse(0, -R * 0.55, R * 0.1, R * 0.45, 0, 0, TAU); c.fill(); c.restore(); }); } },
+  starorbit: { back: 1, f(c, L, R, t, env, seed) { const col = L.acol || '#fff6b0'; c.lineWidth = 2; for (let i = 0; i < 3; i++) { const a = t * 1.1 + seed + i * TAU / 3, x = Math.cos(a) * R * 1.55, y = Math.sin(a) * R * 0.45 - R * 0.35; if (Math.sin(a) < 0) _star(c, x, y, R * 0.16 + env * 3, col); } c.lineWidth = 3; } },
+  bubbleorb: { back: 1, f(c, L, R, t, env, seed) { c.save(); c.lineWidth = 2.5; for (let i = 0; i < 5; i++) { const p = (t * 0.35 + i / 5 + seed * 0.1) % 1, x = Math.sin(i * 2.4 + t) * R * 1.3, y = R * 0.6 - p * R * 2.4, s = R * (0.1 + (i % 3) * 0.05); c.globalAlpha = Math.sin(p * Math.PI); c.strokeStyle = L.acol || '#bfe8ff'; c.fillStyle = 'rgba(255,255,255,0.18)'; c.beginPath(); c.arc(x, y, s, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x - s * 0.35, y - s * 0.35, s * 0.22, 0, TAU); c.fill(); } c.restore(); } },
+  firering: { back: 1, f(c, L, R, t, env, seed) { const col = L.acol || '#ff7a1a'; for (let i = 0; i < 7; i++) { const a = t * 1.6 + seed + i * TAU / 7, x = Math.cos(a) * R * 1.4, y = Math.sin(a) * R * 0.5 - R * 0.2; if (Math.sin(a) > 0) continue; const f = 1 + Math.sin(t * 12 + i) * 0.15; c.save(); c.translate(x, y); c.scale(1, f); c.fillStyle = col; c.beginPath(); c.moveTo(0, -R * 0.32); c.quadraticCurveTo(R * 0.17, -R * 0.05, 0, R * 0.08); c.quadraticCurveTo(-R * 0.17, -R * 0.05, 0, -R * 0.32); c.fill(); c.fillStyle = '#fff0a0'; c.beginPath(); c.arc(0, -R * 0.02, R * 0.06, 0, TAU); c.fill(); c.restore(); } } },
+  leafwings: { back: 1, f(c, L, R, t) { const col = L.acol || '#6fd04f'; [-1, 1].forEach(s => { c.save(); c.scale(s, 1); c.translate(R * 0.75, -R * 0.35); c.rotate(-0.5 + Math.sin(t * 4) * 0.12); c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(R * 0.6, -R * 0.55, R * 1.05, -R * 0.2); c.quadraticCurveTo(R * 0.6, R * 0.25, 0, 0); c.fill(); c.stroke(); c.strokeStyle = shade(col, -0.35); c.lineWidth = 2; c.beginPath(); c.moveTo(R * 0.05, 0); c.lineTo(R * 0.9, -R * 0.18); c.stroke(); c.restore(); }); c.strokeStyle = OUTLINE; c.lineWidth = 3; } },
+  frost: { back: 1, f(c, L, R, t) { c.fillStyle = L.acol || '#dff6ff'; for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI, r0 = R * 0.95, r1 = R * (1.35 + (i % 2) * 0.2 + Math.sin(t * 2 + i) * 0.03); c.beginPath(); c.moveTo(Math.cos(a - 0.12) * r0, Math.sin(a - 0.12) * r0 - R * 0.1); c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1 - R * 0.1); c.lineTo(Math.cos(a + 0.12) * r0, Math.sin(a + 0.12) * r0 - R * 0.1); c.closePath(); c.fill(); c.stroke(); } } },
+  shards: { back: 1, f(c, L, R, t, env, seed) { const col = L.acol || '#c08aff'; for (let i = 0; i < 4; i++) { const a = -t * 0.9 + seed + i * TAU / 4, x = Math.cos(a) * R * 1.5, y = Math.sin(a * 1) * R * 0.55 - R * 0.3 + Math.sin(t * 2 + i) * 4; c.save(); c.translate(x, y); c.rotate(t * 1.5 + i); const s = R * (0.16 + env * 0.05); c.fillStyle = col; _poly(c, [[0, -s * 1.5], [s, s], [-s, s]]); c.fill(); c.lineWidth = 2; c.stroke(); c.restore(); } c.lineWidth = 3; } },
+  // ---- front layer ----
+  tophat: { f(c, L, R, t, env, seed, topY) { c.save(); c.translate(R * 0.1, topY + R * 0.12); c.rotate(0.12 + env * 0.1); const col = L.acol || '#2a2238'; c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, R * 0.55, R * 0.13, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.roundRect(-R * 0.32, -R * 0.62, R * 0.64, R * 0.6, 4); c.fill(); c.stroke(); c.fillStyle = '#e0405a'; c.fillRect(-R * 0.32, -R * 0.2, R * 0.64, R * 0.12); c.strokeRect(-R * 0.32, -R * 0.2, R * 0.64, R * 0.12); c.restore(); } },
+  tiara: { f(c, L, R, t, env, seed, topY) { c.save(); c.translate(0, topY + R * 0.14); c.fillStyle = '#ffe07a'; c.beginPath(); c.moveTo(-R * 0.42, 0); c.quadraticCurveTo(0, -R * 0.2, R * 0.42, 0); c.lineTo(R * 0.36, -R * 0.12); c.lineTo(R * 0.15, -R * 0.14); c.lineTo(0, -R * 0.36); c.lineTo(-R * 0.15, -R * 0.14); c.lineTo(-R * 0.36, -R * 0.12); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 2; _gem(c, 0, -R * 0.2, R * 0.1, L.acol || '#ff4a9a'); c.restore(); c.lineWidth = 3; } },
+  scarf: { f(c, L, R, t) { const col = L.acol || '#e0405a'; c.save(); c.fillStyle = col; c.beginPath(); c.ellipse(0, R * 0.42, R * 0.78, R * 0.16, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.moveTo(R * 0.3, R * 0.45); c.quadraticCurveTo(R * 0.55 + Math.sin(t * 3) * 3, R * 0.8, R * 0.42, R * 1.0); c.lineTo(R * 0.62, R * 0.95); c.quadraticCurveTo(R * 0.6, R * 0.7, R * 0.52, R * 0.45); c.closePath(); c.fill(); c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = 2; c.beginPath(); c.ellipse(0, R * 0.42, R * 0.6, R * 0.08, 0, 0.2, Math.PI - 0.2); c.stroke(); c.restore(); } },
+  flowercrown: { f(c, L, R, t, env, seed, topY) { const cols = [L.acol || '#ff7ab0', '#fff07a', '#ffffff', L.acol || '#ff7ab0', '#9ad8ff']; c.save(); c.translate(0, topY + R * 0.18); c.lineWidth = 2; for (let i = 0; i < 5; i++) { const x = (i - 2) * R * 0.2, y = -Math.cos((i - 2) * 0.5) * R * 0.08 + Math.sin(t * 3 + i) * 1.5; c.fillStyle = '#4faa3a'; c.beginPath(); c.ellipse(x + R * 0.08, y + R * 0.04, R * 0.08, R * 0.04, 0.5, 0, TAU); c.fill(); c.fillStyle = cols[i]; for (let k = 0; k < 5; k++) { const a = k * TAU / 5; c.beginPath(); c.arc(x + Math.cos(a) * R * 0.06, y + Math.sin(a) * R * 0.06, R * 0.055, 0, TAU); c.fill(); c.stroke(); } c.fillStyle = '#ffd23a'; c.beginPath(); c.arc(x, y, R * 0.04, 0, TAU); c.fill(); } c.restore(); c.lineWidth = 3; } },
+  bowtie: { f(c, L, R) { const col = L.acol || '#e0405a'; c.save(); c.translate(0, R * 0.48); c.fillStyle = col; _poly(c, [[0, 0], [-R * 0.3, -R * 0.15], [-R * 0.3, R * 0.15]]); c.fill(); c.stroke(); _poly(c, [[0, 0], [R * 0.3, -R * 0.15], [R * 0.3, R * 0.15]]); c.fill(); c.stroke(); c.beginPath(); c.arc(0, 0, R * 0.07, 0, TAU); c.fill(); c.stroke(); c.restore(); } },
+  gemcore: { f(c, L, R, t, env) { c.save(); c.lineWidth = 2.5; c.shadowColor = L.acol || '#ff4a9a'; c.shadowBlur = 10 + env * 14; _gem(c, 0, R * 0.42, R * (0.17 + env * 0.03), L.acol || '#ff4a9a'); c.restore(); c.lineWidth = 3; } },
+  feather: { f(c, L, R, t, env, seed, topY) { c.save(); c.translate(-R * 0.15, topY + R * 0.1); c.rotate(-0.35 + Math.sin(t * 2.4 + seed) * 0.12); const col = L.acol || '#ff6a9a'; c.fillStyle = col; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-R * 0.3, -R * 0.5, 0, -R * 0.95); c.quadraticCurveTo(R * 0.28, -R * 0.5, 0, 0); c.fill(); c.stroke(); c.strokeStyle = shade(col, -0.35); c.lineWidth = 2; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -R * 0.85); c.stroke(); c.restore(); c.lineWidth = 3; } },
+  antlers: { f(c, L, R, t, env, seed, topY) { c.save(); c.strokeStyle = OUTLINE; c.lineCap = 'round'; [-1, 1].forEach(s => { const path = () => { c.beginPath(); c.moveTo(s * R * 0.3, topY + R * 0.2); c.lineTo(s * R * 0.5, topY - R * 0.3); c.lineTo(s * R * 0.75, topY - R * 0.55); c.moveTo(s * R * 0.5, topY - R * 0.3); c.lineTo(s * R * 0.35, topY - R * 0.6); c.moveTo(s * R * 0.62, topY - R * 0.43); c.lineTo(s * R * 0.85, topY - R * 0.3); }; c.lineWidth = 9; path(); c.stroke(); c.strokeStyle = L.acol || '#c08a4a'; c.lineWidth = 5; path(); c.stroke(); c.strokeStyle = OUTLINE; }); c.restore(); c.lineWidth = 3; } },
+  witchhat: { f(c, L, R, t, env, seed, topY) { c.save(); c.translate(0, topY + R * 0.15); c.rotate(-0.08); const col = L.acol || '#5a3aa0'; c.fillStyle = col; c.beginPath(); c.ellipse(0, 0, R * 0.7, R * 0.14, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.moveTo(-R * 0.4, -R * 0.04); c.quadraticCurveTo(-R * 0.1, -R * 0.6, R * 0.25 + Math.sin(t * 2) * 3, -R * 1.0); c.quadraticCurveTo(R * 0.1, -R * 0.5, R * 0.4, -R * 0.04); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 2; _star(c, 0, -R * 0.28, R * 0.1, '#ffd23a'); c.restore(); c.lineWidth = 3; } },
+  headband: { f(c, L, R, t, env, seed, topY) { const col = L.acol || '#e0405a'; c.save(); c.fillStyle = col; c.beginPath(); c.ellipse(0, topY + R * 0.42, R * 0.72, R * 0.12, 0, Math.PI, TAU); c.ellipse(0, topY + R * 0.5, R * 0.72, R * 0.12, 0, 0, Math.PI, true); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 2; _star(c, 0, topY + R * 0.43, R * 0.12, '#ffffff'); c.restore(); c.lineWidth = 3; } },
+};
 function drawAcc(c, def, R, t, env, sus, beat, layer, seed, geo) {
   const L = def.look, acc = L.acc || [], topY = -(L.shape === 'ring' ? R : L.shape === 'mono' ? 1.35 * R : (def.cat === 'triangle' ? 1.3 : def.cat === 'star' ? 1.25 : def.cat === 'diamond' ? 1.2 : def.cat === 'hexagon' ? 1.0 : 0.95) * R);
   c.lineWidth = 3; c.strokeStyle = OUTLINE; c.lineJoin = 'round'; c.lineCap = 'round';
   for (const a of acc) {
+    const X = ACC2[a]; if (X) { if (!!X.back === (layer === 'back')) { c.save(); X.f(c, L, R, t, env, seed, topY); c.restore(); c.lineWidth = 3; c.strokeStyle = OUTLINE; } continue; }
     if (layer === 'back') switch (a) {
       case 'epicaura': { c.save(); const p = 0.5 + 0.5 * Math.sin(t * 2.4 + seed); const g = c.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 1.9); g.addColorStop(0, 'rgba(255,210,80,0.55)'); g.addColorStop(1, 'rgba(255,210,80,0)'); c.fillStyle = g; c.globalAlpha = 0.6 + 0.4 * p; c.beginPath(); c.arc(0, 0, R * 1.9, 0, TAU); c.fill(); c.globalAlpha = 1;
         for (let i = 0; i < 5; i++) { const a = t * 0.9 + i * TAU / 5, x = Math.cos(a) * R * 1.55, y = Math.sin(a) * R * 0.75 - R * 0.1; c.fillStyle = '#ffd84a'; c.strokeStyle = OUTLINE; c.lineWidth = 2; c.beginPath(); c.moveTo(x, y - 7); c.lineTo(x + 4.5, y); c.lineTo(x, y + 7); c.lineTo(x - 4.5, y); c.closePath(); c.fill(); c.stroke(); } c.restore(); c.lineWidth = 3; c.strokeStyle = OUTLINE; break; }
@@ -1686,7 +1733,7 @@ function drawEgg(c, def, s, t, ready, progress) {
 
 // ---------- structures ----------
 function drawCastle(c, lvl, t, theme, beat) {
-  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c' }[theme] || '#c8b28c';
+  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb', diamond: '#fff8e0', ruin: '#8a8aa0' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c', diamond: '#e8c060', ruin: '#4a4a62' }[theme] || '#c8b28c';
   const roofs = ['#ff5f7a', '#4fb0ff', '#ffc23a', '#7ad65a', '#b07aff'];
   c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 150, 30, 0, 0, TAU); c.fill();
@@ -1823,7 +1870,7 @@ function drawDeco(c, kind, t, theme, ghost) {
   c.save(); if (ghost) c.globalAlpha = 0.6;
   c.lineWidth = 3.5; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.2)'; c.beginPath(); c.ellipse(0, 0, 26, 7, 0, 0, TAU); c.fill();
-  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a' }[theme] || '#2f8a25';
+  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a', diamond: '#9ae8ff', ruin: '#5a9a7a' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a', diamond: '#4aa0d8', ruin: '#2a5a4a' }[theme] || '#2f8a25';
   switch (kind) {
     case 'bush': [[-12, -14, 15], [12, -14, 15], [0, -24, 17]].forEach(([x, y, r]) => { const g = c.createRadialGradient(x - 4, y - 5, 2, x, y, r); g.addColorStop(0, shade(leaf, 0.3)); g.addColorStop(1, leafD); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); }); break;
     case 'flowers': for (let i = 0; i < 5; i++) { const x = (i - 2) * 9, h = 14 + (i % 2) * 8, sw = Math.sin(t * 2 + i) * 2; c.strokeStyle = '#2f8a25'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + sw, -h); c.stroke(); c.fillStyle = ['#ff5f7a', '#ffd23a', '#b07aff', '#4fb0ff', '#ff9a3a'][i]; c.strokeStyle = OUTLINE; c.lineWidth = 2; c.beginPath(); c.arc(x + sw, -h, 6, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff6b0'; c.beginPath(); c.arc(x + sw, -h, 2.5, 0, TAU); c.fill(); } break;
@@ -1882,8 +1929,9 @@ function portrait(def, size, opts = {}) {
 }
 function renderPortrait(c, def, size, opts = {}) {
   c.clearRect(0, 0, size, size);
-  const s = size / 130;
-  c.save(); c.translate(size / 2, size * 0.86); c.scale(s, s);
+  const acc = def.look.acc || [], tall = acc.some(a => ['mane', 'crystals', 'antlers', 'witchhat', 'tophat', 'feather', 'frost', 'bunny'].includes(a)), wide = acc.some(a => ['starorbit', 'firering', 'shards', 'leafwings', 'bubbleorb'].includes(a));
+  const s = size / 130 * (tall ? 0.84 : wide ? 0.9 : 1);
+  c.save(); c.translate(size / 2, size * (tall ? 0.9 : 0.86)); c.scale(s, s);
   if (opts.silhouette) { drawShape(c, def, { t: 0, seed: 3 }); c.globalCompositeOperation = 'source-atop'; c.fillStyle = opts.silCol || '#3a2f55'; c.fillRect(-100, -200, 200, 260); }
   else drawShape(c, def, { t: opts.t || 0, seed: 3, hi: opts.hi, playing: opts.playing, beat: opts.beat });
   c.restore();
@@ -1895,9 +1943,9 @@ const STRUCT = { // fixed buildings
   castle:   { x: 0,    y: -150, r: 150, name: 'Castle' },
 };
 function newStruct(kind, x, y, st) { const o = { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; if (kind === 'mine') o.mine = now(); return o; }
-function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: ['breeder', 'hatchery'].map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; genObstacles(I0, id || 'shape', st); return I0; }
+function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: (ISLAND[id || 'shape'].special === 'diamond' ? [] : ['breeder', 'hatchery']).map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; if (ISLAND[id || 'shape'].special === 'diamond') I0.noPlat = true; genObstacles(I0, id || 'shape', st); return I0; }
 // ---------- platforms (fixed, joined to the island edge) ----------
-function platforms(I0) { const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
+function platforms(I0) { if (I0.noPlat) return []; const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
 function onPlatform(x, y, I0, pad = 0.72) { return platforms(I0).some(p => ((x - p.x) / (p.rx * pad)) ** 2 + ((y - p.y) / (p.ry * pad)) ** 2 < 1); }
 // ---------- obstacles ----------
 function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -1929,7 +1977,7 @@ function startClear(uid) {
 function speedClear(uid) { const o = obstById(uid); if (!o || !o.clr) return; const c = speedCostMin(o.clr.end); if (!c) return; if (!spend(0, c)) return; o.clr.end = now(); Audio.sfx('buy'); markDirty(); }
 function finishClear(uid) {
   const I0 = isl(), o = obstById(uid); if (!o || !o.clr || now() < o.clr.end) return; const z = OBST_SIZE[o.size];
-  I0.obstacles = I0.obstacles.filter(x => x !== o); addXP(z.xp); let msg = `${OBST_NAME[o.kind]} cleared! +${z.xp} XP`;
+  I0.obstacles = I0.obstacles.filter(x => x !== o); track('cleared'); addXP(z.xp); let msg = `${OBST_NAME[o.kind]} cleared! +${z.xp} XP`;
   if (Math.random() < z.gem) { const g = o.size === 'l' ? 2 : 1; S.shards += g; msg += ` and ${g} gem${g > 1 ? 's' : ''}!`; }
   Audio.sfx('levelup'); FX.burst(o.x, o.y - 40, 'spark', 22); UI.toast(msg, 'good'); markDirty();
 }
@@ -2021,7 +2069,7 @@ function addXP(n) {
 function collect(m, silent) {
   const b = monBank(m); m.last = now();
   if (b <= 0) return 0;
-  addCoins(b); Tut.ev('collect'); addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
+  addCoins(b); Tut.ev('collect'); track('coins', b); addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
   const sp = worldPosOf(m); FX.coinText(sp.x, sp.y - 90, b);
   if (!silent) Audio.sfx('coin');
   markDirty(); return b;
@@ -2035,7 +2083,7 @@ function feed(m) {
   const c = feedCost(m); if (!spend(0, 0, c)) return;
   m.feeds++; S.stats.fed++; addXP(3 * SHAPE[m.id].tier);
   Audio.sfx('feed'); const p = worldPosOf(m); FX.burst(p.x, p.y - 60, 'heart', 5);
-  if (m.feeds >= FEEDS_PER_LEVEL) { m.feeds = 0; m.level++; Audio.sfx('levelup'); UI.toast(`${SHAPE[m.id].name} reached level ${m.level}!`, 'good'); FX.burst(p.x, p.y - 60, 'spark', 14); addXP(10 * SHAPE[m.id].tier); }
+  if (m.feeds >= FEEDS_PER_LEVEL) { m.feeds = 0; m.level++; track('levelups'); Audio.sfx('levelup'); UI.toast(`${SHAPE[m.id].name} reached level ${m.level}!`, 'good'); FX.burst(p.x, p.y - 60, 'spark', 14); addXP(10 * SHAPE[m.id].tier); }
   markDirty();
 }
 function baseValue(d) { const b = SHAPE[d.baseId]; const v = b.tier === 1 ? b.price : b.tier === 5 ? 30000 : TIER[b.tier].price; return v * (d.variant === 'rare' ? 2 : d.variant === 'epic' ? 3 : 1); }
@@ -2095,7 +2143,7 @@ function speedEgg(i) {
 }
 
 // ---------- admin ----------
-function finishIsland(I0) { (I0.obstacles || []).forEach(o => { if (o.clr) o.clr.end = now(); }); I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); if (s.kind === 'mine') s.mine = now() - MINE_TIME * 1000; }); I0.hatch.forEach(e => e.end = now()); }
+function finishIsland(I0) { (I0.obstacles || []).forEach(o => { if (o.clr) o.clr.end = now(); }); I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); if (s.kind === 'mine') s.mine = now() - MINE_TIME * 1000; }); I0.hatch.forEach(e => e.end = now()); if (I0.castleUp) I0.castleUp.end = now(); }
 const Admin = {
   clearObstacles() { isl().obstacles = []; markDirty(); UI.toast('All obstacles removed from this island', 'good'); },
   food(n) { S.food += n; markDirty(); UI.toast(`+${fmt(n)} food`, 'good'); },
@@ -2107,7 +2155,7 @@ const Admin = {
   finishAllIslands() { Object.values(S.islands).forEach(finishIsland); markDirty(); UI.toast('All timers finished everywhere', 'good'); },
   fillBanks() { isl().monsters.forEach(m => m.last = now() - 3 * 3600e3); markDirty(); UI.toast('Coin banks filled', 'good'); },
   discoverAll() { SHAPES.forEach(s => S.discovered[s.id] = true); ISLANDS.forEach(I => I.shapes.forEach(id => markFound(id, I.id))); markDirty(); UI.toast('All Shapes discovered', 'good'); },
-  resetCollection() { S.discovered = {}; S.found = {}; Object.entries(S.islands).forEach(([iid, I0]) => { I0.monsters.forEach(m => { S.discovered[m.id] = true; markFound(m.id, iid); }); }); S.claimed = []; markDirty(); UI.toast('Collection reset (placed Shapes stay known)'); },
+  resetCollection() { S.discovered = {}; S.found = {}; Object.entries(S.islands).forEach(([iid, I0]) => { I0.monsters.forEach(m => { S.discovered[m.id] = true; markFound(m.id, iid); }); }); markDirty(); UI.toast('Collection reset (placed Shapes stay known)'); },
   unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id]) { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S, i.id); } }); markDirty(); UI.toast('All islands unlocked', 'good'); },
   maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; const dE = EXPANSIONS.length - 1 - I0.expand; I0.structs.forEach(st => { if (onPlatform(st.x, st.y, I0, 1)) st.x += Math.sign(st.x) * EXPAND_RX * dE; }); I0.expand = EXPANSIONS.length - 1; Render.resetCam(); markDirty(); UI.toast('Castle and island maxed', 'good'); },
   maxLevels() { isl().monsters.forEach(m => { m.level = MAX_LEVEL; m.feeds = 0; }); markDirty(); UI.toast(`All Shapes here set to level ${MAX_LEVEL}`, 'good'); },
@@ -2145,12 +2193,13 @@ function startBake(sid, rid) {
 }
 function collectBake(sid) {
   const st = structById(sid), b = st && st.bake; if (!b || now() < b.end) return; const r = RECIPES.find(x => x.id === b.rid);
-  S.food += r.food; st.bake = null; Tut.ev('food'); Audio.sfx('coin'); FX.foodText(st.x, st.y - 120, r.food); UI.toast(`+${fmt(r.food)} food`, 'good'); markDirty();
+  S.food += r.food; st.bake = null; Tut.ev('food'); track('baked'); Audio.sfx('coin'); FX.foodText(st.x, st.y - 120, r.food); UI.toast(`+${fmt(r.food)} food`, 'good'); markDirty();
 }
 function speedBake(sid) { const st = structById(sid), b = st && st.bake; if (!b) return; const c = speedCost(b.end); if (!c) return; if (!spend(0, c)) return; b.end = now(); Audio.sfx('buy'); markDirty(); }
 // ---------- structures ----------
 function buyStructStatus(kind) {
   const d = STRUCTS[kind], have = structsOf(kind).length;
+  if (islDef().special === 'diamond' && (kind === 'breeder' || kind === 'hatchery')) return { ok: false, why: 'Not on Diamond Island' };
   if (have >= d.max) return { ok: false, why: have ? 'Owned' : '' , owned: true };
   if (S.level < d.buy.lvl) return { ok: false, why: `Requires level ${d.buy.lvl}` };
   return { ok: true, coins: d.buy.coins || 0, gems: d.buy.gems || 0 };
@@ -2173,7 +2222,7 @@ function buyShape(id) {
   const I0 = isl(), st = marketStatus(id); if (!st.ok) return;
   if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); UI.toast('Hatchery is full!', 'bad'); return; }
   if (!spend(st.coins || 0, st.shards || 0)) return;
-  addEgg(id); Tut.ev('buy_' + SHAPE[id].baseId);
+  addEgg(id); Tut.ev('buy_' + SHAPE[id].baseId); track('bought');
   addXP(Math.max(5, st.coins ? st.coins / 25 : st.shards * 2)); Audio.sfx('buy'); UI.toast(`${SHAPE[id].name} egg sent to the Hatchery`, 'good'); markDirty(); return true;
 }
 function eggReady(e) { return now() >= e.end; }
@@ -2194,6 +2243,54 @@ function validSpot(x, y, ignoreUid, big) {
   for (const m of I0.monsters) if (m.uid !== ignoreUid) { const dx = (x - m.x) / 62, dy = (y - m.y) / 30; if (dx * dx + dy * dy < 1) return false; }
   for (const d of I0.decos) if (d.uid !== ignoreUid) { const dx = (x - d.x) / 46, dy = (y - d.y) / 22; if (dx * dx + dy * dy < 1) return false; }
   return true;
+}
+// ---------- teleport (level 15 Shapes to Diamond Island, level 15 Ruins to Ruin Island) ----------
+function teleportDests(m) {
+  if (islDef().special === 'diamond') return [];
+  const out = [], ruin = SHAPE[SHAPE[m.id].baseId].tier === 5;
+  if (islDef().special !== 'ruin') out.push('diamond');
+  if (ruin && islDef().special !== 'ruin') out.push('ruins');
+  if (islDef().special === 'ruin') out.push('diamond');
+  return out;
+}
+function teleport(m, dest) {
+  const D = ISLAND[dest]; if (m.level < MAX_LEVEL) { Audio.sfx('error'); UI.toast(`Reach level ${MAX_LEVEL} to teleport`, 'bad'); return false; }
+  if (!S.unlocked[dest]) { Audio.sfx('error'); UI.toast(`Unlock ${D.name} first (level ${D.req.level})`, 'bad'); return false; }
+  const DI = S.islands[dest]; if (DI.monsters.length >= capacity(DI)) { Audio.sfx('error'); UI.toast(`${D.name}'s castle is full!`, 'bad'); return false; }
+  const prev = S.current; S.current = dest; const p = findFreeSpot(); S.current = prev;
+  isl().monsters = isl().monsters.filter(x => x !== m);
+  DI.monsters.push({ ...m, x: p.x, y: p.y, last: now(), muted: false }); markFound(m.id, dest);
+  syncAudio(); Audio.sfx('discover'); UI.toast(`${SHAPE[m.id].name} teleported to ${D.name}!`, 'good'); track('teleport'); markDirty(); return true;
+}
+// ---------- tasks ----------
+function track(k, n = 1) { S.stats[k] = (S.stats[k] || 0) + n; }
+const TASK_POOL = [
+  { k:'fed',      t: n => `Feed Shapes ${n} times`,            n:[8, 16, 30] },
+  { k:'col',      t: n => `Collect coins from Shapes ${n} times`, n:[10, 25, 50] },
+  { k:'coins',    t: n => `Collect ${fmt(n)} coins from Shapes`, n:[400, 2000, 8000], grow:true },
+  { k:'bred',     t: n => `Breed ${n} Shape${n > 1 ? 's' : ''}`, n:[1, 3, 6] },
+  { k:'hatched',  t: n => `Hatch ${n} egg${n > 1 ? 's' : ''}`,   n:[1, 3, 6] },
+  { k:'baked',    t: n => `Collect ${n} batch${n > 1 ? 'es' : ''} of food from a Bakery`, n:[1, 3, 6] },
+  { k:'decos',    t: n => `Place ${n} decoration${n > 1 ? 's' : ''}`, n:[1, 3, 5] },
+  { k:'cleared',  t: n => `Clear ${n} obstacle${n > 1 ? 's' : ''}`, n:[1, 2, 4] },
+  { k:'bought',   t: n => `Buy ${n} Shape egg${n > 1 ? 's' : ''} at the Market`, n:[1, 2, 4] },
+  { k:'levelups', t: n => `Level up Shapes ${n} time${n > 1 ? 's' : ''}`, n:[1, 3, 6] },
+];
+function newTask(exclude) {
+  const pool = TASK_POOL.filter(p => !exclude.includes(p.k)), p = pool[Math.floor(Math.random() * pool.length)];
+  const d = Math.random() < 0.5 ? 0 : Math.random() < 0.7 ? 1 : 2, lv = S.level;
+  const n = p.grow ? Math.round(p.n[d] * (1 + lv / 3) / 50) * 50 : p.n[d];
+  const r = { coins: Math.round((120 + 90 * lv) * (d + 1) * (d + 1) / 10) * 10, xp: Math.round(15 * (d + 1) * Math.sqrt(lv)), gems: d === 2 ? 1 + (lv >= 10 ? 1 : 0) : 0, food: d === 1 ? 20 * (d + 1) * Math.ceil(lv / 3) : 0 };
+  return { k: p.k, n, d, base: S.stats[p.k] || 0, r };
+}
+function ensureTasks() { S.tasks = (S.tasks || []).filter(t => TASK_POOL.some(p => p.k === t.k)); while (S.tasks.length < 3) S.tasks.push(newTask(S.tasks.map(t => t.k))); }
+function taskText(t) { return TASK_POOL.find(p => p.k === t.k).t(t.n); }
+function taskProg(t) { return Math.min(t.n, (S.stats[t.k] || 0) - t.base); }
+function claimTask(i) {
+  const t = S.tasks[i]; if (!t || taskProg(t) < t.n) return;
+  addCoins(t.r.coins); S.shards += t.r.gems; S.food += t.r.food; addXP(t.r.xp); Audio.sfx('discover');
+  UI.toast(`Task complete! +${fmt(t.r.coins)} coins${t.r.gems ? `, +${t.r.gems} gem${t.r.gems > 1 ? 's' : ''}` : ''}${t.r.food ? `, +${t.r.food} food` : ''}`, 'good');
+  S.tasks.splice(i, 1, newTask(S.tasks.map(x => x.k))); markDirty();
 }
 function findFreeSpot(big) {
   const { rx, ry } = islandRadius();
@@ -2221,7 +2318,7 @@ function confirmPlace() {
     if (first) setTimeout(() => UI.discovered(e.id), 350);
   } else if (p.kind === 'deco') {
     const d = DECO[p.id]; if (!spend(d.cost || 0, d.shards || 0)) return;
-    I0.decos.push({ uid: S.uid++, id: p.id, x: p.x, y: p.y }); Audio.sfx('place'); FX.burst(p.x, p.y - 20, 'spark', 8); addXP(Math.max(2, (d.cost || d.shards * 400) / 50));
+    I0.decos.push({ uid: S.uid++, id: p.id, x: p.x, y: p.y }); track('decos'); Audio.sfx('place'); FX.burst(p.x, p.y - 20, 'spark', 8); addXP(Math.max(2, (d.cost || d.shards * 400) / 50));
   } else if (p.kind === 'move') {
     const m = I0.monsters.find(x => x.uid === p.uid); if (m) { m.x = p.x; m.y = p.y; } Audio.sfx('place');
   } else if (p.kind === 'buystruct') {
@@ -2239,9 +2336,14 @@ function sellDeco(uid) { const I0 = isl(), d = I0.decos.find(x => x.uid === uid)
 
 // ---------- upgrades / islands ----------
 function upgradeCastle() {
-  const I0 = isl(), nx = CASTLE_LEVELS[I0.castle + 1]; if (!nx) return;
-  if (S.level < nx.lvl) { Audio.sfx('error'); return UI.toast(`Requires level ${nx.lvl}`, 'bad'); }
-  if (!spend(nx.cost)) return; I0.castle++; addXP(nx.cost / 40); Audio.sfx('levelup'); UI.toast(`Castle upgraded! Room for ${nx.cap} Shapes`, 'good'); markDirty();
+  const I0 = isl(), nx = CASTLE_LEVELS[I0.castle + 1]; if (!nx || I0.castleUp) return;
+  if (!spend(nx.cost)) return; I0.castleUp = { start: now(), end: now() + nx.time * 1000 }; addXP(nx.cost / 40); Audio.sfx('buy'); UI.toast('Castle upgrade started!', 'good'); track('castle'); markDirty();
+}
+function speedCastle() { const I0 = isl(), u = I0.castleUp; if (!u) return; const c = speedCostMin(u.end); if (c && !spend(0, c)) return; u.end = now(); checkCastles(); }
+function checkCastles() { // finish castle upgrades whose timer ran out (on every island)
+  for (const [id, I0] of Object.entries(S.islands)) { const u = I0.castleUp; if (!u || now() < u.end) continue;
+    I0.castleUp = null; I0.castle = Math.min(CASTLE_LEVELS.length - 1, I0.castle + 1); markDirty();
+    if (!VISIT) { Audio.sfx('levelup'); UI.toast(`${ISLAND[id].name}: castle upgraded! Room for ${CASTLE_LEVELS[I0.castle].cap} Shapes`, 'good'); if (id === S.current && !VISIT) FX.burst(0, -200, 'spark', 20); } }
 }
 function expandIsland() {
   const I0 = isl(), nx = EXPANSIONS[I0.expand + 1]; if (!nx) return;
@@ -2256,10 +2358,6 @@ function unlockIsland(id) {
 function travel(id) {
   if (!S.unlocked[id]) return; document.getElementById('map').classList.add('hidden'); S.current = id; placing = null; UI.placeBar(false); UI.closeAll(); UI.closeSheet();
   Audio.setIsland(ISLAND[id]); syncAudio(); Render.resetCam(); Render.buildTerrain(); UI.refreshHUD(); markDirty();
-}
-function claimMilestone(i) {
-  const ms = MILESTONES[i]; if (S.claimed.includes(i) || discoveredCount() < ms.n) return;
-  S.claimed.push(i); addCoins(ms.coins); S.shards += ms.shards; Audio.sfx('discover'); UI.toast(`Milestone reward: ${fmt(ms.coins)} coins + ${ms.shards} gems`, 'good'); markDirty();
 }
 
 function showIsland() { Audio.setIsland(islDef()); syncAudio(); Render.resetCam(); Render.buildTerrain(); UI.refreshHUD(); }
@@ -2284,7 +2382,7 @@ function currentGoal() {
   if (I0.structs.some(s => s.br && now() >= s.br.end)) return 'Breeding finished! Tap the Breeding Structure.';
   if (I0.structs.some(s => s.bake && now() >= s.bake.end)) return 'Food is ready! Tap the Bakery to collect it.';
   if (S.food < 20 && !I0.structs.some(s => s.bake)) return 'Low on food. Tap the Bakery to bake treats for your Shapes.';
-  if (!S.discovered.tikki && S.current === 'shape' && !I0.hatch.some(e => e.id === 'tikki')) return 'Buy a Tikki egg at the Market to add hi-hats.';
+  if (!S.discovered.tikki && S.current === 'shape' && !I0.hatch.some(e => e.id === 'tikki')) return 'Buy a Tikki egg at the Market.';
   if (I0.monsters.reduce((a, m) => a + monBank(m), 0) > 30 && !S.stats.col) return 'Tap your Shapes to collect coins.';
   if (!I0.monsters.some(m => m.level >= 2)) return 'Tap a Shape and Feed it to level 2.';
   if (S.stats.bred === 0) return 'Breed two level 2 Shapes in the Breeding Structure.';
@@ -2292,8 +2390,11 @@ function currentGoal() {
   if (!S.unlocked.prism) return S.level >= 6 ? 'Prism Peaks is ready to unlock on the island map!' : 'Reach level 6 to unlock Prism Peaks.';
   if (discoveredCount() < 12) return 'Mix elements to discover new Shapes. Two elements + one more makes a Triple!';
   if (!S.unlocked.volt) return S.level >= 9 ? 'Volt Grotto is ready to unlock on the island map!' : 'Reach level 9 to unlock Volt Grotto.';
+  if (islDef().special === 'diamond') return 'Tap a level 15 Shape on another island and press Teleport to bring it here.';
+  if (islDef().special === 'ruin' && isl().monsters.length < 2) return 'Teleport level 15 Ruins here, then breed them for Rare and Epic Ruins.';
   if (discoveredCount() < SHAPES.length) return `Collection: ${discoveredCount()}/${SHAPES.length} Shapes found. Rares and Epics come from secret pairings!`;
-  return 'Every Shape found! Your islands are a full orchestra.';
+  if (!S.unlocked.diamond) return S.level >= 18 ? 'Diamond Island is ready to unlock on the island map!' : 'Reach level 18 to unlock Diamond Island, where level 15 Shapes can teleport.';
+  return 'Every Shape found! Teleport level 15 Shapes to Diamond Island.';
 }
 
 // ===================== FX =====================
@@ -2415,6 +2516,8 @@ const Render = (() => {
     else if (th === 'snow') { g.addColorStop(0, '#1d1850'); g.addColorStop(0.55, '#5a4aa8'); g.addColorStop(1, '#c8a8e8'); }
     else if (th === 'desert') { g.addColorStop(0, '#ff9a5a'); g.addColorStop(0.55, '#ffd29a'); g.addColorStop(1, '#fff0d0'); }
     else if (th === 'lagoon') { g.addColorStop(0, '#2ac8e8'); g.addColorStop(0.6, '#9af0f0'); g.addColorStop(1, '#e8fff8'); }
+    else if (th === 'diamond') { g.addColorStop(0, '#8a7ae8'); g.addColorStop(0.45, '#f0b8ff'); g.addColorStop(1, '#fff6dc'); }
+    else if (th === 'ruin') { g.addColorStop(0, '#0a1a2a'); g.addColorStop(0.55, '#2a2060'); g.addColorStop(1, '#5a3a7a'); }
     else { g.addColorStop(0, '#07040f'); g.addColorStop(0.6, '#1a0d36'); g.addColorStop(1, '#2a1250'); }
     c.fillStyle = g; c.fillRect(0, 0, W, H);
     if (th === 'desert') {
@@ -2425,6 +2528,13 @@ const Render = (() => {
       c.save(); c.fillStyle = 'rgba(255,255,220,0.95)'; c.shadowColor = '#fff6a0'; c.shadowBlur = 50; c.beginPath(); c.arc(W * 0.16, H * 0.14, 44, 0, TAU); c.fill(); c.restore();
       terrain.clouds.slice(0, 4).forEach(([x, y, s, sp]) => { const px = ((x + t * sp) % (W + 800) + (W + 800)) % (W + 800) - 400; cloud(px, H * 0.06 + (y + 900) * 0.2, s * 0.8); });
       [[0.12, 0.47], [0.86, 0.5]].forEach(([fx, fy]) => { const x = W * fx, y = H * fy; c.fillStyle = '#e8d090'; c.beginPath(); c.ellipse(x, y, 60, 12, 0, Math.PI, TAU); c.fill(); c.strokeStyle = '#8a5a2a'; c.lineWidth = 5; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + 8, y - 30, x + 2, y - 55); c.stroke(); c.fillStyle = '#2aa86a'; for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(x + 2 + Math.cos(k * 1.26) * 18, y - 55 + Math.sin(k * 1.26) * 6, 22, 6, k * 1.26, 0, TAU); c.fill(); } });
+    }
+    if (th === 'diamond') { // glittering sky with drifting gems
+      terrain.stars.forEach(([x, y, p]) => { const tw = Math.max(0, Math.sin(t * 1.6 + p * 30)); if (tw < 0.3) return; c.save(); c.translate(x * W, y * H * 0.8); c.globalAlpha = tw; c.fillStyle = p > 0.5 ? '#ffffff' : '#ffe8a0'; c.beginPath(); c.moveTo(0, -6 * tw); c.lineTo(1.5, 0); c.lineTo(0, 6 * tw); c.lineTo(-1.5, 0); c.closePath(); c.moveTo(-6 * tw, 0); c.lineTo(0, 1.5); c.lineTo(6 * tw, 0); c.lineTo(0, -1.5); c.fill(); c.restore(); });
+      [[0.12, 0.2, 40], [0.82, 0.12, 54], [0.92, 0.42, 30], [0.25, 0.48, 26]].forEach(([fx, fy, sz], k) => { const x = W * fx, y = H * fy + Math.sin(t * 0.8 + k) * 10; c.save(); c.translate(x, y); c.rotate(Math.sin(t * 0.4 + k) * 0.2); c.globalAlpha = 0.55; c.fillStyle = k % 2 ? '#bfe8ff' : '#ffd0f4'; c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -sz); c.lineTo(sz * 0.7, -sz * 0.25); c.lineTo(0, sz); c.lineTo(-sz * 0.7, -sz * 0.25); c.closePath(); c.fill(); c.stroke(); c.restore(); });
+    } else if (th === 'ruin') { // dark sky, glowing runes and floating stones
+      terrain.stars.forEach(([x, y, p]) => { c.fillStyle = `rgba(160,255,230,${0.2 + 0.6 * Math.abs(Math.sin(t * 0.6 + p * 20))})`; c.fillRect(x * W, y * H * 0.8, 2, 2); });
+      terrain.stal.slice(0, 7).forEach(([x, h, w, p], k) => { const sx = x * W, sy = H * (0.15 + h) + Math.sin(t * 0.6 + k) * 8, sz = 18 + w * 900; c.fillStyle = '#3a2e5a'; c.strokeStyle = '#120a28'; c.lineWidth = 3; c.beginPath(); c.moveTo(sx - sz, sy); c.lineTo(sx - sz * 0.6, sy - sz * 0.5); c.lineTo(sx + sz * 0.7, sy - sz * 0.45); c.lineTo(sx + sz, sy); c.lineTo(sx + sz * 0.2, sy + sz * 0.8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = `rgba(110,255,210,${0.4 + 0.4 * Math.sin(t * 2 + k)})`; c.font = `900 ${sz * 0.5}px sans-serif`; c.textAlign = 'center'; c.fillText('ᚱᚦᛟᚨᛉᛞᚹ'[k], sx, sy - sz * 0.05); });
     }
     if (th === 'grass') {
       c.save(); c.fillStyle = 'rgba(255,250,200,0.9)'; c.shadowColor = '#fff6a0'; c.shadowBlur = 50; c.beginPath(); c.arc(W * 0.85, H * 0.13, 46 + Math.sin(beat * Math.PI) * 2, 0, TAU); c.fill(); c.restore();
@@ -2443,7 +2553,7 @@ const Render = (() => {
 
   function drawWater(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8' }[th] || '#0a3a50';
+    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8', diamond: '#6ab8f0', ruin: '#141a40' }[th] || '#0a3a50';
     c.fillStyle = col; c.fillRect(-4000, ry * 0.2, 8000, 4000);
     const g = c.createLinearGradient(0, ry * 0.2, 0, ry + 600); g.addColorStop(0, th === 'cave' ? 'rgba(60,240,255,0.25)' : 'rgba(255,255,255,0.18)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(-4000, ry * 0.2, 8000, 800);
     c.strokeStyle = th === 'cave' ? 'rgba(80,255,240,0.45)' : 'rgba(255,255,255,0.6)'; c.lineWidth = 3;
@@ -2452,8 +2562,8 @@ const Render = (() => {
   }
   function drawIsland(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'] }[th] || ['#3a2f6a', '#221a48'];
-    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'] }[th] || ['#2a2050', '#120a28'];
+    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'], diamond: ['#ffffff', '#bfe2f8'], ruin: ['#7a8a8a', '#4a5260'] }[th] || ['#3a2f6a', '#221a48'];
+    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'], diamond: ['#c8b8ff', '#7a6ad8'], ruin: ['#5a5070', '#241a3a'] }[th] || ['#2a2050', '#120a28'];
     const depth = 110;
     // cliff
     let g = c.createLinearGradient(0, 0, 0, ry + depth); g.addColorStop(0, cliff[0]); g.addColorStop(1, cliff[1]);
@@ -2465,7 +2575,7 @@ const Render = (() => {
     c.strokeStyle = 'rgba(30,10,40,0.18)'; c.lineWidth = 3; for (let k = 1; k <= 2; k++) { c.beginPath(); c.ellipse(0, k * 32, rx * (1 - k * 0.02), ry, 0, 0.1, Math.PI - 0.1); c.stroke(); }
     if (th === 'cave') { c.strokeStyle = `rgba(60,240,255,${0.35 + 0.3 * Math.max(0, Math.sin(beat * Math.PI * 2))})`; c.lineWidth = 3; c.beginPath(); for (let i = 0; i < 10; i++) { const a = 0.2 + i * 0.28; c.moveTo(Math.cos(a) * rx * 0.98, Math.sin(a) * ry); c.lineTo(Math.cos(a) * rx * 0.95 + 8, Math.sin(a) * ry + 50 + (i % 3) * 15); } c.stroke(); }
     // platforms joined to the island edge
-    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8' }[th] || '#d8c8a8';
+    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8', diamond: '#ffe68a', ruin: '#8a80a0' }[th] || '#d8c8a8';
     platforms(isl()).forEach(p => {
       const pd = 70, cg = c.createLinearGradient(0, p.y, 0, p.y + p.ry + pd); cg.addColorStop(0, cliff[0]); cg.addColorStop(1, cliff[1]);
       c.fillStyle = cg; c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI); c.lineTo(p.x - p.rx * 0.8, p.y + pd * 0.5);
@@ -2485,9 +2595,9 @@ const Render = (() => {
     c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill(); c.strokeStyle = OUTLINE; c.lineWidth = 5; c.stroke();
     if (th === 'lagoon') { c.save(); c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.clip(); c.strokeStyle = '#f6e2a8'; c.lineWidth = 46; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.stroke(); c.restore(); c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.stroke(); }
     // edge highlight
-    c.strokeStyle = th === 'cave' ? 'rgba(120,90,255,0.5)' : th === 'snow' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, rx - 10, ry - 7, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
+    c.strokeStyle = th === 'cave' ? 'rgba(120,90,255,0.5)' : th === 'snow' || th === 'diamond' ? 'rgba(255,255,255,0.9)' : th === 'ruin' ? 'rgba(110,255,210,0.45)' : 'rgba(255,255,255,0.35)'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, rx - 10, ry - 7, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
     // path to castle
-    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)' }[th] || 'rgba(90,70,160,0.6)';
+    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)', diamond: 'rgba(255,214,90,0.85)', ruin: 'rgba(150,140,170,0.6)' }[th] || 'rgba(90,70,160,0.6)';
     c.beginPath(); c.moveTo(-36, -80); c.quadraticCurveTo(-60, 60, -20, ry * 0.95); c.lineTo(40, ry * 0.95); c.quadraticCurveTo(10, 60, 36, -80); c.closePath(); c.fill();
     // tufts / texture
     terrain.tufts.forEach(([nx, ny, r]) => {
@@ -2495,6 +2605,8 @@ const Render = (() => {
       if (th === 'grass') { c.strokeStyle = r > 0.5 ? '#3f9a2e' : '#a6ef7a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x - 6, y - 7); c.moveTo(x, y); c.lineTo(x, y - 9); c.moveTo(x + 4, y); c.lineTo(x + 6, y - 7); c.stroke(); if (r > 0.93) { c.fillStyle = ['#ff6f9a', '#fff', '#ffd23a'][Math.floor(r * 100) % 3]; c.beginPath(); c.arc(x, y - 10, 3, 0, TAU); c.fill(); } }
       else if (th === 'snow') { c.fillStyle = r > 0.5 ? 'rgba(160,190,230,0.5)' : 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(x, y, 7 * r + 3, 2.5, 0, 0, TAU); c.fill(); if (r > 0.95) { c.fillStyle = '#c8f0ff'; c.beginPath(); c.moveTo(x, y - 14); c.lineTo(x + 4, y); c.lineTo(x - 4, y); c.fill(); } }
       else if (th === 'desert') { if (r > 0.96) { c.fillStyle = '#4a9a3a'; c.strokeStyle = OUTLINE; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x - 3, y - 16, 6, 16, 3); c.roundRect(x - 9, y - 11, 5, 7, 2); c.fill(); c.stroke(); } else { c.fillStyle = r > 0.5 ? 'rgba(180,110,50,0.35)' : 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(x, y, 8 * r + 3, 2, 0, 0, TAU); c.fill(); } }
+      else if (th === 'diamond') { if (r > 0.8) { const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + r * 50)), sz = (r > 0.95 ? 9 : 5) * tw; c.fillStyle = r > 0.9 ? '#ff9ae0' : r > 0.85 ? '#7ad8ff' : '#ffffff'; c.strokeStyle = 'rgba(80,60,160,0.6)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, y - sz); c.lineTo(x + sz * 0.7, y); c.lineTo(x, y + sz * 0.6); c.lineTo(x - sz * 0.7, y); c.closePath(); c.fill(); c.stroke(); } else { c.fillStyle = 'rgba(150,190,240,0.35)'; c.beginPath(); c.ellipse(x, y, 6 * r + 2, 2, 0, 0, TAU); c.fill(); } }
+      else if (th === 'ruin') { if (r > 0.9) { c.fillStyle = `rgba(110,255,210,${0.35 + 0.45 * Math.abs(Math.sin(t * 1.5 + r * 40))})`; c.font = '900 14px sans-serif'; c.textAlign = 'center'; c.fillText('ᚱᚦᛟᚨᛉ'[Math.floor(r * 50) % 5], x, y); } else if (r > 0.55) { c.fillStyle = 'rgba(60,140,90,0.5)'; c.beginPath(); c.ellipse(x, y, 7, 3, 0, 0, TAU); c.fill(); } else { c.strokeStyle = 'rgba(30,20,50,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 8, y); c.lineTo(x + 6, y + 2); c.stroke(); } }
       else if (th === 'lagoon') { if (r > 0.94) { c.fillStyle = r > 0.97 ? '#ff8a6a' : '#fff0e0'; c.beginPath(); starPts(5, 6, 2.5, -Math.PI / 2).forEach((q, k) => k ? c.lineTo(x + q[0], y + q[1]) : c.moveTo(x + q[0], y + q[1])); c.fill(); } else { c.strokeStyle = r > 0.5 ? '#2f9a3e' : '#b8f08a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x - 7, y - 8); c.moveTo(x + 4, y); c.lineTo(x + 7, y - 8); c.stroke(); } }
       else { if (r > 0.85) { c.fillStyle = r > 0.93 ? '#3af0ff' : '#ff4af0'; c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 2 + r * 40); c.beginPath(); c.arc(x, y, 2.5, 0, TAU); c.fill(); c.globalAlpha = 1; } else { c.fillStyle = 'rgba(10,5,30,0.35)'; c.beginPath(); c.ellipse(x, y, 6 * r + 2, 2, 0, 0, TAU); c.fill(); } }
     });
@@ -2506,11 +2618,16 @@ const Render = (() => {
     if (th === 'grass' && ambient.length < 8) ambient.push({ x: (Math.random() - 0.5) * rx * 1.6, y: (Math.random() - 0.5) * ry * 1.4 - 40, v: 0, s: 1, p: Math.random() * 6, col: ['#ff8fc0', '#ffd23a', '#9ad0ff'][Math.floor(Math.random() * 3)] });
     if (th === 'desert' && ambient.length < 50) ambient.push({ x: -rx * 1.6, y: (Math.random() - 0.5) * ry * 2.4 - 80, v: 40 + Math.random() * 60, s: 1 + Math.random() * 2, p: Math.random() * 6 });
     if (th === 'lagoon' && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.6, y: ry + 120 + Math.random() * 200, v: 20 + Math.random() * 30, s: 3 + Math.random() * 5, p: Math.random() * 6 });
+    if ((th === 'diamond' || th === 'ruin') && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.2, y: (Math.random() - 0.5) * ry * 2.4 - 120, v: 8 + Math.random() * 14, s: 2 + Math.random() * 3, p: Math.random() * 6, life: 0 });
     for (let i = ambient.length - 1; i >= 0; i--) {
       const a = ambient[i];
+      if (th === 'diamond' || th === 'ruin') { a.life += dt; a.y -= a.v * dt; if (a.life > 6) { ambient.splice(i, 1); continue; } const al = Math.sin(a.life / 6 * Math.PI); c.save(); c.translate(a.x + Math.sin(t + a.p) * 14, a.y); c.globalAlpha = al;
+        if (th === 'diamond') { c.fillStyle = a.p > 3 ? '#ffffff' : '#ffe8a0'; c.rotate(t * 2 + a.p); c.beginPath(); c.moveTo(0, -a.s * 2); c.lineTo(a.s * 0.5, 0); c.lineTo(0, a.s * 2); c.lineTo(-a.s * 0.5, 0); c.closePath(); c.moveTo(-a.s * 2, 0); c.lineTo(0, a.s * 0.5); c.lineTo(a.s * 2, 0); c.lineTo(0, -a.s * 0.5); c.fill(); }
+        else { c.fillStyle = 'rgba(110,255,210,0.8)'; c.shadowColor = '#6effd2'; c.shadowBlur = 10; c.beginPath(); c.arc(0, 0, a.s, 0, TAU); c.fill(); }
+        c.restore(); continue; }
       if (th === 'desert') { a.x += a.v * dt; a.y += Math.sin(t + a.p) * 6 * dt; if (a.x > rx * 1.6) { ambient.splice(i, 1); continue; } c.fillStyle = 'rgba(255,230,180,0.7)'; c.beginPath(); c.arc(a.x, a.y, a.s, 0, TAU); c.fill(); continue; }
-      if (th === 'lagoon') { a.y -= a.v * dt; if (a.y < ry + 30) { ambient.splice(i, 1); continue; } c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 2; c.beginPath(); c.arc(a.x + Math.sin(t * 2 + a.p) * 5, a.y, a.s, 0, TAU); c.stroke(); continue; }
-      if (th === 'snow') { a.y += a.v * dt; a.x += Math.sin(t + a.p) * 12 * dt; if (a.y > ry + 300) { ambient.splice(i, 1); continue; } c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(a.x, a.y, a.s, 0, TAU); c.fill(); }
+      else if (th === 'lagoon') { a.y -= a.v * dt; if (a.y < ry + 30) { ambient.splice(i, 1); continue; } c.strokeStyle = 'rgba(255,255,255,0.75)'; c.lineWidth = 2; c.beginPath(); c.arc(a.x + Math.sin(t * 2 + a.p) * 5, a.y, a.s, 0, TAU); c.stroke(); continue; }
+      else if (th === 'snow') { a.y += a.v * dt; a.x += Math.sin(t + a.p) * 12 * dt; if (a.y > ry + 300) { ambient.splice(i, 1); continue; } c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.arc(a.x, a.y, a.s, 0, TAU); c.fill(); }
       else if (th === 'cave') { const x = a.x + Math.sin(t * 0.7 + a.p) * 30, y = a.y + Math.cos(t * 0.5 + a.p * 2) * 20; c.fillStyle = `rgba(150,255,200,${0.4 + 0.5 * Math.sin(t * 3 + a.p)})`; c.beginPath(); c.arc(x, y, a.s, 0, TAU); c.fill(); }
       else { // butterflies
         const x = a.x + Math.sin(t * 0.4 + a.p) * 120, y = a.y + Math.sin(t * 0.9 + a.p * 3) * 40, f = Math.abs(Math.sin(t * 14 + a.p));
@@ -2589,7 +2706,7 @@ const Render = (() => {
   }
   function drawStruct(k, t, beat) {
     const s = STRUCT[k], I0 = isl(); c.save(); c.translate(s.x, s.y);
-    if (k === 'castle') { drawCastle(c, I0.castle + 1, t, terrain.th, beat); }
+    if (k === 'castle') { drawCastle(c, I0.castle + 1, t, terrain.th, beat); if (I0.castleUp) label(now() >= I0.castleUp.end ? 'Done!' : 'Upgrading ' + fmtTime(I0.castleUp.end - now()), -330, now() >= I0.castleUp.end); }
     else if (k === 'market') drawMarket(c, t, beat);
     c.restore();
   }
@@ -2612,6 +2729,7 @@ const Render = (() => {
 // ===================== UI =====================
 const ICONS = {
   coin: `<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#ffd23a" stroke="#2a1f3d" stroke-width="3"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#c88a10" stroke-width="2.5"/><path d="M14 11.5h4M16 11v10" stroke="#c88a10" stroke-width="3" stroke-linecap="round"/><circle cx="11" cy="10" r="2.5" fill="#fff6c0"/></svg>`,
+  tp: `<svg viewBox="0 0 40 40"><path d="M20 6a14 14 0 1 1-13 9" fill="none" stroke="#2a1f3d" stroke-width="7" stroke-linecap="round"/><path d="M20 6a14 14 0 1 1-13 9" fill="none" stroke="#e8d8ff" stroke-width="3.5" stroke-linecap="round"/><path d="M20 13a7 7 0 1 1-7 7" fill="none" stroke="#2a1f3d" stroke-width="6" stroke-linecap="round"/><path d="M20 13a7 7 0 1 1-7 7" fill="none" stroke="#ffd23a" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="20" r="3" fill="#fff" stroke="#2a1f3d" stroke-width="2"/></svg>`,
   shard: `<svg viewBox="0 0 32 32"><path d="M16 3l11 9-11 17L5 12z" fill="#ff7ad9" stroke="#2a1f3d" stroke-width="3" stroke-linejoin="round"/><path d="M5 12h22M16 3l-4 9 4 17 4-17z" fill="none" stroke="#2a1f3d" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 9l3-3" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/></svg>`,
   market: `<svg viewBox="0 0 40 40"><rect x="7" y="18" width="26" height="16" rx="2" fill="#c8874a" stroke="#2a1f3d" stroke-width="3"/><path d="M4 18l4-10h24l4 10z" fill="#ff5f7a" stroke="#2a1f3d" stroke-width="3" stroke-linejoin="round"/><path d="M14 8l-2 10M20 8v10M26 8l2 10" stroke="#fff" stroke-width="3"/><circle cx="15" cy="27" r="4" fill="#4fb0ff" stroke="#2a1f3d" stroke-width="2.5"/><path d="M25 23l4 7h-8z" fill="#ffd23a" stroke="#2a1f3d" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
   heart: `<svg viewBox="0 0 40 40"><path d="M20 34C6 25 4 17 7 12c3-5 10-5 13 1 3-6 10-6 13-1 3 5 1 13-13 22z" fill="#ff5f8f" stroke="#2a1f3d" stroke-width="3" stroke-linejoin="round"/><circle cx="13" cy="15" r="3" fill="#fff" opacity=".7"/><path d="M18 17v8m0-8l5-2" stroke="#2a1f3d" stroke-width="2.5" stroke-linecap="round"/><circle cx="16" cy="25" r="2.6" fill="#2a1f3d"/></svg>`,
@@ -2702,9 +2820,8 @@ const UI = (() => {
     $('#isle-name').textContent = (VISIT ? `${VISIT.name}'s ` : '') + islDef().name + (lk ? `  ❤ ${lk}` : '');
     $('#food').textContent = fmt(S.food);
     const I0 = isl(), eggs = I0.hatch.filter(eggReady).length;
-    const claim = MILESTONES.filter((m, i) => !S.claimed.includes(i) && discoveredCount() >= m.n).length; setDot('#plus-gems', claim);
+    if (!VISIT) { ensureTasks(); setDot('#b-goals', S.tasks.filter(t => taskProg(t) >= t.n).length); }
     const unl = ISLANDS.filter(i => !S.unlocked[i.id] && S.level >= i.req.level && S.coins >= i.req.coins).length; setDot('#b-map', unl ? '!' : 0);
-    const g = currentGoal(); if ($('#goal').dataset.g !== g) { $('#goal').dataset.g = g; $('#goal').textContent = g; if ($('#goal').classList.contains('hidden')) setDot('#b-goals', '!'); }
   }
   function setDot(sel, n) { const b = $(sel); let d = b.querySelector('.dot'); if (n) { if (!d) { d = document.createElement('span'); d.className = 'dot'; b.appendChild(d); } d.textContent = n; } else if (d) d.remove(); }
 
@@ -2722,13 +2839,13 @@ const UI = (() => {
       renderPortrait(c, a.def, a.size, { t, hi, playing, beat: Audio.beatPhase() });
     }
     if (t - lastTimer > 0.25) {
-      lastTimer = t; refreshHUD();
+      lastTimer = t; if (!VISIT) checkCastles(); refreshHUD(); if (modalKind === 'tasks' && modal.dataset.sig !== taskSig()) openTasks(true);
       for (const el of timerEls) { const end = +el.dataset.end; const left = end - now(); if (left <= 0 && !el.dataset.doneShown) { el.dataset.doneShown = 1; rerender(); return; } el.textContent = fmtTime(left); if (el.dataset.start) { const bar = el.parentElement.querySelector('.bar i'); if (bar) bar.style.width = Math.min(100, (now() - el.dataset.start) / (end - el.dataset.start) * 100) + '%'; } }
       if (modal) modal.querySelectorAll('[data-cost]').forEach(el => { el.textContent = (el.dataset.cm === 'min' ? speedCostMin : speedCost)(+el.dataset.cost); });
       if (sheetFor) updateSheet();
     }
   }
-  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
+  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'castle') openCastle(true); else if (k === 'tasks') openTasks(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
 
   // ---------- MARKET ----------
   let currentTab = null;
@@ -2761,7 +2878,8 @@ const UI = (() => {
       body = `<div class="cats">${MARKET_CATS.map(([k, n]) => `<button class="cat" data-cat="${k}"><div class="catart" data-catart="${k}"></div><div class="catname">${n}</div></button>`).join('')}</div>`;
     } else if (tab === 'shapes') {
       title = 'Shapes';
-      body = `<div class="muted center" style="margin-bottom:8px">Eggs go to the Hatchery (${isl().hatch.length}/${hatchSlots()} slots used)</div><div class="wgrid hrow scrollx">${islDef().commons.map(shapeCard).join('')}</div>`;
+      body = islDef().special ? `<div class="info center" style="padding:24px"><b>Shapes can't be bought on ${islDef().name}.</b><br><br>${islDef().special === 'diamond' ? 'Tap a level 15 Shape on any other island and press <b>Teleport</b> to bring it here.' : 'Tap a level 15 Ruin on its home island and press <b>Teleport</b>, then breed Ruins together here for Rare and Epic Ruins.'}</div>`
+        : `<div class="muted center" style="margin-bottom:8px">Eggs go to the Hatchery (${isl().hatch.length}/${hatchSlots()} slots used)</div><div class="wgrid hrow scrollx">${islDef().commons.map(shapeCard).join('')}</div>`;
     } else if (tab === 'decor') {
       title = 'Decorations';
       body = `<div class="muted center" style="margin-bottom:8px">Decorations boost coin income on this island: <b>+${decoBonus()}%</b> (max 60%)</div><div class="wgrid hrow scrollx">${DECOS.map(d => `<div class="wcard"><div class="wname">${d.name}</div><div class="wprice"><span>${d.shards ? ic('shard') + ' ' + d.shards : ic('coin') + ' ' + fmt(d.cost)}</span><span>+${d.bonus}%</span></div><div class="wart"><div data-deco="${d.id}"></div></div><button class="btn green sm wbuy" data-deco-buy="${d.id}">Buy</button></div>`).join('')}</div>`;
@@ -2788,11 +2906,14 @@ const UI = (() => {
   }
   function upgradesHTML() {
     const I0 = isl(), cl = CASTLE_LEVELS[I0.castle], nx = CASTLE_LEVELS[I0.castle + 1], ex = EXPANSIONS[I0.expand + 1];
-    return `<div class="sec">${ic('castle')} Castle — level ${I0.castle + 1}</div><div class="info"><div class="row" style="justify-content:space-between"><div>Holds <b>${cl.cap}</b> Shapes (${I0.monsters.length} placed)${nx ? `<br><span class="muted">Next level: ${nx.cap} Shapes · requires player level ${nx.lvl}</span>` : '<br><span class="muted">Fully upgraded!</span>'}</div>${nx ? `<button class="btn blue" data-up="castle" ${S.level < nx.lvl ? 'disabled' : ''}>${ic('coin')} ${fmt(nx.cost)}</button>` : ''}</div></div>
+    const cu = I0.castleUp, castleRight = cu ? `<div style="min-width:200px;text-align:center"><div class="bar"><i style="width:${Math.min(100, (now() - cu.start) / (cu.end - cu.start) * 100)}%"></i></div><div class="timer" data-end="${cu.end}" data-start="${cu.start}">${fmtTime(cu.end - now())}</div><button class="btn purple sm" data-castlespeed style="margin-top:6px">⚡ Finish ${ic('shard')} <span data-cost="${cu.end}" data-cm="min">${speedCostMin(cu.end)}</span></button></div>`
+      : nx ? `<button class="btn blue" data-up="castle">${ic('coin')} ${fmt(nx.cost)} · ${fmtTime(nx.time * 1000)}</button>` : '';
+    return `<div class="sec">${ic('castle')} Castle — level ${I0.castle + 1}</div><div class="info"><div class="row" style="justify-content:space-between"><div>Holds <b>${cl.cap}</b> Shapes (${I0.monsters.length} placed)${cu ? `<br><span class="muted">Upgrading to ${nx.cap} Shapes...</span>` : nx ? `<br><span class="muted">Next level: ${nx.cap} Shapes · takes ${fmtTime(nx.time * 1000)} to build</span>` : '<br><span class="muted">Fully upgraded!</span>'}</div>${castleRight}</div></div>
     <div class="sec">🏝️ Expand Island — size ${I0.expand + 1}/${EXPANSIONS.length}</div><div class="info"><div class="row" style="justify-content:space-between"><div>More room for Shapes and decorations.</div>${ex ? `<button class="btn purple" data-up="expand">${ic('shard')} ${ex.shards}</button>` : '<span class="muted">Max size</span>'}</div></div>`;
   }
   function wireUpgrades() {
     modal.querySelectorAll('[data-up]').forEach(b => b.onclick = () => { if (b.dataset.up === 'castle') upgradeCastle(); else expandIsland(); openCastle(true); });
+    const cs = modal.querySelector('[data-castlespeed]'); if (cs) cs.onclick = () => { speedCastle(); openCastle(true); };
   }
 
   // ---------- CASTLE ----------
@@ -2961,10 +3082,11 @@ const UI = (() => {
     // crowd
     const pageSet = new Set(I[bookPage]), ids = bookOrder(I).filter(id => pageSet.has(id));
     const arrowW = 64 * u, left = m + fw + arrowW, right = W - m - fw - arrowW, areaW = right - left, top = py + ph + 6 * u, bottom = H - m - fw - 80 * u, depth = bottom - top;
-    const counts = [Math.floor(ids.length / 3), Math.floor(ids.length / 3)]; counts.push(ids.length - counts[0] - counts[1]);
+    const nRows = ids.length > 18 ? 4 : ids.length <= 6 ? 1 : 3, counts = []; for (let r = 0; r < nRows; r++) counts.push(Math.floor(ids.length / nRows) + (r >= nRows - ids.length % nRows ? 1 : 0));
     bookItems = []; const drawList = []; let idx = 0;
     counts.forEach((n, r) => {
-      const cell = areaW / n, rowScale = 0.8 + r * 0.1, sz = Math.min(cell * 1.02, depth * 0.44) * rowScale, y = top + depth * (0.36 + r * 0.31);
+      const cell = areaW / n, rowScale = nRows === 1 ? 1 : 0.8 + r * 0.2 / (nRows - 1), sz = Math.min(cell * 1.02, depth * (nRows === 4 ? 0.3 : nRows === 1 ? 0.6 : 0.44)) * rowScale,
+        y = top + depth * (nRows === 1 ? 0.78 : nRows === 4 ? 0.3 + r * 0.22 : 0.36 + r * 0.31);
       for (let k = 0; k < n; k++, idx++) { const rnd = seededRand(idx * 31 + 7); drawList.push({ id: ids[idx], x: left + (k + 0.5) * cell + (rnd() - 0.5) * cell * 0.1, y: y + (rnd() - 0.5) * 6 * u, sz, i: idx }); }
     });
     c.save(); c.beginPath(); c.roundRect(m + fw + 3, m + fw + 3, W - 2 * (m + fw) - 6, H - 2 * (m + fw) - 6, 16 * u); c.clip();
@@ -3010,7 +3132,7 @@ const UI = (() => {
 
   // ---------- MAP ----------
   const mapEl = $('#map'); let mapSel = null;
-  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'] };
+  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'], diamond: ['#7ac8f0', '#f0fbff', '#9ab0f0'], ruin: ['#4a3a78', '#8a7ab0', '#2a1a48'] };
   function islePreview(I) {
     const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), W = 300, H = 190; cv.width = W * d; cv.height = H * d; cv.style.width = W * VIEW.u + 'px'; cv.style.height = H * VIEW.u + 'px';
     const c = cv.getContext('2d'); c.scale(d, d); const col = ISLE_COL[I.theme], un = S.unlocked[I.id];
@@ -3163,6 +3285,7 @@ const UI = (() => {
         <button class="rbtn ${m.muted ? 'c-gray' : 'c-blue'}" id="sh-mute"><span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span></button>
         <button class="rbtn c-teal" id="sh-move"><span>${ICONS.move}</span><span class="rlbl">Move</span></button>
         <button class="rbtn c-purple" id="sh-info"><span>${ICONS.info}</span><span class="rlbl">Info</span></button>
+        ${teleportDests(m).length && !VISIT ? `<button class="rbtn c-pink" id="sh-tp" style="${m.level < MAX_LEVEL ? 'filter:grayscale(.7)' : ''}"><span>${ICONS.tp}</span><span class="rlbl">${m.level < MAX_LEVEL ? 'Lv ' + MAX_LEVEL : 'Teleport'}</span></button>` : ''}
         <button class="rbtn c-red" id="sh-sell"><span>${ICONS.sell}</span><span class="rlbl">Sell</span></button>
       </div></div>`;
     { const sb = sheet.querySelector('.sh-btns'); if (sb) sheet.appendChild(sb); } sheet.classList.remove('hidden'); hudButtons(false);
@@ -3173,6 +3296,7 @@ const UI = (() => {
     $('#sh-mute').onclick = () => { toggleMute(m); const b = $('#sh-mute'); b.className = 'rbtn ' + (m.muted ? 'c-gray' : 'c-blue'); b.innerHTML = `<span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span>`; Audio.sfx('tap'); };
     $('#sh-move').onclick = () => { closeSheet(); beginPlace({ kind: 'move', uid: m.uid, x: m.x, y: m.y }); };
     $('#sh-info').onclick = () => bookDetail(m.id, m);
+    const tpb = $('#sh-tp'); if (tpb) tpb.onclick = () => openTeleport(m);
     const sell = $('#sh-sell'); sell.onclick = () => { if (!sell.dataset.armed) { sell.dataset.armed = 1; sell.querySelector('.rlbl').innerHTML = `${ic('coin')}${fmt(sellValue(m))}?`; Audio.sfx('tap'); return; } sellMonster(m); closeSheet(); };
     updateSheet();
   }
@@ -3211,8 +3335,34 @@ const UI = (() => {
   function discovered(id) { const d = SHAPE[id]; popup(`<h1>New Shape!</h1><div style="font-weight:900;font-size:24px">${d.name}</div><div class="stage" style="width:200px;height:200px;margin:10px auto"><div data-portrait="${id}" data-size="190" data-anim="1"></div></div>${elBadges(d.el)}<p style="font-weight:700;max-width:320px;margin:8px auto">${d.desc}</p><div class="muted">Added to your Collection Book · ${discoveredCount()}/${SHAPES.length}</div>`); const a = anims[anims.length - 1]; if (a) { const m = isl().monsters.slice().reverse().find(x => x.id === id); if (m) a.uid = m.uid; } }
   function levelUp(l, sh) { setTimeout(() => popup(`<h1>Level Up!</h1><div style="font-size:64px;font-weight:900;-webkit-text-stroke:2px #2a1f3d;color:#ffd23a;text-shadow:0 4px 0 #2a1f3d">${l}</div><div style="font-weight:800">+${sh} ${ic('shard')} gem${sh > 1 ? 's' : ''}</div>${unlocksAt(l)}`), 250); }
   function unlocksAt(l) {
-    const u = []; SHAPES.forEach(s => { if (s.tier === 1 && s.lvl === l) u.push(s.name + ' in the Market'); }); ISLANDS.forEach(i => { if (i.req.level === l) u.push(i.name + ' can be unlocked'); }); CASTLE_LEVELS.forEach((c, i) => { if (i && c.lvl === l) u.push(`Castle level ${i + 1}`); });
+    const u = []; SHAPES.forEach(s => { if (s.tier === 1 && s.lvl === l) u.push(s.name + ' in the Market'); }); ISLANDS.forEach(i => { if (i.req.level === l) u.push(i.name + ' can be unlocked'); });
     return u.length ? `<div class="info" style="margin-top:10px;font-weight:800;font-size:14px">Unlocked: ${u.join(', ')}</div>` : '';
+  }
+
+  // ---------- TELEPORT ----------
+  function openTeleport(m) {
+    if (m.level < MAX_LEVEL) { Audio.sfx('error'); toast(`${SHAPE[m.id].name} must reach level ${MAX_LEVEL} to teleport`, 'bad'); return; }
+    const dests = teleportDests(m);
+    const body = `<div class="center" style="margin-bottom:10px"><div class="stage" style="display:inline-grid;width:120px;height:120px"><div data-portrait="${m.id}" data-size="110"></div></div><p class="muted">Teleporting moves ${SHAPE[m.id].name} to another island for good. It keeps its level.</p></div>
+      <div class="row" style="justify-content:center;gap:14px">${dests.map(id => { const D = ISLAND[id], un = S.unlocked[id], I1 = S.islands[id], full = un && I1.monsters.length >= capacity(I1);
+        return `<div class="wcard" style="width:220px;padding:12px"><div class="wname">${D.name}</div><div class="muted" style="margin:8px 0;min-height:48px">${D.desc}</div>${!un ? `<div class="req">Unlock at level ${D.req.level}</div>` : full ? '<div class="req">Castle is full</div>' : `<button class="btn green" data-tpgo="${id}">Teleport</button>`}</div>`; }).join('')}</div>`;
+    open('teleport', 'Teleport', '#7a4ae0', null, body);
+    modal.querySelectorAll('[data-tpgo]').forEach(b => b.onclick = () => { if (teleport(m, b.dataset.tpgo)) { closeAll(); closeSheet(); refreshHUD(); } });
+  }
+
+  // ---------- TASKS ----------
+  const taskSig = () => (S.tasks || []).map(t => t.k + taskProg(t)).join();
+  function openTasks(keep) {
+    ensureTasks();
+    const stars = d => '★'.repeat(d + 1) + '☆'.repeat(2 - d);
+    const body = `<div class="muted center" style="margin-bottom:10px">Finish tasks for rewards. A new task appears each time you claim one.</div><div class="list">${S.tasks.map((t, i) => { const p = taskProg(t), done = p >= t.n;
+      return `<div class="taskrow ${done ? 'done' : ''}"><div class="tstars">${stars(t.d)}</div><div style="flex:1;min-width:0"><b>${taskText(t)}</b><div class="bar" style="margin-top:6px"><i style="width:${p / t.n * 100}%"></i></div><div class="muted" style="margin-top:3px">${fmt(p)} / ${fmt(t.n)}</div></div>
+        <div class="treward">${ic('coin')} ${fmt(t.r.coins)}${t.r.food ? `<br>${ic('food')} ${t.r.food}` : ''}${t.r.gems ? `<br>${ic('shard')} ${t.r.gems}` : ''}<br><span class="muted">+${t.r.xp} XP</span></div>
+        ${done ? `<button class="btn green" data-tclaim="${i}">Claim</button>` : ''}</div>`; }).join('')}</div>
+      <div class="info" style="margin-top:12px"><b>Tip:</b> ${currentGoal()}</div>`;
+    if (keep && modalKind === 'tasks') setBody(body); else open('tasks', 'Tasks', '', 'scroll', body);
+    modal.dataset.sig = taskSig();
+    modal.querySelectorAll('[data-tclaim]').forEach(b => b.onclick = () => { claimTask(+b.dataset.tclaim); refreshHUD(); openTasks(true); });
   }
 
   // ---------- BANK (+ buttons) ----------
@@ -3225,10 +3375,8 @@ const UI = (() => {
   function openGemInfo() {
     const n = discoveredCount();
     const body = `<div class="info" style="margin-bottom:12px"><div class="row" style="justify-content:space-between"><div><b>Level up</b> to earn gems: +1 every level, +4 on every 5th level.</div><div style="min-width:200px"><div class="bar"><i style="width:${Math.min(100, S.xp / xpForLevel(S.level) * 100)}%"></i></div><div class="muted" style="text-align:center;margin-top:4px">${fmt(S.xp)} / ${fmt(xpForLevel(S.level))} XP to level ${S.level + 1}</div></div></div></div>
-      <div class="sec">Collection milestones</div><div class="list">${MILESTONES.map((m, i) => { const done = S.claimed.includes(i), can = !done && n >= m.n; return `<div class="mixrow" style="padding:8px 12px"><b style="flex:1">Discover ${m.n} Shapes <span class="muted">(${Math.min(n, m.n)}/${m.n})</span></b><span>${ic('shard')} <b>${m.shards}</b> + ${ic('coin')} <b>${fmt(m.coins)}</b></span>${done ? '<span class="btn gray sm" style="pointer-events:none">Claimed</span>' : `<button class="btn green sm" data-claim="${i}" ${can ? '' : 'disabled'}>Claim</button>`}</div>`; }).join('')}</div>
       <div class="muted" style="margin-top:12px;text-align:center">Spend gems to finish breeding and hatching instantly, buy rare Shapes and decorations, expand islands, or trade them for coins.</div>`;
     open('gems', 'Gems', '#7a4ae0', 'shard', body);
-    modal.querySelectorAll('[data-claim]').forEach(b => b.onclick = () => { claimMilestone(+b.dataset.claim); openGemInfo(); });
   }
   $('#plus-coins').onclick = () => openMarket('currency'); $('#plus-gems').onclick = openGemInfo; $('#plus-food').onclick = () => { const b = structsOf('bakery')[0]; if (b) openBakery(false, b.uid); else openMarket('currency'); };
 
@@ -3236,7 +3384,7 @@ const UI = (() => {
   $('#b-market').onclick = () => openMarket();
   $('#b-book').onclick = () => openBook(); $('#b-map').onclick = () => openIslands(); $('#b-settings').onclick = openSettings; $('#b-info').onclick = () => openCastle();
   $('#b-friends').onclick = openFriends;
-  $('#b-goals').onclick = () => { const g = $('#goal'); g.classList.toggle('hidden'); setDot('#b-goals', 0); Audio.sfx('tap'); clearTimeout(g._t); if (!g.classList.contains('hidden')) g._t = setTimeout(() => g.classList.add('hidden'), 7000); };
+  $('#b-goals').onclick = () => openTasks();
   $('#lvl-pill').onclick = () => toast(`Level ${S.level} · ${S.xp}/${xpForLevel(S.level)} XP`);
 
   const sheetMon = () => sheetFor && sheetFor.type === 'mon' ? isl().monsters.find(x => x.uid === sheetFor.uid) : null;
