@@ -709,25 +709,65 @@ SHAPES.push(
 );
 const RUIN_DOUBLES = ['spiralord','pixelking','throneheart','blobbess','glitchloop','runewhirl','wobbleknot','bytestone','gloopix','hauntolith'];
 const SHATTER_IDS = ['kaleidrone','chronoliss','marquessa','circuitcrown','jesterbyte','phantomarch','fractalith','snarlwave','echoshade','corruptus','prismatrix','carnivault','elderspire','sovereign','nullvoid','shatterheart'];
+// ---------- PARANORMAL PARK: Day Shapes with Night forms, woken up by zapping eggs ----------
+Object.assign(ELEMENTS, {
+  moon:   { name:'Moon',   color:'#f4e8a8', dark:'#a89a50', icon:'🌙', spooky: true },
+  candle: { name:'Candle', color:'#ffb05a', dark:'#b0602a', icon:'🕯️', spooky: true },
+  web:    { name:'Web',    color:'#d8d8e8', dark:'#7a7a90', icon:'🕸️', spooky: true },
+  bone:   { name:'Bone',   color:'#fff4e0', dark:'#b0a080', icon:'🦴', spooky: true },
+});
+const HP = (id, name, el, cat, shape, inst, vol, sec, look, desc, pat) => ({ id, sec, name, cat, el, tier: el.length, inst, vol, rate: [0, 8, 22, 55, 130][el.length], time: [0, 120, 900, 3600, 10800][el.length], sound: '', desc,
+  look: { eyes: 2, legs: 0, ...look, ...(shape ? { shape } : {}) }, pat, haunt: true });
+const HAUNT_IDS = [];
+SHAPES.push(...[
+  HP('lunette', 'Lunette', ['moon'], 'circle', null, 'bell', 0.41, 'VC', { body:'#fff2b0', body2:'#e0c060', eye:'sleepy', mouth:'small', acc:['halo'], pat:'dots' }, 'Lunette is a little piece of the moon that fell off one night. It naps all day so it can glow brighter later.', mel([7, null, 4, null], 3, 0.6, 8)),
+  HP('wickly', 'Wickly', ['candle'], 'special', 'mono', 'pluck', 0.649, 'VC', { body:'#fff0e0', body2:'#e8c0a0', eyes:2, eye:'happy', mouth:'grin', acc:['flame'], pat:'drip', size:0.9 }, 'Wickly is a jolly candle that never runs out of wax. It lights the way for any Shape lost in the dark.', rep4([[0,0,1,.8],[4,4,1,.6],[8,2,1,.7],[12,4,1,.6]])),
+  HP('spindle', 'Spindle', ['web'], 'hexagon', null, 'marimba', 0.531, 'VC', { body:'#c8c8e0', body2:'#7a7aa0', eyes:3, eye:'big', mouth:'small', acc:['antenna'], pat:'facets', legs:4 }, 'Spindle weaves the fanciest webs in the park. It sells them as hammocks to tired bats.', rep4([[0,0,1,.8],[2,2,1,.5],[6,4,1,.7],[10,2,1,.5],[12,0,1,.6]])),
+  HP('rattles', 'Rattles', ['bone'], 'square', null, 'block', 0.581, 'VC', { body:'#fff8ec', body2:'#c8b898', eye:'happy', mouth:'teeth', acc:[], pat:'cracks', legs:2 }, 'Rattles is a cheerful pile of bones that loves to dance. Sometimes a leg falls off mid-step. It always finds it again.', rep4([[0,'w',1,.8],[3,'w',1,.5],[6,'b',1,.6],[10,'w',1,.6],[12,'w',1,.4]])),
+  HP('lanternox', 'Lanternox', ['moon','candle'], 'diamond', null, 'arp', 0.592, 'VC', { body:'#ffd88a', body2:'#ff9a3a', eye:'sparkle', mouth:'o', acc:['twinkle','flame'], pat:'facets' }, 'Lanternox carries moonlight inside a paper lantern. On foggy nights it guides lost Shapes home.', rep4([[0,0,1,.7],[2,4,1,.5],[4,7,1,.6],[6,4,1,.5],[8,9,1,.6],[10,7,1,.5]])),
+  HP('dreamweb', 'Dreamweb', ['moon','web'], 'special', 'ring', 'pad', 0.181, 'B', { body:'#d8d0f8', body2:'#f4e8a8', eye:'sleepy', mouth:'small', acc:['feather'], pat:'none', acol:'#c8a0ff' }, 'Dreamweb catches bad dreams in its strings and turns them into good ones. It is very popular at sleepovers.', rep4([[0,[0,4,7],16,.6]])),
+  HP('howlbone', 'Howlbone', ['moon','bone'], 'triangle', null, 'theremin', 0.284, 'B', { body:'#e8e0d0', body2:'#8a8aa8', eye:'angry', mouth:'o', acc:['ears'], pat:'stripes', legs:2 }, 'Howlbone howls at the moon every night. The moon has never once howled back, but Howlbone stays hopeful.', mel([7, null, 9, null], 6, 0.6, 8)),
+  HP('cobwick', 'Cobwick', ['candle','web'], 'special', 'blob', 'clav', 0.384, 'VC', { body:'#ffe0b0', body2:'#d8d8e8', eyes:2, eye:'odd', mouth:'grin', acc:['flame','antenna'], pat:'swirls' }, 'Cobwick is a melted candle covered in old cobwebs. It insists that is the latest fashion.', rep4([[0,[0,2],1,.8],[3,[0,2],1,.5],[6,[1,3],1,.7],[10,[0,2],1,.6]])),
+  HP('skullwick', 'Skullwick', ['candle','bone'], 'circle', null, 'tom', 0.326, 'VC', { body:'#fff4e8', body2:'#ff9a3a', eye:'big', mouth:'teeth', acc:['flame'], pat:'cracks' }, 'Skullwick has a candle on its head and a grin on its face. It loves telling jokes in the dark.', rep4([[0,'l',1,.8],[6,'m',1,.6],[8,'l',1,.7],[12,'h',1,.6]])),
+  HP('cryptling', 'Cryptling', ['web','bone'], 'square', null, 'stab', 0.433, 'C', { body:'#b8b0c8', body2:'#fff4e0', eye:'calm', mouth:'small', acc:['cape'], pat:'cracks', legs:2 }, 'Cryptling lives in a tiny crypt full of cobwebs. It keeps it very tidy and expects guests to wipe their feet.', rep4([[0,[0,2,4],1,.8],[6,[0,2,4],1,.6],[10,[1,3,5],1,.7]])),
+  HP('nightmoth', 'Nightmoth', ['moon','candle','web'], 'star', null, 'lead', 0.513, 'C', { body:'#e8d8b0', body2:'#a08a6a', eye:'big', mouth:'small', acc:['wings','antenna'], pat:'dots' }, 'Nightmoth flutters toward any light it can find. It once followed the moon for three whole nights.', mel([4, 2, 4, 7, 9, 7, 4, null], 2, 0.75, 2).slice(0, 28)),
+  HP('jackolune', 'Jack-o-Lune', ['moon','candle','bone'], 'circle', null, 'brass', 0.486, 'C', { body:'#ff9a3a', body2:'#c05a1a', eyes:2, eye:'angry', mouth:'teeth', acc:['sprout','flame'], pat:'stripes', size:1.15 }, 'Jack-o-Lune carved its own face and is very proud of it. A candle flickers inside whenever it laughs.', rep4([[0,[0,4],2,.8],[4,[0,4],1,.6],[6,[2,5],2,.7],[12,[0,4],2,.6]])),
+  HP('banshelle', 'Banshelle', ['moon','web','bone'], 'special', 'blob', 'choir', 0.38, 'B', { body:'#e0f0ff', body2:'#a0b0d8', eyes:2, eye:'closed', mouth:'singer', acc:['wisps','halo'], pat:'none' }, 'Banshelle floats through the park in a dress made of moonlit cobwebs. Everyone says she is spooky. She is actually very shy.', rep4([[0,[0,2,4],16,.55]])),
+  HP('grimwick', 'Grimwick', ['candle','web','bone'], 'triangle', null, 'organ', 0.205, 'VB', { body:'#3a3048', body2:'#ffb05a', eye:'visor', mouth:'small', acc:['cape','flame'], pat:'zigzag', legs:2 }, 'Grimwick wears a hooded cloak and carries a candle everywhere. Underneath it all, it is a big softie.', rep4([[0,[0,2,4],8,.6],[8,[1,3,5],8,.55]])),
+  HP('phantasmo', 'Phantasmo', ['moon','candle','web','bone'], 'special', 'dodeca', 'opera', 0.519, 'C', { body:'#f0f0ff', body2:'#a080d8', eyes:3, eye:'sparkle', mouth:'singer', acc:['tophat','cape','wisps'], pat:'gems', size:1.35 }, 'Phantasmo is the ringmaster of Eclipse Island. Every night it puts on a show nobody else can see.', mel([7, 9, 7, 4, 2, 4, 7, null], 2, 0.8, 2).slice(0, 28)),
+].map(s => { HAUNT_IDS.push(s.id); return s; }));
+function mixHex(a, b, t) { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); }
+// Night forms: darker look, a glowing eye, a different instrument and tune
+const NIGHT_INST = { bell:'theremin', pluck:'bell', marimba:'pluck', block:'tom', arp:'swell', pad:'choir', theremin:'pad', clav:'wobble', tom:'block', stab:'organ', lead:'theremin', brass:'tuba', choir:'pad', organ:'choir', opera:'choir' };
+const NIGHT_VOL = { theremin:0.284, bell:0.41, pluck:0.649, tom:0.326, swell:0.319, choir:0.38, pad:0.181, wobble:0.224, block:0.581, organ:0.205, tuba:0.198 };
+HAUNT_IDS.slice().forEach((id, i) => {
+  const b = SHAPES.find(s => s.id === id), L = b.look;
+  const shift = p => p.map(([st, n, len, v]) => [st, typeof n === 'number' ? n + 2 : Array.isArray(n) ? n.map(x => x + 2) : n, len, v * 0.9]);
+  SHAPES.push({ ...b, id: 'night_' + id, base: id, variant: 'night', name: 'Night ' + b.name, inst: NIGHT_INST[b.inst] || b.inst, vol: NIGHT_VOL[NIGHT_INST[b.inst]] || b.vol,
+    desc: `When the sun goes down, ${b.name} changes. ` + ['Its glow turns spooky and its song gets a little stranger.', 'It looks scarier, but it is still the same friendly Shape inside.', 'Its eyes start to shine in the dark.'][i % 3],
+    pat: shift(b.pat), look: { ...L, body: mixHex(L.body, '#2a1e5a', 0.58), body2: mixHex(L.body2, '#120c2a', 0.5), eye: ['sparkle', 'angry', 'big'][i % 3], acc: ['glow', ...L.acc].slice(0, 4), acol: ['#7affc0', '#c08aff', '#5ad8ff'][i % 3] } });
+});
 // ---------- ISLANDS ----------
 const ISLANDS = [
   { id:'shape', name:'Shape Island', theme:'grass', els:['moss','ember','tide','lumen'], ruin:'dodecadon', bpm:104, root:48, scale:[0,2,4,5,7,9,11], prog:[0,5,3,4], swing:0, rev:0.22, bright:1,
     tag:'Bouncy · C major · 104 BPM', desc:'A sunny meadow island where every Shape\'s story begins.', req:{ level:1, coins:0 } },
   { id:'prism', name:'Prism Peaks', theme:'snow', els:['moss','tide','lumen','gust'], ruin:'mobius', bpm:88, root:45, scale:[0,2,3,5,7,8,10], prog:[0,5,2,6], swing:0.14, rev:0.42, bright:0.8,
-    tag:'Dreamy · A minor · 88 BPM · swung', desc:'Frozen crystal mountains that sparkle in the cold light.', req:{ level:6, coins:20000 } },
+    tag:'Dreamy · A minor · 88 BPM · swung', desc:'Frozen crystal mountains that sparkle in the cold light.', req:{ level:5, coins:20000 } },
   { id:'volt', name:'Volt Grotto', theme:'cave', els:['ember','tide','lumen','gust'], ruin:'glitchling', bpm:122, root:50, scale:[0,2,3,5,7,9,10], prog:[0,6,5,6], swing:0, rev:0.18, bright:1.35,
-    tag:'Electric · D dorian · 122 BPM', desc:'A neon-lit cavern crackling with static.', req:{ level:9, coins:50000 } },
+    tag:'Electric · D dorian · 122 BPM', desc:'A neon-lit cavern crackling with static.', req:{ level:1, coins:50000, after:'prism' } },
   { id:'dunes', name:'Sunscorch Dunes', theme:'desert', els:['moss','ember','lumen','gust'], ruin:'monolith', bpm:96, root:52, scale:[0,1,4,5,7,8,10], prog:[0,1,0,6], swing:0.08, rev:0.3, bright:1.1,
-    tag:'Mysterious · E phrygian · 96 BPM', desc:'Golden sands, ancient stones and a heat that shimmers on the horizon.', req:{ level:12, coins:120000 } },
+    tag:'Mysterious · E phrygian · 96 BPM', desc:'Golden sands, ancient stones and a heat that shimmers on the horizon.', req:{ level:1, coins:120000, after:'volt' } },
   { id:'lagoon', name:'Bubble Lagoon', theme:'lagoon', els:['moss','ember','tide','gust'], ruin:'oddball', bpm:112, root:53, scale:[0,2,4,5,7,9,11], prog:[0,4,5,3], swing:0.18, rev:0.28, bright:1.05,
-    tag:'Breezy · F major · 112 BPM · swung', desc:'A tropical lagoon of coral, palms and bubbles with a laid-back vibe.', req:{ level:15, coins:250000 } },
+    tag:'Breezy · F major · 112 BPM · swung', desc:'A tropical lagoon of coral, palms and bubbles with a laid-back vibe.', req:{ level:1, coins:250000, after:'dunes' } },
   // special islands: no buying, Shapes arrive by teleporting at level 15
   { id:'diamond', name:'Diamond Island', theme:'diamond', special:'diamond', els:[], bpm:108, root:50, scale:[0,2,4,6,7,9,11], prog:[0,3,4,0], swing:0.06, rev:0.34, bright:1.2,
-    desc:'A glittering island where every Shape can live. Teleport your level 15 Shapes here.', req:{ level:18, coins:400000 } },
+    desc:'A glittering island where every Shape can live. Copy your level 15 Shapes here.', req:{ level:10, coins:0 } },
   { id:'ruins', name:'Ruin Island', theme:'ruin', special:'ruin', els:[], bpm:80, root:45, scale:[0,2,3,5,7,8,11], prog:[0,5,4,0], swing:0, rev:0.5, bright:0.85,
-    desc:'Ancient floating stones where only Ruins live. Teleport level 15 Ruins here, buy Ruins with gems, and breed double Ruins.', req:{ level:20, coins:750000 } },
+    desc:'Ancient floating stones where only Ruins live. Teleport level 15 Ruins here, buy Ruins with gems, and breed double Ruins.', req:{ level:10, coins:0 } },
   { id:'shattered', name:'Shattered Island', theme:'shatter', special:'shattered', els:[], bpm:96, root:47, scale:[0,2,3,5,7,8,10], prog:[0,6,3,4], swing:0.1, rev:0.45, bright:0.95,
-    desc:'Broken crystal isles where the biggest Ruins are synthesized. Opens with Ruin Island and comes with a free Ruin.', req:{ level:20, coins:0 } },
+    desc:'Broken crystal isles where the biggest Ruins are synthesized. Comes with a free Ruin.', req:{ level:10, coins:0 } },
+  { id:'haunt', name:'Eclipse Island', theme:'haunt', special:'haunt', els:['moon','candle','web','bone'], bpm:100, root:46, scale:[0,2,3,5,7,8,10], prog:[0,5,3,4], swing:0.14, rev:0.4, bright:0.9,
+    desc:'A spooky carnival where Shapes have a Day form and a Night form. Buy or breed statues, then zap eggs to wake them.', req:{ level:10, coins:0 } },
 ];
 const ISLAND = {}; ISLANDS.forEach(i => ISLAND[i.id] = i);
 const NORMAL_ISLANDS = ISLANDS.filter(i => !i.special);
@@ -743,6 +783,7 @@ ISLANDS.forEach(I => {
 ISLAND.diamond.commons = [...new Set(NORMAL_ISLANDS.flatMap(I => I.commons))].sort((a, b) => SHAPES.find(s => s.id === a).tier - SHAPES.find(s => s.id === b).tier);
 ISLAND.ruins.commons = [...NORMAL_ISLANDS.map(I => I.ruin), ...RUIN_DOUBLES];
 ISLAND.shattered.commons = SHATTER_IDS.slice();
+ISLAND.haunt.commons = HAUNT_IDS.slice(); ISLAND.haunt.singles = HAUNT_IDS.filter(id => SHAPES.find(s => s.id === id).el.length === 1);
 ISLANDS.filter(I => I.special).forEach(I => { I.singles = []; I.doubles = []; I.triples = []; });
 
 // ---------- RARE & EPIC VARIANTS (looks only) ----------
@@ -759,7 +800,7 @@ const ACC_WORDS = { glow:'a shimmering glow', mane:'a wild mane', crystals:'crys
 function liftDark(hex, minL) { const [h, s0, l] = hexToHsl(hex); return l >= minL ? hex : hslToHex(h, Math.min(1, s0 + 0.15), minL); } // keep dark Epics readable
 const BASE_COUNT = SHAPES.length;
 for (let i = 0; i < BASE_COUNT; i++) {
-  const b = SHAPES[i], V = VARIANT_LOOKS[b.id];
+  const b = SHAPES[i], V = VARIANT_LOOKS[b.id]; if (!V) continue; // Eclipse Island Shapes have Night forms instead
   const mk = (kind, v) => { const [body, body2, pat, acc, acol, eye] = v, extra = acc.filter(a => !b.look.acc.includes(a) && ACC_WORDS[a]).map(a => ACC_WORDS[a]);
     const feats = extra.length > 1 ? extra.slice(0, -1).join(', ') + ' and ' + extra[extra.length - 1] : extra[0] || 'brand new colors';
     return { ...b, id: kind + '_' + b.id, base: b.id, variant: kind, name: (kind === 'rare' ? 'Rare ' : 'Epic ') + b.name,
@@ -770,7 +811,16 @@ for (let i = 0; i < BASE_COUNT; i++) {
 }
 SHAPES.forEach(s => { if (!s.variant) s.variant = s.tier === 5 ? 'ruin' : 'common'; s.baseId = s.base || s.id; });
 const SHAPE = {}; SHAPES.forEach(s => SHAPE[s.id] = s);
-ISLANDS.forEach(I => { I.rares = I.commons.map(id => 'rare_' + id); I.epics = I.commons.map(id => 'epic_' + id); I.shapes = [...I.commons, ...I.rares, ...I.epics]; });
+// Eclipse Island: every statue needs certain eggs from the 5 main islands zapped into it within a week
+const ZAP_TIME = 7 * 24 * 3600, HAUNT_GEM_PRICE = { 1: 20, 2: 750, 3: 2000, 4: 5000 };
+const ZAP_NEEDS = {};
+{ const main = [...new Set(NORMAL_ISLANDS.flatMap(I => I.commons))].filter(id => SHAPE[id].tier <= 4);
+  HAUNT_IDS.forEach((id, i) => { const n = SHAPE[id].el.length, cnt = [0, 4, 5, 6, 8][n], [lo, hi] = [[0, 0], [1, 2], [1, 3], [2, 3], [2, 4]][n], rnd = seededRand(9341 * (i + 5));
+    const pool = main.filter(x => SHAPE[x].tier >= lo && SHAPE[x].tier <= hi), out = [];
+    while (out.length < cnt && out.length < pool.length) { const x = pool[Math.floor(rnd() * pool.length)]; if (!out.includes(x)) out.push(x); }
+    ZAP_NEEDS[id] = out; }); }
+const zapNeeds = id => ZAP_NEEDS[SHAPE[id].baseId] || [];
+ISLANDS.forEach(I => { if (I.special === 'haunt') { I.rares = []; I.epics = []; I.nights = I.commons.map(id => 'night_' + id); I.shapes = [...I.commons, ...I.nights]; return; } I.rares = I.commons.map(id => 'rare_' + id); I.epics = I.commons.map(id => 'epic_' + id); I.shapes = [...I.commons, ...I.rares, ...I.epics]; });
 
 // ---------- HIDDEN RECIPES (fixed per island) ----------
 // Rare: island Quad + a Triple.  Epic: a Triple + a Double.  Ruin: two specific Triples.
@@ -879,6 +929,7 @@ const OBST_KINDS = {
   lagoon: [['palm','l','Leaning Palm'], ['coral','m','Coral Heap'], ['driftwood','s','Driftwood Pile']],
   diamond:[['bigcrystal','l','Crystal Cluster'], ['boulder','m','Mossy Boulder'], ['cavestone','s','Glowstone']],
   ruin:   [['bigcrystal','l','Crystal Cluster'], ['stalag','m','Stalagmite'], ['fossil','s','Old Fossil']],
+  haunt:  [['tree','l','Overgrown Tree'], ['stump','m','Old Stump'], ['bramble','s','Bramble Patch']],
   shatter:[['bigcrystal','l','Crystal Cluster'], ['iceblock','m','Ice Block'], ['cavestone','s','Glowstone']],
 };
 const OBST_NAME = {}; Object.values(OBST_KINDS).forEach(l => l.forEach(([k, , n]) => OBST_NAME[k] = n));
@@ -1485,6 +1536,30 @@ const ANIM_DESC = {
   glitchling: 'Glitches and teleports', kelpsong: 'Sways like seaweed', didgeroo: 'Puffs up its cheeks', flutterby: 'Flutters in little loops', steamtrom: 'Recoils with each puff of steam',
   sparkplug: 'Twitches like electricity', celestar: 'Cartwheels through the sky', organon: 'Rises up tall and proud', bassoonix: 'Double bounces', monolith: 'Hovers and rumbles',
 };
+
+// ---- Eclipse Island (Night forms share their Day form's animation) ----
+Object.assign(ANIM, {
+  lunette: (P, k) => { P.jump = 14 + Math.sin(k.t * 1.1 + k.seed) * 6; P.rot = -0.18 + Math.sin(k.t * 0.8) * 0.06 + (k.pl ? k.env * 0.1 : 0); const p = 1 + k.sus * 0.06; P.sx *= p; P.sy *= p; },
+  wickly: (P, k) => { const fl = Math.sin(k.t * 11 + k.seed) * 0.02 + Math.sin(k.t * 17) * 0.015; P.sx += fl; P.sy -= fl; P.rot = Math.sin(k.t * 2.4 + k.seed) * 0.05 + (k.pl ? Math.sin(k.beat * Math.PI) * 0.1 : 0); P.jump = hop(k, 0.25, 10); },
+  spindle: (P, k) => { P.jump = 4 + Math.abs(Math.sin(k.t * (k.pl ? 6 : 2) + k.seed)) * 6; P.jx = Math.sin(k.t * 1.2 + k.seed) * 8; P.bodyRot = Math.sin(k.t * 3) * 0.05; },
+  rattles: (P, k) => { P.jump = hop(k, 0.22, 16); if (k.pl) { P.rot = (Math.floor(k.beat * 2) % 2 ? 0.12 : -0.12) * (0.4 + k.env); P.jx = Math.sin(k.beat * Math.PI) * 6; } squashAt(P, k, 0.14); },
+  lanternox: (P, k) => { P.jump = 16 + Math.sin(k.t * 1.4 + k.seed) * 6; P.rot = Math.sin(k.t * 1.1 + k.seed) * 0.14; P.spinX = 0.8 + 0.2 * Math.cos(k.t * 1.7); },
+  dreamweb: (P, k) => { P.jump = 18 + Math.sin(k.t * 0.7 + k.seed) * 8; P.rot = Math.sin(k.t * 0.9 + k.seed) * 0.22; const p = 1 + k.sus * 0.08; P.sx *= p; P.sy *= p; },
+  howlbone: (P, k) => { const h = k.pl ? Math.min(1, k.sus * 1.5 + k.env) : 0; P.rot = -h * 0.28; P.sy += h * 0.1; P.sx -= h * 0.06; P.jump = h * 6; },
+  cobwick: (P, k) => { P.jump = 10 + Math.sin(k.t * 1.6 + k.seed) * 5; const w = Math.sin(k.t * 3.6 + k.seed) * 0.06 + k.env * 0.07; P.sx += w; P.sy -= w * 1.2; P.skew = Math.sin(k.t * 2.2) * 0.06; },
+  skullwick: (P, k) => { P.jump = hop(k, 0.3, 14); P.rot = k.pl ? Math.sin(k.t * 8) * 0.08 * k.env : Math.sin(k.t * 1.6) * 0.03; squashAt(P, k, 0.12); },
+  cryptling: (P, k) => { const st = Math.floor(k.beat * 2) % 2; P.rot = k.pl ? (st ? 0.06 : -0.06) : 0; P.jump = k.pl ? k.env * 8 : 0; P.sy -= k.env * 0.08; },
+  nightmoth: (P, k) => { P.jump = 20 + Math.sin(k.t * 2.6 + k.seed) * 8; P.jx = Math.sin(k.t * 1.3 + k.seed) * 14; P.rot = Math.sin(k.t * 2.6 + k.seed + 1) * 0.12; },
+  jackolune: (P, k) => { P.jump = hop(k, 0.35, 20); squashAt(P, k, 0.16, 0.08); P.rot = Math.sin(k.t * 1.3 + k.seed) * 0.05 + (k.pl ? k.env * 0.12 : 0); },
+  banshelle: (P, k) => { P.jump = 22 + Math.sin(k.t * 0.8 + k.seed) * 9; P.jx = Math.sin(k.t * 0.55 + k.seed) * 16; P.skew = Math.sin(k.t * 1.6) * 0.08; const p = 1 + k.sus * 0.07; P.sy *= p; },
+  grimwick: (P, k) => { P.rot = Math.sin(k.t * 0.9 + k.seed) * 0.05; const e = k.pl ? Math.exp(-k.since * 3) * k.vel : 0; P.sy -= e * 0.1; P.sx += e * 0.08; P.jump = e * 6; },
+  phantasmo: (P, k) => { P.jump = 16 + Math.sin(k.t * 1.2 + k.seed) * 6; P.rot = k.pl ? Math.sin(k.beat * Math.PI) * 0.1 : Math.sin(k.t) * 0.03; const p = 1 + k.env * 0.1; P.sx *= p; P.sy *= p; P.bodyRot = Math.sin(k.t * 0.6) * 0.15; },
+});
+Object.assign(ANIM_DESC, {
+  lunette: 'Floats tilted like a crescent', wickly: 'Flickers like a candle flame', spindle: 'Scuttles side to side', rattles: 'Rattles and dances', lanternox: 'Swings like a lantern',
+  dreamweb: 'Drifts and sways like a dreamcatcher', howlbone: 'Throws its head back to howl', cobwick: 'Wobbles like melting wax', skullwick: 'Hops and chatters', cryptling: 'Shuffles side to side',
+  nightmoth: 'Flutters in loops', jackolune: 'Bounces like a pumpkin', banshelle: 'Glides like a ghost', grimwick: 'Looms and puffs up', phantasmo: 'Floats grandly, ringmaster style',
+});
 // ---- Ruin Island doubles ----
 Object.assign(ANIM, {
   spiralord: (P, k) => { P.jump = 18 + Math.sin(k.t * 1.2 + k.seed) * 6; P.spinX = 0.6 + 0.4 * Math.abs(Math.cos(k.t * 1.1 + k.seed)); P.rot = Math.sin(k.t * 0.6) * 0.1; },
@@ -1527,6 +1602,7 @@ Object.assign(ANIM_DESC, {
 // Main monster renderer. Origin = ground point under the monster.
 // o: {t, hi:{env,since,vel,dur,sustain}, beat, seed, playing, scale, ghost, muted, flip}
 function drawShape(c, def, o) {
+  if (o.statue) def = statueDef(def);
   const L = def.look, R = 34 * (L.size || 1) * (o.scale || 1), geo = geoOf(def), t = o.t || 0;
   const hi = o.hi || { env: 0, since: 9, vel: 0, dur: 0, sustain: 0 };
   const playing = o.playing && !o.muted;
@@ -1536,9 +1612,9 @@ function drawShape(c, def, o) {
   const legH = float ? 0 : R * 0.28;
   let jump = 0, sx = 1, sy = 1, rot = 0, bodyRot = 0, skew = 0, spinX = 1, jx = 0;
   const idleB = Math.sin(t * 2.2 + seed) * 0.025;
-  sy += idleB; sx -= idleB * 0.6;
+  if (!o.statue) { sy += idleB; sx -= idleB * 0.6; }
   const cat = def.cat, A = ANIM[def.baseId || def.id];
-  if (o.muted) { // asleep: slow deep breathing and a drowsy head tilt instead of its dance
+  if (o.statue) { rot = 0; } else if (o.muted) { // asleep: slow deep breathing and a drowsy head tilt instead of its dance
     const br = Math.sin(t * 1.4 + seed); sy += br * 0.045; sx -= br * 0.03; rot = 0.07 + Math.sin(t * 0.7 + seed) * 0.02;
   } else if (A) { const P = { jump, sx, sy, rot, bodyRot, skew, spinX, jx }; A(P, { t, env, sus, since, vel: hi.vel || 0, beat, seed, pl: playing, R }); ({ jump, sx, sy, rot, bodyRot, skew, spinX, jx } = P); }
   else if (cat === 'circle') {
@@ -1566,6 +1642,15 @@ function drawShape(c, def, o) {
     else if (L.shape === 'ring') { jump = 16 + Math.sin(t * 1.5 + seed) * 5; spinX = 0.75 + 0.25 * Math.cos(t * 1.8 + seed); rot = Math.sin(t * 0.9) * 0.15 + sus * 0.1; const p = 1 + sus * 0.12; sx *= p; sy *= p; }
     else if (L.shape === 'pixel') { if (playing && env > 0.25) { jx = (Math.floor(t * 30) % 3 - 1) * 4 * env; jump = (Math.floor(t * 23) % 2) * 4 * env; } }
     else if (L.shape === 'dodeca') { rot = playing ? Math.sin(beat * Math.PI) * 0.06 : Math.sin(t) * 0.02; const p = 1 + env * 0.06 + sus * 0.04; sx *= p; sy *= p; }
+  }
+  if (playing && !o.statue && since < 0.9) { const sp = Math.exp(-since * 8) * Math.cos(since * 26) * 0.055 * (0.5 + (hi.vel || 0.6)); sy += sp; sx -= sp * 0.8; } // jelly wobble after each note
+  rot += jx * 0.004; // lean into sideways moves
+  if (o.state && !o.statue) { // smooth out snaps between sections and squash on landing
+    const st = o.state, dt = Math.min(0.1, Math.max(0, t - (st.t == null ? t : st.t))); st.t = t; const k = 1 - Math.exp(-dt * 22);
+    if (st.pj > 7 && jump < 2) st.land = t; st.pj = jump;
+    if (st.land != null && t - st.land < 0.4) { const q = Math.exp(-(t - st.land) * 11) * 0.12; sy -= q; sx += q * 0.9; }
+    ['jump', 'rot', 'sx', 'sy'].forEach(key => { const v = { jump, rot, sx, sy }[key]; st[key] = st[key] == null ? v : st[key] + (v - st[key]) * k; });
+    jump = st.jump; rot = st.rot; sx = st.sx; sy = st.sy;
   }
   const lift = float ? R * 0.35 : 0;
   const cy = -(geo.bottom * R + legH) - jump - lift;
@@ -1618,8 +1703,8 @@ function drawShape(c, def, o) {
 
   // face
   const fy = geo.faceY * R;
-  if (L.shape === 'ring') { c.save(); c.translate(0, R * 0.28); drawFace(c, o.muted ? sleepyDef(def) : def, R * 0.78, t, env, sus, seed, playing); c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 4; c.beginPath(); c.moveTo(-R * 0.9, -R * 0.55); c.bezierCurveTo(-R * 0.3, -R * 0.05, R * 0.3, -R * 0.95, R * 0.9, -R * 0.35); c.stroke(); c.restore(); }
-  else { c.save(); c.translate(0, fy); drawFace(c, o.muted ? sleepyDef(def) : def, R, t, env, sus, seed, playing); c.restore(); }
+  if (L.shape === 'ring') { c.save(); c.translate(0, R * 0.28); drawFace(c, o.statue ? statueDef(def) : o.muted ? sleepyDef(def) : def, R * 0.78, t, env, sus, seed, playing); c.restore(); c.save(); c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 4; c.beginPath(); c.moveTo(-R * 0.9, -R * 0.55); c.bezierCurveTo(-R * 0.3, -R * 0.05, R * 0.3, -R * 0.95, R * 0.9, -R * 0.35); c.stroke(); c.restore(); }
+  else { c.save(); c.translate(0, fy); drawFace(c, o.statue ? statueDef(def) : o.muted ? sleepyDef(def) : def, R, t, env, sus, seed, playing); c.restore(); }
 
   drawAcc(c, def, R, t, env, sus, beat, 'front', seed, geo);
 
@@ -1662,7 +1747,8 @@ function eye(c, x, y, r, style, blink, look, t, env) {
   c.restore();
 }
 
-const _sleepy = {};
+const _sleepy = {}, _statue = {};
+function statueDef(def) { return _statue[def.id] || (_statue[def.id] = { ...def, look: { ...def.look, body: '#b8b4c0', body2: '#7a7684', acol: '#9a96a4', pat: 'cracks', eye: 'closed', mouth: 'small' } }); }
 function sleepyDef(def) { return _sleepy[def.id] || (_sleepy[def.id] = { ...def, look: { ...def.look, eye: 'closed', mouth: def.look.mouth === 'none' ? 'none' : 'small' } }); }
 // floating "z z Z" above a sleeping Shape
 function drawZzz(c, x, y, t, seed) {
@@ -1677,8 +1763,9 @@ function drawZzz(c, x, y, t, seed) {
 }
 function drawFace(c, def, R, t, env, sus, seed, playing) {
   const L = def.look, n = L.eyes || 2, st = L.eye;
-  const blinkT = (t + seed * 1.37) % 4.3, blink = blinkT < 0.12 && !['cool', 'visor', 'closed', 'happy', 'pixel', 'dizzy'].includes(st);
-  const look = [Math.sin(t * 0.7 + seed) * 0.8, Math.cos(t * 0.5 + seed) * 0.4];
+  const blinkT = (t + seed * 1.37) % 4.3, blink = (blinkT < 0.12 || (seed % 3 === 0 && blinkT > 0.24 && blinkT < 0.34)) && !['cool', 'visor', 'closed', 'happy', 'pixel', 'dizzy'].includes(st);
+  const gz = t * 0.42 + seed * 0.31, gk = Math.floor(gz), gf = Math.min(1, (gz - gk) * 7), ge = 1 - Math.pow(1 - gf, 3), hsh = n => { const x = Math.sin(n * 127.1 + seed * 3.7) * 43758.5; return x - Math.floor(x); };
+  const look = [(hsh(gk - 1) - 0.5) * 1.6 * (1 - ge) + (hsh(gk) - 0.5) * 1.6 * ge, (hsh(gk + 50 - 1) - 0.5) * 0.8 * (1 - ge) + (hsh(gk + 50) - 0.5) * 0.8 * ge];
   const er = R * (n === 1 ? 0.34 : n === 3 ? 0.18 : 0.24), gap = R * (n === 3 ? 0.42 : 0.4), ey = -R * 0.22;
   const xs = n === 1 ? [0] : n === 3 ? [-gap, 0, gap] : [-gap, gap];
   const ys = n === 3 ? [ey + R * 0.04, ey - R * 0.12, ey + R * 0.04] : xs.map(() => ey);
@@ -1848,7 +1935,7 @@ function drawEgg(c, def, s, t, ready, progress) {
 
 // ---------- structures ----------
 function drawCastle(c, lvl, t, theme, beat) {
-  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb', diamond: '#fff8e0', ruin: '#8a8aa0', shatter: '#d8c8f0' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c', diamond: '#e8c060', ruin: '#4a4a62', shatter: '#7a5aa8' }[theme] || '#c8b28c';
+  const stone = { snow: '#dfe8f5', cave: '#4a4470', desert: '#f2cf8a', lagoon: '#f4eadb', diamond: '#fff8e0', ruin: '#8a8aa0', shatter: '#d8c8f0', haunt: '#6a5a7a' }[theme] || '#efe0c4', stoneD = { snow: '#a8b8d0', cave: '#2a2650', desert: '#c8904a', lagoon: '#c8b89c', diamond: '#e8c060', ruin: '#4a4a62', shatter: '#7a5aa8', haunt: '#3a2a4a' }[theme] || '#c8b28c';
   const roofs = ['#ff5f7a', '#4fb0ff', '#ffc23a', '#7ad65a', '#b07aff'];
   c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 150, 30, 0, 0, TAU); c.fill();
@@ -2017,7 +2104,7 @@ function drawDeco(c, kind, t, theme, ghost) {
   c.save(); if (ghost) c.globalAlpha = 0.6;
   c.lineWidth = 3.5; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
   c.fillStyle = 'rgba(20,10,40,0.2)'; c.beginPath(); c.ellipse(0, 0, 26, 7, 0, 0, TAU); c.fill();
-  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a', diamond: '#9ae8ff', ruin: '#5a9a7a', shatter: '#c08aff' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a', diamond: '#4aa0d8', ruin: '#2a5a4a', shatter: '#6a3aa8' }[theme] || '#2f8a25';
+  const leaf = { snow: '#bfe0f0', cave: '#5a3ab0', desert: '#9ac85a', lagoon: '#3ad08a', diamond: '#9ae8ff', ruin: '#5a9a7a', shatter: '#c08aff', haunt: '#3a7a5a' }[theme] || '#5fc24a', leafD = { snow: '#7aa8c8', cave: '#2a1a70', desert: '#5a8a2a', lagoon: '#1a8a5a', diamond: '#4aa0d8', ruin: '#2a5a4a', shatter: '#6a3aa8', haunt: '#1a4030' }[theme] || '#2f8a25';
   switch (kind) {
     case 'bush': [[-12, -14, 15], [12, -14, 15], [0, -24, 17]].forEach(([x, y, r]) => { const g = c.createRadialGradient(x - 4, y - 5, 2, x, y, r); g.addColorStop(0, shade(leaf, 0.3)); g.addColorStop(1, leafD); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.stroke(); }); break;
     case 'flowers': for (let i = 0; i < 5; i++) { const x = (i - 2) * 9, h = 14 + (i % 2) * 8, sw = Math.sin(t * 2 + i) * 2; c.strokeStyle = '#2f8a25'; c.lineWidth = 3; c.beginPath(); c.moveTo(x, 0); c.lineTo(x + sw, -h); c.stroke(); c.fillStyle = ['#ff5f7a', '#ffd23a', '#b07aff', '#4fb0ff', '#ff9a3a'][i]; c.strokeStyle = OUTLINE; c.lineWidth = 2; c.beginPath(); c.arc(x + sw, -h, 6, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff6b0'; c.beginPath(); c.arc(x + sw, -h, 2.5, 0, TAU); c.fill(); } break;
@@ -2195,7 +2282,7 @@ function likeStatus(m, I0 = isl()) {
 }
 function monRate(m, I0 = isl()) { const d = SHAPE[m.id]; return d.rate * (1 + 0.2 * (m.level - 1)) * (1 + decoBonus(I0) / 100) * (1 + LIKE_BONUS * likeStatus(m, I0).happy); }
 function monCap(m, I0) { return Math.round(monRate(m, I0) * 180); }
-function monBank(m, I0) { return Math.min(monCap(m, I0), Math.floor(monRate(m, I0) * (now() - m.last) / 60000)); }
+function monBank(m, I0) { if (m.statue) return 0; return Math.min(monCap(m, I0), Math.floor(monRate(m, I0) * (now() - m.last) / 60000)); }
 function feedCost(m) { return 5 * SHAPE[m.id].tier * m.level; } // food per treat
 function capacity(I0 = isl()) { return I0.noPlat ? DIAMOND_CAP : CASTLE_LEVELS[I0.castle].cap; } // Diamond Island fits every Shape
 function islandRadius(I0 = isl()) { const rx = (I0.noPlat ? DIAMOND_RX : ISLAND_RX) + (I0.expand || 0) * EXPAND_RX; return { rx, ry: rx * 0.45 }; } // expand only exists on old saves
@@ -2231,6 +2318,7 @@ function collectAll() {
   if (tot > 0) { Audio.sfx('coin'); UI.toast(`Collected ${fmt(tot)} coins`, 'good'); } else UI.toast('Nothing to collect yet');
 }
 function feed(m) {
+  if (m.statue) { UI.toast('Wake this statue up first by zapping eggs into it'); return; }
   if (m.level >= MAX_LEVEL) { UI.toast('Max level!'); return; }
   const c = feedCost(m); if (!spend(0, 0, c)) return;
   m.feeds++; S.stats.fed++; addXP(3 * SHAPE[m.id].tier);
@@ -2267,6 +2355,7 @@ function startBreed(ua, ub, sid) {
   const I0 = isl(), st = structById(sid); if (!st) return; if (st.br) return UI.toast('This Breeding Structure is busy');
   const a = I0.monsters.find(m => m.uid === ua), b = I0.monsters.find(m => m.uid === ub);
   if (!a || !b || a === b) return UI.toast('Pick two different Shapes');
+  if (a.statue || b.statue) return UI.toast('Statues can\'t breed. Zap eggs into them to wake them up!', 'bad');
   if (a.level < BREED_MIN_LEVEL || b.level < BREED_MIN_LEVEL) return UI.toast(`Both Shapes must be level ${BREED_MIN_LEVEL}+ (feed them!)`, 'bad');
   const outs = breedOutcomes(a.id, b.id, S.current); let res = rollOutcome(outs);
   if (tutOn()) { const top = Math.max(SHAPE[a.id].tier, SHAPE[b.id].tier), nw = Object.keys(outs).find(id => SHAPE[id].variant === 'common' && SHAPE[id].tier > top); if (nw) res = nw; }
@@ -2367,6 +2456,7 @@ function upgradeStruct(sid) {
 // ---------- market ----------
 function marketStatus(id) {
   const d = SHAPE[id], sp = islDef().special;
+  if (sp === 'haunt') return d.variant === 'night' ? { ok: false, why: 'Swap a Day Shape' } : { ok: true, shards: HAUNT_GEM_PRICE[d.el.length] };
   if (sp === 'ruin') { if (d.variant === 'rare' || d.variant === 'epic') return { ok: false, why: 'Breeding only' }; return RUIN_GEM_PRICE[d.el.length] ? { ok: true, shards: RUIN_GEM_PRICE[d.el.length] } : { ok: false, why: 'Breeding only' }; }
   if (sp === 'shattered') { if (d.variant === 'rare' || d.variant === 'epic' || d.el.length > 3) return { ok: false, why: 'Synthesis only' }; return { ok: true, shards: SHATTER_TRIPLE_PRICE }; }
   if (d.tier === 1) return S.level >= d.lvl ? { ok: true, coins: d.price } : { ok: false, why: `Reach level ${d.lvl}` };
@@ -2412,6 +2502,25 @@ function teleport(m, dest) {
   isl().monsters = isl().monsters.filter(x => x !== m);
   DI.hatch.push({ id: m.id, start: now(), end: now() + RUIN_TELEPORT_TIME * 1000 });
   pruneCopies(); syncAudio(); Audio.sfx('discover'); UI.toast(`${SHAPE[m.id].name} is on its way to ${D.name}! It will hatch there in 10 hours.`, 'good'); track('teleport'); markDirty(); return true;
+}
+// ---------- Eclipse Island: statues, zapping and Day/Night forms ----------
+function hauntStatues() { const H = S.islands.haunt; return H ? H.monsters.filter(m => m.statue) : []; }
+function zapTargets(eggId) { const b = SHAPE[eggId].baseId; return hauntStatues().filter(m => zapNeeds(m.id).includes(b) && !m.statue.got.includes(b)).sort((x, y) => y.statue.got.length - x.statue.got.length); }
+function canZapFrom(iid) { return !ISLAND[iid].special && !!S.unlocked.haunt; } // only the 5 main islands
+function zapEgg(idx, statueUid) {
+  const I0 = isl(), e = I0.hatch[idx]; if (!e || !canZapFrom(S.current)) return false;
+  const m = hauntStatues().find(x => x.uid === statueUid), b = SHAPE[e.id].baseId; if (!m || !zapNeeds(m.id).includes(b) || m.statue.got.includes(b)) return false;
+  I0.hatch.splice(idx, 1); m.statue.got.push(b); if (!m.statue.end) m.statue.end = now() + ZAP_TIME * 1000;
+  Audio.sfx('discover'); track('zapped');
+  if (m.statue.got.length >= zapNeeds(m.id).length) { m.statue = null; m.last = now(); if (!S.discovered[m.id]) setTimeout(() => UI.discovered(m.id), 400); S.discovered[m.id] = true; markFound(m.id, 'haunt'); UI.toast(`${SHAPE[m.id].name} woke up on Eclipse Island!`, 'good'); addXP(100 * SHAPE[m.id].el.length); }
+  else UI.toast(`Zapped to ${SHAPE[m.id].name} (${m.statue.got.length}/${zapNeeds(m.id).length})`, 'good');
+  markDirty(); return true;
+}
+function checkStatues() { hauntStatues().forEach(m => { if (m.statue.end && now() > m.statue.end) { m.statue = { got: [], end: null }; markDirty(); UI.toast(`Time ran out for the ${SHAPE[m.id].name} statue. Its eggs were lost.`, 'bad'); } }); }
+function swapForm(m) {
+  const d = SHAPE[m.id]; if (!ISLAND.haunt.shapes.includes(m.id) || m.statue) return;
+  m.id = d.variant === 'night' ? d.baseId : 'night_' + d.baseId; S.discovered[m.id] = true; markFound(m.id, 'haunt');
+  Audio.sfx('place'); FX.burst(m.x, m.y - 60, 'spark', 16); syncAudio(); markDirty();
 }
 // ---------- tasks ----------
 function track(k, n = 1) { S.stats[k] = (S.stats[k] || 0) + n; }
@@ -2514,11 +2623,13 @@ function confirmPlace() {
     const e = I0.hatch[p.idx]; if (!e) { cancelPlace(); return; }
     I0.hatch.splice(p.idx, 1);
     const m = { uid: S.uid++, id: e.id, x: p.x, y: p.y, level: 1, feeds: 0, last: now(), muted: false };
-    I0.monsters.push(m); S.stats.hatched++; markFound(e.id);
+    if (islDef().special === 'haunt') m.statue = { got: [], end: null }; // Eclipse Island Shapes hatch as statues
+    I0.monsters.push(m); S.stats.hatched++; if (!m.statue) markFound(e.id);
     const d = SHAPE[e.id]; addXP(TIER[d.tier].xpHatch);
-    const first = !S.discovered[e.id]; S.discovered[e.id] = true;
+    const first = !m.statue && !S.discovered[e.id]; if (!m.statue) S.discovered[e.id] = true; // statues count once they wake up
     FX.burst(p.x, p.y - 50, 'spark', 18); Audio.sfx(first ? 'discover' : 'place');
     if (first) setTimeout(() => UI.discovered(e.id), 350);
+    if (m.statue) UI.toast(`${d.name} statue placed! Zap eggs into it to wake it up.`, 'good');
   } else if (p.kind === 'deco') {
     const d = DECO[p.id]; if (!spend(d.cost || 0, d.shards || 0)) return;
     I0.decos.push({ uid: S.uid++, id: p.id, x: p.x, y: p.y }); track('decos'); Audio.sfx('place'); FX.burst(p.x, p.y - 20, 'spark', 8); addXP(Math.max(2, (d.cost || d.shards * 400) / 50));
@@ -2548,10 +2659,14 @@ function checkCastles() { // finish castle upgrades whose timer ran out (on ever
     I0.castleUp = null; I0.castle = Math.min(CASTLE_LEVELS.length - 1, I0.castle + 1); markDirty();
     if (!VISIT) { Audio.sfx('levelup'); UI.toast(`${ISLAND[id].name}: castle upgraded! Room for ${CASTLE_LEVELS[I0.castle].cap} Shapes`, 'good'); if (id === S.current && !VISIT) FX.burst(0, -200, 'spark', 20); } }
 }
+function islandReqText(d) { return d.req.after ? `Buy ${ISLAND[d.req.after].name} first · ${fmt(d.req.coins)} coins` : d.req.coins ? `Requires level ${d.req.level} · ${fmt(d.req.coins)} coins` : `Free at level ${d.req.level}`; }
+function canUnlock(d) { return !S.unlocked[d.id] && S.level >= d.req.level && (!d.req.after || S.unlocked[d.req.after]) && S.coins >= d.req.coins; }
 function unlockIsland(id) {
   const d = ISLAND[id]; if (S.unlocked[id]) return;
   if (S.level < d.req.level) { Audio.sfx('error'); return UI.toast(`Requires level ${d.req.level}`, 'bad'); }
-  if (!spend(d.req.coins)) return;
+  if (d.req.after && !S.unlocked[d.req.after]) { Audio.sfx('error'); return UI.toast(`Buy ${ISLAND[d.req.after].name} first`, 'bad'); }
+  if (id === 'shattered') { openShattered(S); addXP(200); Audio.sfx('discover'); markDirty(); return; }
+  if (d.req.coins && !spend(d.req.coins)) return;
   S.unlocked[id] = true; S.islands[id] = newIsland(S, id); addXP(200); Audio.sfx('discover'); UI.toast(`${d.name} unlocked!`, 'good');
   if (id === 'ruins') openShattered(S); markDirty();
 }
@@ -2576,7 +2691,7 @@ function startVisit(friend, data, likes, myLikes) {
 }
 function visitIsland(id) { if (!VISIT || !VISIT.data.unlocked[id]) return; VISIT.island = id; UI.visitMode(true); showIsland(); }
 function endVisit() { if (!VISIT) return; VISIT = null; UI.visitMode(false); showIsland(); Audio.sfx('close'); }
-function syncAudio() { Audio.syncVoices(isl().monsters.map(m => ({ uid: m.uid, id: m.id, muted: m.muted }))); }
+function syncAudio() { Audio.syncVoices(isl().monsters.map(m => ({ uid: m.uid, id: m.id, muted: m.muted || !!m.statue }))); }
 function worldPosOf(m) { return { x: m.x, y: m.y }; }
 
 function fmt(n) { n = Math.floor(n); if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1) + 'K'; return n.toLocaleString(); }
@@ -2599,6 +2714,7 @@ function currentGoal() {
   if (!S.unlocked.volt) return S.level >= 9 ? 'Volt Grotto is ready to unlock on the island map!' : 'Reach level 9 to unlock Volt Grotto.';
   if (islDef().special === 'diamond') return 'Tap the arrow at the bottom of the screen to copy your level 15 Shapes here.';
   if (islDef().special === 'ruin') return 'Buy Ruins here with gems, teleport level 15 Ruins from other islands, and breed two Ruins for a double.';
+  if (islDef().special === 'haunt') return hauntStatues().length ? 'Wake your statues by zapping eggs into them from the Hatcheries on the 5 main islands.' : 'Buy a Day Shape statue in the Market, then zap eggs into it to wake it up.';
   if (islDef().special === 'shattered') return 'Put a Ruin and some Relics in the Synthesizer to turn it into a bigger Ruin. Relics drop when you collect coins here.';
   if (discoveredCount() < SHAPES.length) return `Collection: ${discoveredCount()}/${SHAPES.length} Shapes found. Rares and Epics come from secret pairings!`;
   if (!S.unlocked.diamond) return S.level >= 18 ? 'Diamond Island is ready to unlock on the island map!' : 'Reach level 18 to unlock Diamond Island, where level 15 Shapes can be copied.';
@@ -2726,6 +2842,7 @@ const Render = (() => {
     else if (th === 'lagoon') { g.addColorStop(0, '#2ac8e8'); g.addColorStop(0.6, '#9af0f0'); g.addColorStop(1, '#e8fff8'); }
     else if (th === 'diamond') { g.addColorStop(0, '#8a7ae8'); g.addColorStop(0.45, '#f0b8ff'); g.addColorStop(1, '#fff6dc'); }
     else if (th === 'ruin') { g.addColorStop(0, '#0a1a2a'); g.addColorStop(0.55, '#2a2060'); g.addColorStop(1, '#5a3a7a'); }
+    else if (th === 'haunt') { g.addColorStop(0, '#0e0a2a'); g.addColorStop(0.55, '#3a1e5a'); g.addColorStop(1, '#c0602a'); }
     else if (th === 'shatter') { g.addColorStop(0, '#120830'); g.addColorStop(0.5, '#4a1a6a'); g.addColorStop(1, '#c05a9a'); }
     else { g.addColorStop(0, '#07040f'); g.addColorStop(0.6, '#1a0d36'); g.addColorStop(1, '#2a1250'); }
     c.fillStyle = g; c.fillRect(0, 0, W, H);
@@ -2741,6 +2858,12 @@ const Render = (() => {
     if (th === 'diamond') { // glittering sky with drifting gems
       terrain.stars.forEach(([x, y, p]) => { const tw = Math.max(0, Math.sin(t * 1.6 + p * 30)); if (tw < 0.3) return; c.save(); c.translate(x * W, y * H * 0.8); c.globalAlpha = tw; c.fillStyle = p > 0.5 ? '#ffffff' : '#ffe8a0'; c.beginPath(); c.moveTo(0, -6 * tw); c.lineTo(1.5, 0); c.lineTo(0, 6 * tw); c.lineTo(-1.5, 0); c.closePath(); c.moveTo(-6 * tw, 0); c.lineTo(0, 1.5); c.lineTo(6 * tw, 0); c.lineTo(0, -1.5); c.fill(); c.restore(); });
       [[0.12, 0.2, 40], [0.82, 0.12, 54], [0.92, 0.42, 30], [0.25, 0.48, 26]].forEach(([fx, fy, sz], k) => { const x = W * fx, y = H * fy + Math.sin(t * 0.8 + k) * 10; c.save(); c.translate(x, y); c.rotate(Math.sin(t * 0.4 + k) * 0.2); c.globalAlpha = 0.55; c.fillStyle = k % 2 ? '#bfe8ff' : '#ffd0f4'; c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -sz); c.lineTo(sz * 0.7, -sz * 0.25); c.lineTo(0, sz); c.lineTo(-sz * 0.7, -sz * 0.25); c.closePath(); c.fill(); c.stroke(); c.restore(); });
+    } else if (th === 'haunt') { // big moon, bats and carnival tents on the horizon
+      terrain.stars.forEach(([x, y, p]) => { c.fillStyle = `rgba(255,240,200,${0.25 + 0.6 * Math.abs(Math.sin(t * 0.8 + p * 20))})`; c.fillRect(x * W, y * H * 0.6, 2, 2); });
+      const mx = W * 0.8, my = H * 0.2, mr = Math.min(W, H) * 0.09; c.save(); c.shadowColor = '#fff4c0'; c.shadowBlur = 50; c.fillStyle = '#fff4c8'; c.beginPath(); c.arc(mx, my, mr, 0, TAU); c.fill(); c.restore();
+      c.fillStyle = 'rgba(200,180,120,0.35)'; [[-0.3, -0.2, 0.18], [0.25, 0.15, 0.12], [-0.1, 0.35, 0.09]].forEach(([a, b, r]) => { c.beginPath(); c.arc(mx + a * mr, my + b * mr, r * mr, 0, TAU); c.fill(); });
+      for (let i = 0; i < 5; i++) { const p = (t * 0.05 + i * 0.2) % 1, bx = W * (1.1 - p * 1.3), by = H * (0.12 + 0.08 * i) + Math.sin(t * 3 + i) * 10, f = Math.sin(t * 14 + i) > 0 ? 1 : 0.4; c.save(); c.translate(bx, by); c.fillStyle = '#120a20'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-10, -8 * f, -18, -2 * f); c.quadraticCurveTo(-10, 0, 0, 4); c.quadraticCurveTo(10, 0, 18, -2 * f); c.quadraticCurveTo(10, -8 * f, 0, 0); c.fill(); c.restore(); }
+      c.fillStyle = 'rgba(20,10,40,0.75)'; [[0.08, 0.06, 0.07], [0.22, 0.09, 0.05], [0.9, 0.05, 0.06]].forEach(([fx, hh, ww]) => { const x = W * fx, base = H * 0.6, h = H * hh; c.beginPath(); c.moveTo(x - W * ww, base); c.lineTo(x, base - h); c.lineTo(x + W * ww, base); c.closePath(); c.fill(); c.fillRect(x - 1, base - h - 14, 2, 14); });
     } else if (th === 'shatter') { // broken crystal shards drifting in a magenta sky
       terrain.stars.forEach(([x, y, p]) => { c.fillStyle = `rgba(255,200,255,${0.2 + 0.6 * Math.abs(Math.sin(t * 0.7 + p * 20))})`; c.fillRect(x * W, y * H * 0.85, 2, 2); });
       terrain.stal.slice(0, 12).forEach(([x, h, w, p], k) => { const sx = x * W, sy = H * (0.1 + h * 1.6) + Math.sin(t * 0.5 + k) * 10, sz = 14 + w * 1200; c.save(); c.translate(sx, sy); c.rotate(Math.sin(t * 0.3 + k) * 0.4 + k); c.globalAlpha = 0.7; c.fillStyle = k % 3 === 0 ? '#ff8ae8' : k % 3 === 1 ? '#6ae8ff' : '#c08aff'; c.strokeStyle = '#1a0a30'; c.lineWidth = 3; c.beginPath(); c.moveTo(0, -sz); c.lineTo(sz * 0.5, sz * 0.2); c.lineTo(sz * 0.1, sz * 0.7); c.lineTo(-sz * 0.45, sz * 0.1); c.closePath(); c.fill(); c.stroke(); c.restore(); });
@@ -2765,7 +2888,7 @@ const Render = (() => {
 
   function drawWater(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8', diamond: '#6ab8f0', ruin: '#141a40', shatter: '#2a1050' }[th] || '#0a3a50';
+    const col = { grass: '#2fa8e0', snow: '#2a3a7a', desert: '#2a9ab0', lagoon: '#18c0c8', diamond: '#6ab8f0', ruin: '#141a40', shatter: '#2a1050', haunt: '#1a1438' }[th] || '#0a3a50';
     c.fillStyle = col; c.fillRect(-4000, ry * 0.2, 8000, 4000);
     const g = c.createLinearGradient(0, ry * 0.2, 0, ry + 600); g.addColorStop(0, th === 'cave' ? 'rgba(60,240,255,0.25)' : 'rgba(255,255,255,0.18)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(-4000, ry * 0.2, 8000, 800);
     c.strokeStyle = th === 'cave' ? 'rgba(80,255,240,0.45)' : 'rgba(255,255,255,0.6)'; c.lineWidth = 3;
@@ -2774,8 +2897,8 @@ const Render = (() => {
   }
   function drawIsland(t, beat) {
     const th = terrain.th, { rx, ry } = islandRadius();
-    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'], diamond: ['#ffffff', '#bfe2f8'], ruin: ['#7a8a8a', '#4a5260'], shatter: ['#d8c0f0', '#8a6ac0'] }[th] || ['#3a2f6a', '#221a48'];
-    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'], diamond: ['#c8b8ff', '#7a6ad8'], ruin: ['#5a5070', '#241a3a'], shatter: ['#6a3a9a', '#200a40'] }[th] || ['#2a2050', '#120a28'];
+    const top = { grass: ['#8be36a', '#55b53e'], snow: ['#ffffff', '#c6d8f2'], desert: ['#ffe4a8', '#eab868'], lagoon: ['#a4ec70', '#4ab84a'], diamond: ['#ffffff', '#bfe2f8'], ruin: ['#7a8a8a', '#4a5260'], shatter: ['#d8c0f0', '#8a6ac0'], haunt: ['#4a8a6a', '#2a5048'] }[th] || ['#3a2f6a', '#221a48'];
+    const cliff = { grass: ['#b47a48', '#6a3e22'], snow: ['#8aa6d8', '#4a5a9a'], desert: ['#e09a58', '#9a5a2a'], lagoon: ['#ff9a8a', '#b8506a'], diamond: ['#c8b8ff', '#7a6ad8'], ruin: ['#5a5070', '#241a3a'], shatter: ['#6a3a9a', '#200a40'], haunt: ['#5a4a6a', '#20142e'] }[th] || ['#2a2050', '#120a28'];
     const depth = 110;
     // cliff
     let g = c.createLinearGradient(0, 0, 0, ry + depth); g.addColorStop(0, cliff[0]); g.addColorStop(1, cliff[1]);
@@ -2787,7 +2910,7 @@ const Render = (() => {
     c.strokeStyle = 'rgba(30,10,40,0.18)'; c.lineWidth = 3; for (let k = 1; k <= 2; k++) { c.beginPath(); c.ellipse(0, k * 32, rx * (1 - k * 0.02), ry, 0, 0.1, Math.PI - 0.1); c.stroke(); }
     if (th === 'cave') { c.strokeStyle = `rgba(60,240,255,${0.35 + 0.3 * Math.max(0, Math.sin(beat * Math.PI * 2))})`; c.lineWidth = 3; c.beginPath(); for (let i = 0; i < 10; i++) { const a = 0.2 + i * 0.28; c.moveTo(Math.cos(a) * rx * 0.98, Math.sin(a) * ry); c.lineTo(Math.cos(a) * rx * 0.95 + 8, Math.sin(a) * ry + 50 + (i % 3) * 15); } c.stroke(); }
     // platforms joined to the island edge
-    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8', diamond: '#ffe68a', ruin: '#8a80a0', shatter: '#ff9ae8' }[th] || '#d8c8a8';
+    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8', diamond: '#ffe68a', ruin: '#8a80a0', shatter: '#ff9ae8', haunt: '#9a8aa8' }[th] || '#d8c8a8';
     platforms(isl()).forEach(p => {
       const pd = 70, cg = c.createLinearGradient(0, p.y, 0, p.y + p.ry + pd); cg.addColorStop(0, cliff[0]); cg.addColorStop(1, cliff[1]);
       c.fillStyle = cg; c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI); c.lineTo(p.x - p.rx * 0.8, p.y + pd * 0.5);
@@ -2809,7 +2932,7 @@ const Render = (() => {
     // edge highlight
     c.strokeStyle = th === 'cave' ? 'rgba(120,90,255,0.5)' : th === 'snow' || th === 'diamond' ? 'rgba(255,255,255,0.9)' : th === 'shatter' ? 'rgba(255,170,240,0.6)' : th === 'ruin' ? 'rgba(110,255,210,0.45)' : 'rgba(255,255,255,0.35)'; c.lineWidth = 6; c.beginPath(); c.ellipse(0, 0, rx - 10, ry - 7, 0, Math.PI * 1.05, Math.PI * 1.95); c.stroke();
     // path to castle
-    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)', diamond: 'rgba(255,214,90,0.85)', ruin: 'rgba(150,140,170,0.6)', shatter: 'rgba(255,140,230,0.55)' }[th] || 'rgba(90,70,160,0.6)';
+    c.fillStyle = { grass: 'rgba(240,215,160,0.8)', snow: 'rgba(190,210,240,0.7)', desert: 'rgba(200,140,80,0.45)', lagoon: 'rgba(246,226,168,0.9)', diamond: 'rgba(255,214,90,0.85)', ruin: 'rgba(150,140,170,0.6)', shatter: 'rgba(255,140,230,0.55)', haunt: 'rgba(255,170,80,0.45)' }[th] || 'rgba(90,70,160,0.6)';
     c.beginPath(); c.moveTo(-36, -80); c.quadraticCurveTo(-60, 60, -20, ry * 0.95); c.lineTo(40, ry * 0.95); c.quadraticCurveTo(10, 60, 36, -80); c.closePath(); c.fill();
     // tufts / texture
     terrain.tufts.forEach(([nx, ny, r]) => {
@@ -2818,6 +2941,7 @@ const Render = (() => {
       else if (th === 'snow') { c.fillStyle = r > 0.5 ? 'rgba(160,190,230,0.5)' : 'rgba(255,255,255,0.9)'; c.beginPath(); c.ellipse(x, y, 7 * r + 3, 2.5, 0, 0, TAU); c.fill(); if (r > 0.95) { c.fillStyle = '#c8f0ff'; c.beginPath(); c.moveTo(x, y - 14); c.lineTo(x + 4, y); c.lineTo(x - 4, y); c.fill(); } }
       else if (th === 'desert') { if (r > 0.96) { c.fillStyle = '#4a9a3a'; c.strokeStyle = OUTLINE; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x - 3, y - 16, 6, 16, 3); c.roundRect(x - 9, y - 11, 5, 7, 2); c.fill(); c.stroke(); } else { c.fillStyle = r > 0.5 ? 'rgba(180,110,50,0.35)' : 'rgba(255,255,255,0.35)'; c.beginPath(); c.ellipse(x, y, 8 * r + 3, 2, 0, 0, TAU); c.fill(); } }
       else if (th === 'diamond') { if (r > 0.8) { const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + r * 50)), sz = (r > 0.95 ? 9 : 5) * tw; c.fillStyle = r > 0.9 ? '#ff9ae0' : r > 0.85 ? '#7ad8ff' : '#ffffff'; c.strokeStyle = 'rgba(80,60,160,0.6)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, y - sz); c.lineTo(x + sz * 0.7, y); c.lineTo(x, y + sz * 0.6); c.lineTo(x - sz * 0.7, y); c.closePath(); c.fill(); c.stroke(); } else { c.fillStyle = 'rgba(150,190,240,0.35)'; c.beginPath(); c.ellipse(x, y, 6 * r + 2, 2, 0, 0, TAU); c.fill(); } }
+      else if (th === 'haunt') { if (r > 0.95) { c.fillStyle = '#ff8a2a'; c.strokeStyle = '#3a1a0a'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, 8, 6, 0, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#3a6a2a'; c.fillRect(x - 1, y - 9, 2, 4); c.fillStyle = `rgba(255,220,100,${0.5 + 0.5 * Math.sin(t * 5 + r * 30)})`; c.fillRect(x - 3, y - 1, 2, 2); c.fillRect(x + 1, y - 1, 2, 2); } else if (r > 0.6) { c.strokeStyle = 'rgba(20,50,40,0.6)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 3, y); c.lineTo(x - 5, y - 7); c.moveTo(x, y); c.lineTo(x, y - 9); c.moveTo(x + 3, y); c.lineTo(x + 5, y - 7); c.stroke(); } }
       else if (th === 'shatter') { if (r > 0.78) { const sz = (r > 0.95 ? 9 : 5); c.fillStyle = r > 0.9 ? '#ff8ae8' : r > 0.84 ? '#6ae8ff' : '#ffffff'; c.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(t * 1.5 + r * 60)); c.beginPath(); c.moveTo(x, y - sz); c.lineTo(x + sz * 0.5, y + 1); c.lineTo(x - sz * 0.4, y + 2); c.closePath(); c.fill(); c.globalAlpha = 1; } else if (r > 0.5) { c.strokeStyle = 'rgba(60,20,90,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 9, y); c.lineTo(x - 2, y + 2); c.lineTo(x + 7, y - 1); c.stroke(); } }
       else if (th === 'ruin') { if (r > 0.9) { c.fillStyle = `rgba(110,255,210,${0.35 + 0.45 * Math.abs(Math.sin(t * 1.5 + r * 40))})`; c.font = '900 14px sans-serif'; c.textAlign = 'center'; c.fillText('ᚱᚦᛟᚨᛉ'[Math.floor(r * 50) % 5], x, y); } else if (r > 0.55) { c.fillStyle = 'rgba(60,140,90,0.5)'; c.beginPath(); c.ellipse(x, y, 7, 3, 0, 0, TAU); c.fill(); } else { c.strokeStyle = 'rgba(30,20,50,0.35)'; c.lineWidth = 2; c.beginPath(); c.moveTo(x - 8, y); c.lineTo(x + 6, y + 2); c.stroke(); } }
       else if (th === 'lagoon') { if (r > 0.94) { c.fillStyle = r > 0.97 ? '#ff8a6a' : '#fff0e0'; c.beginPath(); starPts(5, 6, 2.5, -Math.PI / 2).forEach((q, k) => k ? c.lineTo(x + q[0], y + q[1]) : c.moveTo(x + q[0], y + q[1])); c.fill(); } else { c.strokeStyle = r > 0.5 ? '#2f9a3e' : '#b8f08a'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x - 4, y); c.lineTo(x - 7, y - 8); c.moveTo(x + 4, y); c.lineTo(x + 7, y - 8); c.stroke(); } }
@@ -2831,11 +2955,12 @@ const Render = (() => {
     if (th === 'grass' && ambient.length < 8) ambient.push({ x: (Math.random() - 0.5) * rx * 1.6, y: (Math.random() - 0.5) * ry * 1.4 - 40, v: 0, s: 1, p: Math.random() * 6, col: ['#ff8fc0', '#ffd23a', '#9ad0ff'][Math.floor(Math.random() * 3)] });
     if (th === 'desert' && ambient.length < 50) ambient.push({ x: -rx * 1.6, y: (Math.random() - 0.5) * ry * 2.4 - 80, v: 40 + Math.random() * 60, s: 1 + Math.random() * 2, p: Math.random() * 6 });
     if (th === 'lagoon' && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.6, y: ry + 120 + Math.random() * 200, v: 20 + Math.random() * 30, s: 3 + Math.random() * 5, p: Math.random() * 6 });
-    if ((th === 'diamond' || th === 'ruin' || th === 'shatter') && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.2, y: (Math.random() - 0.5) * ry * 2.4 - 120, v: 8 + Math.random() * 14, s: 2 + Math.random() * 3, p: Math.random() * 6, life: 0 });
+    if ((th === 'diamond' || th === 'ruin' || th === 'shatter' || th === 'haunt') && ambient.length < 40) ambient.push({ x: (Math.random() - 0.5) * rx * 2.2, y: (Math.random() - 0.5) * ry * 2.4 - 120, v: 8 + Math.random() * 14, s: 2 + Math.random() * 3, p: Math.random() * 6, life: 0 });
     for (let i = ambient.length - 1; i >= 0; i--) {
       const a = ambient[i];
-      if (th === 'diamond' || th === 'ruin' || th === 'shatter') { a.life += dt; a.y -= a.v * dt; if (a.life > 6) { ambient.splice(i, 1); continue; } const al = Math.sin(a.life / 6 * Math.PI); c.save(); c.translate(a.x + Math.sin(t + a.p) * 14, a.y); c.globalAlpha = al;
+      if (th === 'diamond' || th === 'ruin' || th === 'shatter' || th === 'haunt') { a.life += dt; a.y -= a.v * dt; if (a.life > 6) { ambient.splice(i, 1); continue; } const al = Math.sin(a.life / 6 * Math.PI); c.save(); c.translate(a.x + Math.sin(t + a.p) * 14, a.y); c.globalAlpha = al;
         if (th === 'diamond') { c.fillStyle = a.p > 3 ? '#ffffff' : '#ffe8a0'; c.rotate(t * 2 + a.p); c.beginPath(); c.moveTo(0, -a.s * 2); c.lineTo(a.s * 0.5, 0); c.lineTo(0, a.s * 2); c.lineTo(-a.s * 0.5, 0); c.closePath(); c.moveTo(-a.s * 2, 0); c.lineTo(0, a.s * 0.5); c.lineTo(a.s * 2, 0); c.lineTo(0, -a.s * 0.5); c.fill(); }
+        else if (th === 'haunt') { c.fillStyle = a.p > 3 ? 'rgba(255,190,90,0.9)' : 'rgba(170,255,140,0.9)'; c.shadowColor = c.fillStyle; c.shadowBlur = 12; c.beginPath(); c.arc(0, 0, a.s * 0.8, 0, TAU); c.fill(); }
         else if (th === 'shatter') { c.rotate(t + a.p); c.fillStyle = a.p > 3 ? 'rgba(255,138,232,0.85)' : 'rgba(106,232,255,0.85)'; c.beginPath(); c.moveTo(0, -a.s * 2); c.lineTo(a.s, a.s); c.lineTo(-a.s, a.s * 0.6); c.closePath(); c.fill(); }
         else { c.fillStyle = 'rgba(110,255,210,0.8)'; c.shadowColor = '#6effd2'; c.shadowBlur = 10; c.beginPath(); c.arc(0, 0, a.s, 0, TAU); c.fill(); }
         c.restore(); continue; }
@@ -2882,14 +3007,14 @@ const Render = (() => {
     const def = SHAPE[m.id]; let r = rt.get(m.uid); if (!r) { r = { prev: 9, seed: (m.uid * 7919) % 97 + 1 }; rt.set(m.uid, r); }
     const hi = Audio.hitInfo(m.uid);
     if (hi.since < r.prev - 0.001 && !m.muted) { // new hit
-      if (['circle', 'triangle', 'square', 'hexagon'].includes(def.cat) && Math.random() < 0.25) FX.note(m.x, m.y - 90, ELEMENTS[def.el[0]].color);
       if (def.cat === 'star') { for (let i = 0; i < 2; i++) FX.spark(m.x, m.y - 50, '#fff6b0'); }
-      if (['diamond', 'special'].includes(def.cat) && Math.random() < 0.35) FX.note(m.x, m.y - 100, ELEMENTS[def.el[def.el.length - 1]].color);
     }
     r.prev = hi.since;
     c.save(); c.translate(m.x, m.y);
     if (selected && selected.type === 'mon' && selected.uid === m.uid) selRing(36 * (def.look.size || 1));
-    const res = drawShape(c, def, { t, hi, beat, seed: r.seed, playing: true, muted: m.muted, scale: 1 + m.level * 0.015 });
+    if (m.statue) { c.filter = 'grayscale(1) brightness(1.08)'; const res = drawShape(c, def, { t, hi, beat, seed: r.seed, playing: false, statue: true, scale: 1.05 }); c.filter = 'none';
+      if (!VISIT) label(`Statue ${m.statue.got.length}/${zapNeeds(m.id).length}${m.statue.end ? ' · ' + fmtTime(m.statue.end - now()) : ''}`, res.top - 22, false); c.restore(); return; }
+    const res = drawShape(c, def, { t, hi, beat, seed: r.seed, playing: true, muted: m.muted, scale: 1 + m.level * 0.015, state: r });
     // coin bubble
     const bank = monBank(m), cap = monCap(m);
     if (bank >= cap && !VISIT) {
@@ -3038,7 +3163,7 @@ const UI = (() => {
     const I0 = isl(), eggs = I0.hatch.filter(eggReady).length;
     if (!VISIT) { ensureTasks(); setDot('#b-goals', S.tasks.filter(t => taskProg(t) >= t.n).length); }
     const showTray = !VISIT && S.current === 'diamond' && !placing && $('#sheet').classList.contains('hidden'); $('#dtray').classList.toggle('hidden', !showTray); if (showTray) { const n = diamondCandidates().length; $('#dtray-n').textContent = n; $('#dtray-n').style.display = n ? '' : 'none'; }
-    const unl = ISLANDS.filter(i => !S.unlocked[i.id] && S.level >= i.req.level && S.coins >= i.req.coins).length; setDot('#b-map', unl ? '!' : 0);
+    const unl = ISLANDS.filter(canUnlock).length; setDot('#b-map', unl ? '!' : 0);
   }
   function setDot(sel, n) { const b = $(sel); let d = b.querySelector('.dot'); if (n) { if (!d) { d = document.createElement('span'); d.className = 'dot'; b.appendChild(d); } d.textContent = n; } else if (d) d.remove(); }
 
@@ -3056,7 +3181,7 @@ const UI = (() => {
       renderPortrait(c, a.def, a.size, { t, hi, playing, beat: Audio.beatPhase() });
     }
     if (t - lastTimer > 0.25) {
-      lastTimer = t; if (!VISIT) { checkCastles(); pruneCopies(); } refreshHUD(); if (modalKind === 'tasks' && modal.dataset.sig !== taskSig()) openTasks(true);
+      lastTimer = t; if (!VISIT) { checkCastles(); pruneCopies(); checkStatues(); } refreshHUD(); if (modalKind === 'tasks' && modal.dataset.sig !== taskSig()) openTasks(true);
       for (const el of timerEls) { const end = +el.dataset.end; const left = end - now(); if (left <= 0 && !el.dataset.doneShown) { el.dataset.doneShown = 1; rerender(); return; } el.textContent = fmtTime(left); if (el.dataset.start) { const bar = el.parentElement.querySelector('.bar i'); if (bar) bar.style.width = Math.min(100, (now() - el.dataset.start) / (end - el.dataset.start) * 100) + '%'; } }
       if (modal) modal.querySelectorAll('[data-cost]').forEach(el => { el.textContent = (el.dataset.cm === 'min' ? speedCostMin : speedCost)(+el.dataset.cost); });
       if (sheetFor) updateSheet();
@@ -3175,7 +3300,7 @@ const UI = (() => {
       body = `<div class="breedrow">${slot(a, 'Pick a Shape')}<div class="plus">+</div>${slot(b, 'Pick another')}</div>${mix}
       <div class="center" style="margin:12px 0"><button class="btn green" data-go ${a && b ? '' : 'disabled'}>Breed!</button></div>
       <div class="muted center" style="margin-bottom:8px">Shapes must be level ${BREED_MIN_LEVEL}+ to breed.</div>
-      <div class="wgrid small-cards">${mons.length ? mons.map(m => { const ok = m.level >= BREED_MIN_LEVEL; return `<div class="wcard pick ${m.uid === pickA || m.uid === pickB ? 'sel' : ''} ${ok ? '' : 'locked'}" data-pick="${m.uid}"><div class="wname">${SHAPE[m.id].name}</div><div class="wart"><div data-portrait="${m.id}" data-size="76"></div></div><div class="muted">Level ${m.level}${ok ? '' : ' · needs ' + BREED_MIN_LEVEL}</div></div>`; }).join('') : '<p class="muted">Place some Shapes on the island first.</p>'}</div>`;
+      <div class="wgrid small-cards">${mons.length ? mons.map(m => { const ok = m.level >= BREED_MIN_LEVEL && !m.statue; return `<div class="wcard pick ${m.uid === pickA || m.uid === pickB ? 'sel' : ''} ${ok ? '' : 'locked'}" data-pick="${m.uid}"><div class="wname">${SHAPE[m.id].name}</div><div class="wart"><div data-portrait="${m.id}" data-size="76"></div></div><div class="muted">Level ${m.level}${ok ? '' : ' · needs ' + BREED_MIN_LEVEL}</div></div>`; }).join('') : '<p class="muted">Place some Shapes on the island first.</p>'}</div>`;
     }
     body += structFooter(st);
     if (keep && modalKind === 'breed') setBody(body); else open('breed', 'Breeding Structure', '', 'heart', body);
@@ -3205,6 +3330,7 @@ const UI = (() => {
       const ready = eggReady(e), d = SHAPE[e.id], known = S.discovered[e.id] || d.tier === 1;
       body += `<div class="slot filled egg-slot"><div data-egg="${e.id}" data-size="96" data-ready="${ready ? 1 : 0}"></div><b>${known ? d.name : 'Mystery Egg'}</b>
         ${ready ? `<button class="btn green sm" data-hatch="${i}" ${full ? 'disabled' : ''}>Hatch!</button>` : `<div style="width:100%"><div class="bar"><i style="width:${(now() - e.start) / (e.end - e.start) * 100}%"></i></div><div class="timer" data-end="${e.end}" data-start="${e.start}">${fmtTime(e.end - now())}</div><button class="btn purple sm" data-speed-egg="${i}">⚡ ${ic('shard')} <span data-cost="${e.end}" data-cm="min">${speedCostMin(e.end)}</span></button></div>`}
+        ${canZapFrom(S.current) && zapTargets(e.id).length ? `<button class="btn sm purple" data-zap="${i}">⚡ Zap to ${SHAPE[zapTargets(e.id)[0].id].name}</button>` : ''}
         <button class="btn sm wood" data-sell-egg="${i}">Sell ${ic('coin')} ${fmt(eggSellValue(e.id))}</button></div>`;
     }
     body += `</div>` + structFooter(st);
@@ -3213,6 +3339,7 @@ const UI = (() => {
     modal.querySelectorAll('[data-hatch]').forEach(b => b.onclick = () => { Audio.sfx('hatch'); beginPlace({ kind: 'hatch', idx: +b.dataset.hatch }); });
     modal.querySelectorAll('[data-sell-egg]').forEach(b => b.onclick = () => { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap to confirm'; return; } sellEgg(+b.dataset.sellEgg); openHatch(true); });
     modal.querySelectorAll('[data-speed-egg]').forEach(b => b.onclick = () => { speedEgg(+b.dataset.speedEgg); openHatch(true); });
+    modal.querySelectorAll('[data-zap]').forEach(b => b.onclick = () => { const i = +b.dataset.zap, tg = zapTargets(isl().hatch[i].id)[0]; if (tg && zapEgg(i, tg.uid)) { refreshHUD(); openHatch(true); } });
   }
 
   // ---------- BAKERY ----------
@@ -3262,6 +3389,7 @@ const UI = (() => {
 
   // ---------- BOOK ----------
   function recipeText(d) {
+    if (d.haunt) return `Buy at Eclipse Island${d.el.length > 1 ? ' or breed it there' : ''}. It starts as a statue: zap ${zapNeeds(d.id).length} eggs into it within a week to wake it.${d.variant === 'night' ? ' Swap a Day Shape to get its Night form.' : ''}`;
     if (d.variant === 'ruin' && RUIN_DOUBLES.includes(d.id)) return `Breed Ruins with ${d.el.map(e => ELEMENTS[e].icon + ' ' + ELEMENTS[e].name).join(' + ')} on Ruin Island, or buy one there.`;
     if (d.variant === 'ruin' && SHATTER_IDS.includes(d.id)) return d.el.length === 3 ? 'Buy on Shattered Island.' : `Synthesize on Shattered Island: a smaller Ruin plus ${RELIC_COST[d.el.length]} Relics of the missing element.`;
     if (d.variant === 'rare' || d.variant === 'epic' || d.variant === 'ruin') return 'Bred from a secret pairing. Nobody knows the recipe... yet.';
@@ -3270,7 +3398,8 @@ const UI = (() => {
   }
   const bookEl = $('#book'), bcv = $('#book-cv'), bc = bcv.getContext('2d');
   let bookIsle = null, bookItems = [], bookCache = {}, bookPage = 'commons', bookTabs = [];
-  const BOOK_PAGES = [['commons', 'COMMONS', '#e8e2f0', '#3a2350'], ['rares', 'RARES', '#6ad8ff', '#22305c'], ['epics', 'EPICS', '#ffc04a', '#4a2e1a']];
+  const PAGES_STD = [['commons', 'COMMONS', '#e8e2f0', '#3a2350'], ['rares', 'RARES', '#6ad8ff', '#22305c'], ['epics', 'EPICS', '#ffc04a', '#4a2e1a']], PAGES_HAUNT = [['commons', 'DAY', '#ffe07a', '#4a3a2a'], ['nights', 'NIGHT', '#a08aff', '#1a1640']];
+  let BOOK_PAGES = PAGES_STD;
   function bookImg(id, sil) { const k = id + (sil ? '_s' : ''); if (!bookCache[k]) bookCache[k] = portrait(SHAPE[id], 120, { silhouette: sil, silCol: '#170c22' }); return bookCache[k]; }
   function openBook(detailId) {
     if (detailId && !bookEl.classList.contains('hidden')) return bookDetail(detailId);
@@ -3279,6 +3408,7 @@ const UI = (() => {
   }
   function closeBook() { bookEl.classList.add('hidden'); Audio.sfx('close'); if (Audio.previewing) Audio.stopPreview(); }
   function drawBook(t) {
+    BOOK_PAGES = ISLAND[bookIsle].special === 'haunt' ? PAGES_HAUNT : PAGES_STD; if (!BOOK_PAGES.find(p => p[0] === bookPage)) bookPage = 'commons';
     const d = Math.min(2, devicePixelRatio || 1), W = VIEW.w, H = VIEW.h, u = VIEW.u;
     if (bcv.width !== Math.round(W * d) || bcv.height !== Math.round(H * d)) { bcv.width = W * d; bcv.height = H * d; bcv.style.width = W + 'px'; bcv.style.height = H + 'px'; }
     const c = bc; c.setTransform(d, 0, 0, d, 0, 0);
@@ -3316,7 +3446,7 @@ const UI = (() => {
     txt(`${I.name}  ·  ${pg[1][0] + pg[1].slice(1).toLowerCase()}`, W / 2, H - m - fw - 56 * u, 24 * u, '#ffffff');
     const cnt = arr => arr.filter(id => foundOn(bookIsle, id)).length;
     const cw = Math.min(170 * u, (W - 260 * u) / 3), th = 40 * u, ty = H - m - fw - 40 * u; bookTabs = [];
-    BOOK_PAGES.forEach(([key, lab, col], k) => { const x = W / 2 + (k - 1) * cw, on = key === bookPage, tw = cw - 14 * u;
+    BOOK_PAGES.forEach(([key, lab, col], k) => { const x = W / 2 + (k - (BOOK_PAGES.length - 1) / 2) * cw, on = key === bookPage, tw = cw - 14 * u;
       c.fillStyle = on ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.25)'; c.strokeStyle = on ? col : 'rgba(255,255,255,0.15)'; c.lineWidth = on ? 3 : 2; c.beginPath(); c.roundRect(x - tw / 2, ty, tw, th, 10 * u); c.fill(); c.stroke();
       txt(lab, x, ty + 13 * u, 13 * u, col, 1.5 * u); txt(`${cnt(I[key])}/${I[key].length}`, x, ty + 29 * u, 15 * u, '#ffffff');
       bookTabs.push({ key, x: x - tw / 2, y: ty, w: tw, h: th }); });
@@ -3329,7 +3459,7 @@ const UI = (() => {
     for (let i = bookItems.length - 1; i >= 0; i--) { const b = bookItems[i]; if (L.x >= b.x && L.x <= b.x + b.w && L.y >= b.y && L.y <= b.y + b.h) { Audio.sfx('tap'); bookDetail(b.id, null, 'bio', foundOn(bookIsle, b.id)); return; } }
   });
   $('#bk-exit').onclick = closeBook;
-  const turnPage = dir => { const i = BOOK_PAGES.findIndex(p => p[0] === bookPage); bookPage = BOOK_PAGES[(i + dir + 3) % 3][0]; Audio.sfx('open'); };
+  const turnPage = dir => { const i = BOOK_PAGES.findIndex(p => p[0] === bookPage); bookPage = BOOK_PAGES[(i + dir + BOOK_PAGES.length) % BOOK_PAGES.length][0]; Audio.sfx('open'); };
   $('#bk-prev').onclick = () => turnPage(-1); $('#bk-next').onclick = () => turnPage(1);
   $('#bk-islands').onclick = () => { const l = $('#bk-list'); l.innerHTML = ISLANDS.map(i => `<button class="btn sm ${i.id === bookIsle ? 'green' : 'blue'}" data-bi="${i.id}">${i.name}</button>`).join(''); l.classList.toggle('hidden'); Audio.sfx('tap'); l.querySelectorAll('[data-bi]').forEach(b => b.onclick = () => { bookIsle = b.dataset.bi; l.classList.add('hidden'); Audio.sfx('open'); }); };
   function bookDetail(id, m, tab = 'bio', knownHere) {
@@ -3351,7 +3481,7 @@ const UI = (() => {
 
   // ---------- MAP ----------
   const mapEl = $('#map'); let mapSel = null;
-  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'], diamond: ['#7ac8f0', '#f0fbff', '#9ab0f0'], ruin: ['#4a3a78', '#8a7ab0', '#2a1a48'], shatter: ['#8a4ab0', '#d8c0f0', '#4a1a6a'] };
+  const ISLE_COL = { grass: ['#5aa83a', '#8be36a', '#b47a48'], snow: ['#8aa6d8', '#ffffff', '#6a7ab8'], cave: ['#2a1a4a', '#3a2f6a', '#1a1030'], desert: ['#d0904a', '#ffe4a8', '#c07a3a'], lagoon: ['#2ab8b0', '#a4ec70', '#ff9a8a'], diamond: ['#7ac8f0', '#f0fbff', '#9ab0f0'], ruin: ['#4a3a78', '#8a7ab0', '#2a1a48'], haunt: ['#3a2a5a', '#4a8a6a', '#1a1030'], shatter: ['#8a4ab0', '#d8c0f0', '#4a1a6a'] };
   function islePreview(I) {
     const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), W = 300, H = 190; cv.width = W * d; cv.height = H * d; cv.style.width = W * VIEW.u + 'px'; cv.style.height = H * VIEW.u + 'px';
     const c = cv.getContext('2d'); c.scale(d, d); const col = ISLE_COL[I.theme], un = S.unlocked[I.id];
@@ -3370,12 +3500,12 @@ const UI = (() => {
     const I = ISLAND[mapSel], un = S.unlocked[I.id], I0 = S.islands[I.id];
     const onIsle = (isl0, a) => a.filter(id => foundOn(isl0.id, id)).length;
     const cnt = a => onIsle(I, a);
-    $('#map-list').innerHTML = ISLANDS.map(d => `<button class="mrow ${d.id === mapSel ? 'on' : ''}" data-mi="${d.id}" style="--mc:${ISLE_COL[d.theme][0]}"><span class="mn">${d.name}</span><span class="mc">${S.unlocked[d.id] ? `${onIsle(d, d.shapes)}/${d.shapes.length}` : '🔒 Lv ' + d.req.level}</span></button>`).join('');
+    $('#map-list').innerHTML = ISLANDS.map(d => `<button class="mrow ${d.id === mapSel ? 'on' : ''}" data-mi="${d.id}" style="--mc:${ISLE_COL[d.theme][0]}"><span class="mn">${d.name}</span><span class="mc">${S.unlocked[d.id] ? `${onIsle(d, d.shapes)}/${d.shapes.length}` : d.req.after ? (S.unlocked[d.req.after] ? '🔒 ' + fmt(d.req.coins) + ' coins' : '🔒 After ' + ISLAND[d.req.after].name) : '🔒 Lv ' + d.req.level}</span></button>`).join('');
     const right = $('#map-main'); right.innerHTML = `<div class="mplaque">${I.name}</div><div class="mprev"></div>
-      <div class="mtext">${un ? `Castle: ${I0.monsters.length}/${capacity(I0)}` : `Requires level ${I.req.level} · ${fmt(I.req.coins)} coins`}</div>
-      <div class="mcounts"><span style="color:#2f7a25">Commons ${cnt(I.commons)}/${I.commons.length}</span><span style="color:#1f6ac0">Rares ${cnt(I.rares)}/${I.rares.length}</span><span style="color:#b8650a">Epics ${cnt(I.epics)}/${I.epics.length}</span></div>
+      <div class="mtext">${un ? `Castle: ${I0.monsters.length}/${capacity(I0)}` : islandReqText(I)}</div>
+      <div class="mcounts">${I.nights ? `<span style="color:#b8650a">Day ${cnt(I.commons)}/${I.commons.length}</span><span style="color:#5a3ab0">Night ${cnt(I.nights)}/${I.nights.length}</span>` : `<span style="color:#2f7a25">Commons ${cnt(I.commons)}/${I.commons.length}</span><span style="color:#1f6ac0">Rares ${cnt(I.rares)}/${I.rares.length}</span><span style="color:#b8650a">Epics ${cnt(I.epics)}/${I.epics.length}</span>`}</div>
       <div class="mdesc">${I.desc}</div>
-      ${S.current === I.id ? '<button class="btn gray" disabled>You are here</button>' : un ? '<button class="btn green mgo" data-mgo>GO</button>' : I.special === 'shattered' ? '<button class="btn gray" disabled>Opens with Ruin Island</button>' : `<button class="btn green mgo" data-munlock ${S.level >= I.req.level ? '' : 'disabled'}>Unlock ${ic('coin')} ${fmt(I.req.coins)}</button>`}`;
+      ${S.current === I.id ? '<button class="btn gray" disabled>You are here</button>' : un ? '<button class="btn green mgo" data-mgo>GO</button>' : `<button class="btn green mgo" data-munlock ${canUnlock(I) || (S.level >= I.req.level && (!I.req.after || S.unlocked[I.req.after])) ? '' : 'disabled'}>${I.req.coins ? `Unlock ${ic('coin')} ${fmt(I.req.coins)}` : 'Unlock for free'}</button>`}`;
     right.querySelector('.mprev').appendChild(islePreview(I));
     mapEl.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { Audio.sfx('tap'); openIslands(b.dataset.mi); });
     const go = right.querySelector('[data-mgo]'); if (go) go.onclick = () => { mapEl.classList.add('hidden'); travel(I.id); };
@@ -3494,6 +3624,7 @@ const UI = (() => {
   // ---------- MONSTER SHEET ----------
   const sheet = $('#sheet'); let sheetAnim = null;
   function openMonster(m) {
+    if (m.statue) { closeSheet(); return openStatue(m); }
     sheetFor = { type: 'mon', uid: m.uid }; const d = SHAPE[m.id];
     sheet.innerHTML = `<div class="sh-card"><button class="xbtn" data-x>✕</button>
       <div class="sh-name"><div class="sh-lv">${ICONS.star}<span id="sh-lv">${m.level}</span></div><span class="nm">${d.name}</span>${elBadges(d.el)}</div>
@@ -3505,6 +3636,7 @@ const UI = (() => {
         <button class="rbtn c-teal" id="sh-move"><span>${ICONS.move}</span><span class="rlbl">Move</span></button>
         <button class="rbtn c-purple" id="sh-info"><span>${ICONS.info}</span><span class="rlbl">Info</span></button>
         ${teleportDests(m).length && !VISIT ? `<button class="rbtn c-pink" id="sh-tp" style="${m.level < MAX_LEVEL ? 'filter:grayscale(.7)' : ''}"><span>${ICONS.tp}</span><span class="rlbl">${m.level < MAX_LEVEL ? 'Lv ' + MAX_LEVEL : 'Teleport'}</span></button>` : ''}
+        ${ISLAND.haunt.shapes.includes(m.id) && !VISIT ? `<button class="rbtn ${SHAPE[m.id].variant === 'night' ? 'c-orange' : 'c-blue'}" id="sh-swap"><span style="font-size:1.6em;line-height:1">${SHAPE[m.id].variant === 'night' ? '☀️' : '🌙'}</span><span class="rlbl">${SHAPE[m.id].variant === 'night' ? 'Day' : 'Night'}</span></button>` : ''}
         <button class="rbtn c-red" id="sh-sell"><span>${ICONS.sell}</span><span class="rlbl">Sell</span></button>
       </div></div>`;
     { const sb = sheet.querySelector('.sh-btns'); if (sb) sheet.appendChild(sb); } sheet.classList.remove('hidden'); hudButtons(false);
@@ -3516,6 +3648,7 @@ const UI = (() => {
     $('#sh-move').onclick = () => { closeSheet(); beginPlace({ kind: 'move', uid: m.uid, x: m.x, y: m.y }); };
     $('#sh-info').onclick = () => bookDetail(m.id, m);
     const tpb = $('#sh-tp'); if (tpb) tpb.onclick = () => openTeleport(m);
+    const swb = $('#sh-swap'); if (swb) swb.onclick = () => { swapForm(m); openMonster(m); };
     const sell = $('#sh-sell'); sell.onclick = () => { if (!sell.dataset.armed) { sell.dataset.armed = 1; sell.querySelector('.rlbl').innerHTML = `${ic('coin')}${fmt(sellValue(m))}?`; Audio.sfx('tap'); return; } sellMonster(m); closeSheet(); };
     updateSheet();
   }
@@ -3600,6 +3733,20 @@ const UI = (() => {
     modal.querySelectorAll('[data-dcopy]').forEach(b => b.onclick = () => { const [iid, uid] = b.dataset.dcopy.split(':'), src = S.islands[iid].monsters.find(m => m.uid === +uid); if (!src) return; if (D.monsters.length >= capacity(D)) { Audio.sfx('error'); toast('Diamond Island is full!', 'bad'); return; } Audio.sfx('tap'); beginPlace({ kind: 'dcopy', iid, srcUid: +uid, id: src.id }); });
   }
   $('#dtray').onclick = () => { Audio.sfx('open'); openDiamondTray(); };
+
+  // ---------- PARANORMAL PARK STATUES ----------
+  function openStatue(m) {
+    const d = SHAPE[m.id], need = zapNeeds(m.id), got = m.statue.got;
+    const body = `<div class="row" style="gap:18px;align-items:flex-start;flex-wrap:wrap;justify-content:center"><div class="center" style="min-width:160px"><div class="stage" style="display:inline-grid;width:150px;height:150px;filter:grayscale(1)"><div data-portrait="${m.id}" data-size="140"></div></div><div class="big-name">${d.name}</div><div class="muted">Statue · ${got.length}/${need.length} eggs</div>
+        ${m.statue.end ? `<div style="margin-top:8px"><div class="bar"><i style="width:${Math.max(0, (m.statue.end - now()) / (ZAP_TIME * 1000) * 100)}%"></i></div><div class="timer" data-end="${m.statue.end}">${fmtTime(m.statue.end - now())}</div><div class="muted">left to finish zapping</div></div>` : '<div class="muted" style="margin-top:8px">The 7-day timer starts with the first egg.</div>'}</div>
+      <div style="flex:1;min-width:260px"><div class="sec" style="margin-top:0">Eggs to zap</div><div class="wgrid small-cards">${need.map(id => { const has = got.includes(id), home = NORMAL_ISLANDS.find(I => I.commons.includes(id));
+        return `<div class="wcard" style="${has ? 'border-color:#6ad04a' : ''}"><div class="wname">${SHAPE[id].name}</div><div class="wart" style="${has ? '' : 'opacity:.5'}"><div data-portrait="${id}" data-size="70"></div></div><div class="muted">${has ? '✓ Zapped' : home ? home.name : ''}</div></div>`; }).join('')}</div>
+        <p class="muted" style="margin-top:8px">Breed or buy these Shapes on the 5 main islands, then tap <b>Zap</b> on the egg in that island's Hatchery. If the timer runs out, the zapped eggs are lost.</p></div></div>
+      <div class="row" style="justify-content:center;gap:10px;margin-top:10px"><button class="btn wood sm" data-smove>✥ Move</button><button class="btn red sm" data-ssell>Sell statue</button></div>`;
+    open('statue', d.name + ' Statue', '#6a5a8a', null, body);
+    modal.querySelector('[data-smove]').onclick = () => { closeAll(); beginPlace({ kind: 'move', uid: m.uid }); };
+    modal.querySelector('[data-ssell]').onclick = e => { const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to sell'; return; } isl().monsters = isl().monsters.filter(x => x !== m); markDirty(); closeAll(); toast('Statue sold'); };
+  }
 
   // ---------- TELEPORT ----------
   function openTeleport(m) {
