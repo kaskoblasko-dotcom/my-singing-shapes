@@ -713,7 +713,22 @@ const RECIPES = [
   { id:'cake',   name:'Harmony Cake',    food:2500, coins:3500,  time:7200 },
   { id:'feast',  name:'Grand Finale Feast', food:9000, coins:11000, time:28800 },
 ];
-const STRUCT_DEFAULT_POS = { breeder:{ x:-310, y:-55 }, hatchery:{ x:320, y:-55 }, bakery:{ x:390, y:120 } };
+const ISLAND_RX = 840, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
+const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 } };
+// obstacles: sizes (cost, time in seconds, XP, chance of a gem, footprint) and the kinds found on each island theme
+const OBST_SIZE = {
+  s: { coins:500,   time:120,  xp:20,  gem:0.15, r:42 },
+  m: { coins:2500,  time:900,  xp:80,  gem:0.35, r:62 },
+  l: { coins:10000, time:3600, xp:200, gem:0.7,  r:88 },
+};
+const OBST_KINDS = {
+  grass:  [['tree','l','Overgrown Tree'], ['boulder','m','Mossy Boulder'], ['stump','s','Old Stump'], ['bramble','s','Bramble Patch']],
+  snow:   [['snowpine','l','Frosty Pine'], ['iceblock','m','Ice Block'], ['snowrock','s','Snowy Rock']],
+  cave:   [['bigcrystal','l','Crystal Cluster'], ['stalag','m','Stalagmite'], ['cavestone','s','Glowstone']],
+  desert: [['mesa','l','Sandstone Pillar'], ['cactus','m','Giant Cactus'], ['fossil','s','Old Fossil']],
+  lagoon: [['palm','l','Leaning Palm'], ['coral','m','Coral Heap'], ['driftwood','s','Driftwood Pile']],
+};
+const OBST_NAME = {}; Object.values(OBST_KINDS).forEach(l => l.forEach(([k, , n]) => OBST_NAME[k] = n));
 const BREED_MIN_LEVEL = 2;
 const FEEDS_PER_LEVEL = 4;
 const MAX_LEVEL = 15;
@@ -1735,6 +1750,38 @@ function drawDeco(c, kind, t, theme, ghost) {
   c.restore();
 }
 
+// ---------- obstacles ----------
+function drawObstacle(c, kind, r, t) {
+  c.save(); c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
+  c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, r * 1.05, r * 0.3, 0, 0, TAU); c.fill();
+  const blob = (x, y, rr, col, col2) => { const g = c.createRadialGradient(x - rr * 0.3, y - rr * 0.35, rr * 0.1, x, y, rr); g.addColorStop(0, col); g.addColorStop(1, col2); c.fillStyle = g; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.fill(); c.stroke(); };
+  const rock = (x, y, w, h, col, col2) => { const g = c.createLinearGradient(x - w, y - h, x + w, y); g.addColorStop(0, col); g.addColorStop(1, col2); c.fillStyle = g; roundPoly(c, [[x - w, y], [x - w * 0.85, y - h * 0.6], [x - w * 0.3, y - h], [x + w * 0.5, y - h * 0.85], [x + w, y - h * 0.3], [x + w * 0.95, y]], w * 0.2); c.fill(); c.stroke(); };
+  switch (kind) {
+    case 'tree': { c.fillStyle = '#7a4a26'; c.beginPath(); c.moveTo(-r * 0.2, 0); c.lineTo(-r * 0.12, -r * 0.9); c.lineTo(r * 0.12, -r * 0.9); c.lineTo(r * 0.22, 0); c.closePath(); c.fill(); c.stroke();
+      const sw = Math.sin(t * 1.2) * 2; [[-r * 0.45, -r * 1.05, r * 0.55], [r * 0.45, -r * 1.1, r * 0.55], [sw, -r * 1.55, r * 0.65], [-r * 0.1, -r * 1.05, r * 0.5]].forEach(([x, y, rr]) => blob(x, y, rr, '#4f9a32', '#1f5a14'));
+      c.fillStyle = '#c0392b'; [[-r * 0.3, -r * 1.3], [r * 0.4, -r * 1.0], [r * 0.05, -r * 1.75]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 4, 0, TAU); c.fill(); }); break; }
+    case 'boulder': rock(0, 0, r, r * 1.1, '#b8b0c8', '#6a6480'); c.fillStyle = '#5fa83a'; c.beginPath(); c.ellipse(-r * 0.2, -r * 0.95, r * 0.4, r * 0.14, -0.2, 0, TAU); c.fill(); c.lineWidth = 2; c.stroke(); break;
+    case 'stump': c.fillStyle = '#8a5a2e'; c.beginPath(); c.roundRect(-r * 0.6, -r * 0.8, r * 1.2, r * 0.8, 6); c.fill(); c.stroke(); c.fillStyle = '#e0b878'; c.beginPath(); c.ellipse(0, -r * 0.8, r * 0.6, r * 0.2, 0, 0, TAU); c.fill(); c.stroke(); c.strokeStyle = '#a0703a'; c.lineWidth = 2; [0.35, 0.18].forEach(k => { c.beginPath(); c.ellipse(0, -r * 0.8, r * k, r * k * 0.33, 0, 0, TAU); c.stroke(); });
+      c.strokeStyle = OUTLINE; c.lineWidth = 2.5; c.fillStyle = '#e8483a'; c.beginPath(); c.ellipse(r * 0.6, -r * 0.25, r * 0.22, r * 0.12, 0, Math.PI, 0); c.fill(); c.stroke(); break;
+    case 'bramble': for (let i = -2; i <= 2; i++) blob(i * r * 0.28, -r * (0.35 + (i % 2 ? 0.1 : 0)), r * 0.38, '#3f7a2a', '#1a3e12'); c.strokeStyle = '#2a1a0a'; c.lineWidth = 2; for (let i = 0; i < 9; i++) { const a = i * 0.7, x = Math.cos(a) * r * 0.7, y = -r * 0.4 + Math.sin(a * 1.3) * r * 0.3; c.beginPath(); c.moveTo(x, y); c.lineTo(x + 6, y - 7); c.stroke(); } break;
+    case 'snowpine': c.fillStyle = '#6a4a2a'; c.beginPath(); c.rect(-r * 0.1, -r * 0.4, r * 0.2, r * 0.4); c.fill(); c.stroke(); [[-r * 0.35, r * 0.85], [-r * 1.0, r * 0.7], [-r * 1.6, r * 0.5]].forEach(([y, w]) => { c.fillStyle = '#2f6a4a'; roundPoly(c, [[0, y - r * 0.85], [w, y], [-w, y]], 6); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, y - r * 0.85); c.lineTo(w * 0.45, y - r * 0.45); c.lineTo(-w * 0.45, y - r * 0.45); c.closePath(); c.fill(); }); break;
+    case 'iceblock': { const g = c.createLinearGradient(-r, -r * 1.3, r, 0); g.addColorStop(0, 'rgba(220,245,255,0.95)'); g.addColorStop(1, 'rgba(120,190,240,0.9)'); c.fillStyle = g; roundPoly(c, [[-r * 0.85, 0], [-r * 0.9, -r * 1.1], [-r * 0.2, -r * 1.35], [r * 0.85, -r * 1.15], [r * 0.9, 0]], 8); c.fill(); c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = 3; c.beginPath(); c.moveTo(-r * 0.3, -r * 1.1); c.lineTo(0, -r * 0.6); c.lineTo(-r * 0.2, -r * 0.2); c.moveTo(r * 0.4, -r * 0.9); c.lineTo(r * 0.55, -r * 0.4); c.stroke(); break; }
+    case 'snowrock': rock(0, 0, r, r * 1.0, '#9aa8c8', '#56607e'); c.fillStyle = '#fff'; c.beginPath(); c.ellipse(-r * 0.1, -r * 0.9, r * 0.6, r * 0.2, -0.1, 0, TAU); c.fill(); c.lineWidth = 2; c.stroke(); break;
+    case 'bigcrystal': c.save(); c.shadowColor = '#c08aff'; c.shadowBlur = 14 + Math.sin(t * 2) * 6; [[-r * 0.45, 0.7, -0.3, '#b88aff'], [r * 0.45, 0.75, 0.3, '#8a6aff'], [0, 1.15, 0, '#d8b8ff']].forEach(([x, s2, a, col]) => { c.save(); c.translate(x, 0); c.rotate(a); c.fillStyle = col; roundPoly(c, [[-r * 0.25 * s2, 0], [-r * 0.3 * s2, -r * 1.2 * s2], [0, -r * 1.7 * s2], [r * 0.3 * s2, -r * 1.2 * s2], [r * 0.25 * s2, 0]], 4); c.fill(); c.stroke(); c.restore(); }); c.restore(); break;
+    case 'stalag': { const g = c.createLinearGradient(-r, 0, r, 0); g.addColorStop(0, '#6a5a90'); g.addColorStop(1, '#3a2e5a'); c.fillStyle = g; roundPoly(c, [[-r * 0.7, 0], [-r * 0.2, -r * 1.2], [0, -r * 1.9], [r * 0.25, -r * 1.1], [r * 0.7, 0]], 8); c.fill(); c.stroke(); c.strokeStyle = 'rgba(255,255,255,0.2)'; c.lineWidth = 3; [0.4, 0.8, 1.2].forEach(y => { c.beginPath(); c.moveTo(-r * 0.6 + y * r * 0.3, -y * r); c.lineTo(r * 0.5 - y * r * 0.25, -y * r); c.stroke(); }); break; }
+    case 'cavestone': rock(0, 0, r, r * 0.95, '#4a4470', '#24203e'); c.strokeStyle = `rgba(80,250,230,${0.5 + 0.4 * Math.sin(t * 2.5)})`; c.lineWidth = 3; c.beginPath(); c.moveTo(-r * 0.5, -r * 0.2); c.lineTo(-r * 0.1, -r * 0.5); c.lineTo(r * 0.2, -r * 0.35); c.lineTo(r * 0.5, -r * 0.7); c.stroke(); break;
+    case 'mesa': [[r * 1.0, r * 0.55, '#e0985a'], [r * 0.85, r * 0.5, '#d0884a'], [r * 0.7, r * 0.5, '#e8a868']].reduce((y, [w, h, col]) => { c.fillStyle = col; c.beginPath(); c.roundRect(-w, y - h, w * 2, h, 6); c.fill(); c.stroke(); return y - h + 4; }, 0); break;
+    case 'cactus': { c.fillStyle = '#4a9a3a'; const arm = (sd, y, h) => { c.beginPath(); c.roundRect(sd * r * 0.25, y, sd * r * 0.45, r * 0.22, r * 0.1); c.roundRect(sd * r * 0.55 - r * 0.11, y - h, r * 0.22, h + r * 0.2, r * 0.11); c.fill(); c.stroke(); };
+      arm(-1, -r * 0.9, r * 0.5); arm(1, -r * 1.3, r * 0.6); c.beginPath(); c.roundRect(-r * 0.22, -r * 1.9, r * 0.44, r * 1.9, r * 0.22); c.fill(); c.stroke(); c.fillStyle = '#ff6a9a'; c.beginPath(); c.arc(0, -r * 1.92, 7, 0, TAU); c.fill(); c.lineWidth = 2; c.stroke(); break; }
+    case 'fossil': rock(0, 0, r, r * 0.6, '#e8d2a0', '#b8985a'); c.strokeStyle = '#fff6e0'; c.lineWidth = 5; c.lineCap = 'round'; for (let i = 0; i < 4; i++) { c.beginPath(); c.arc(-r * 0.15 + i * r * 0.18, -r * 0.2, r * 0.3, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); } c.lineCap = 'butt'; break;
+    case 'palm': { c.strokeStyle = OUTLINE; c.lineWidth = r * 0.24; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(r * 0.5, -r, r * 0.25, -r * 1.9); c.stroke(); c.strokeStyle = '#a0703a'; c.lineWidth = r * 0.16; c.stroke(); c.lineCap = 'butt';
+      c.save(); c.translate(r * 0.25, -r * 1.9); c.rotate(Math.sin(t) * 0.05); c.fillStyle = '#2aa86a'; c.strokeStyle = OUTLINE; c.lineWidth = 3; for (let k = 0; k < 6; k++) { c.save(); c.rotate(k * TAU / 6 + 0.3); c.beginPath(); c.ellipse(r * 0.55, 0, r * 0.6, r * 0.16, 0.25, 0, TAU); c.fill(); c.stroke(); c.restore(); } c.fillStyle = '#7a4a26'; [[-6, 4], [6, 6], [0, 10]].forEach(([x, y]) => { c.beginPath(); c.arc(x, y, 6, 0, TAU); c.fill(); c.stroke(); }); c.restore(); break; }
+    case 'coral': c.strokeStyle = OUTLINE; c.lineCap = 'round'; [['#ff7a9a', -r * 0.4], ['#ffa86a', 0], ['#c87aff', r * 0.4]].forEach(([col, x], k) => { const br = (x0, y0, a, len, w, d) => { const x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len; c.lineWidth = w + 4; c.strokeStyle = OUTLINE; c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); c.lineWidth = w; c.strokeStyle = col; c.stroke(); if (d > 0) { br(x1, y1, a - 0.5, len * 0.7, w * 0.75, d - 1); br(x1, y1, a + 0.5, len * 0.7, w * 0.75, d - 1); } }; br(x, 0, -Math.PI / 2 + (k - 1) * 0.2, r * 0.6, r * 0.16, 2); }); c.lineCap = 'butt'; break;
+    case 'driftwood': [[-r * 0.1, -r * 0.2, 0.15, '#b89a72'], [r * 0.1, -r * 0.5, -0.2, '#a0825a'], [0, -r * 0.8, 0.05, '#c8aa82']].forEach(([x, y, a, col]) => { c.save(); c.translate(x, y); c.rotate(a); c.fillStyle = col; c.beginPath(); c.roundRect(-r * 0.9, -r * 0.16, r * 1.8, r * 0.32, r * 0.16); c.fill(); c.stroke(); c.fillStyle = 'rgba(0,0,0,0.15)'; c.beginPath(); c.ellipse(r * 0.82, 0, r * 0.1, r * 0.13, 0, 0, TAU); c.fill(); c.restore(); }); break;
+  }
+  c.restore();
+}
+
 function portrait(def, size, opts = {}) {
   const cv = document.createElement('canvas'), d = Math.min(2, window.devicePixelRatio || 1);
   cv.width = size * d; cv.height = size * d; cv.style.width = size + 'px'; cv.style.height = size + 'px';
@@ -1755,21 +1802,58 @@ function renderPortrait(c, def, size, opts = {}) {
 const SAVE_KEY = 'mySingingShapes_save_v2';
 const STRUCT = { // fixed buildings
   castle:   { x: 0,    y: -150, r: 150, name: 'Castle' },
-  market:   { x: -390, y: 115,  r: 85,  name: 'Market' },
 };
 function newStruct(kind, x, y, st) { return { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; }
-function newIsland(st) { const P = STRUCT_DEFAULT_POS; return { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: ['breeder', 'hatchery', 'bakery'].map(k => newStruct(k, P[k].x, P[k].y, st)) }; }
+function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: ['breeder', 'hatchery', 'bakery'].map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; genObstacles(I0, id || 'shape', st); return I0; }
+// ---------- platforms (fixed, joined to the island edge) ----------
+function platforms(I0) { const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
+function onPlatform(x, y, I0, pad = 0.72) { return platforms(I0).some(p => ((x - p.x) / (p.rx * pad)) ** 2 + ((y - p.y) / (p.ry * pad)) ** 2 < 1); }
+// ---------- obstacles ----------
+function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function genObstacles(I0, id, st) {
+  I0.obstacles = []; const kinds = OBST_KINDS[ISLAND[id].theme], rnd = seededRand(hashStr(id + ':obst'));
+  const { rx, ry } = islandRadius(I0);
+  const ok = (x, y, r) => {
+    if ((x / (rx * 0.86)) ** 2 + (y / (ry * 0.86)) ** 2 > 1) return false;
+    for (const k in STRUCT) { const sc = STRUCT[k]; if (((x - sc.x) / (sc.r + r + 30)) ** 2 + ((y - sc.y) / ((sc.r + r) * 0.6)) ** 2 < 1) return false; }
+    for (const sc of I0.structs) { const rr = STRUCTS[sc.kind].r + r + 30; if (((x - sc.x) / rr) ** 2 + ((y - sc.y) / (rr * 0.6)) ** 2 < 1) return false; }
+    for (const m of I0.monsters) if (((x - m.x) / (r + 60)) ** 2 + ((y - m.y) / (r * 0.5 + 40)) ** 2 < 1) return false;
+    for (const d of I0.decos) if (((x - d.x) / (r + 40)) ** 2 + ((y - d.y) / (r * 0.5 + 25)) ** 2 < 1) return false;
+    for (const o of I0.obstacles) { const rr = OBST_SIZE[o.size].r + r + 20; if (((x - o.x) / rr) ** 2 + ((y - o.y) / (rr * 0.55)) ** 2 < 1) return false; }
+    if (Math.abs(x) < 70 && y > -60) return false; // keep the castle path clear
+    if (Math.abs(x) < 320 && y < -60) return false; // nothing hiding behind the castle
+    return true;
+  };
+  for (let i = 0, tries = 0; i < 12 && tries < 900; tries++) {
+    const [kind, size] = kinds[Math.floor(rnd() * kinds.length)], r = OBST_SIZE[size].r, a = rnd() * TAU, d = 0.25 + Math.sqrt(rnd()) * 0.75;
+    const x = Math.cos(a) * rx * d, y = Math.sin(a) * ry * d;
+    if (ok(x, y, r)) { I0.obstacles.push({ uid: (st || S).uid++, kind, size, x: Math.round(x), y: Math.round(y), clr: null }); i++; }
+  }
+}
+const obstById = (uid, I0 = isl()) => (I0.obstacles || []).find(o => o.uid === uid);
+function startClear(uid) {
+  const o = obstById(uid); if (!o || o.clr) return; const z = OBST_SIZE[o.size];
+  if (!spend(z.coins)) return; o.clr = { start: now(), end: now() + z.time * 1000 }; Audio.sfx('buy'); FX.burst(o.x, o.y - 40, 'spark', 8); markDirty();
+}
+function speedClear(uid) { const o = obstById(uid); if (!o || !o.clr) return; const c = speedCostMin(o.clr.end); if (!c) return; if (!spend(0, c)) return; o.clr.end = now(); Audio.sfx('buy'); markDirty(); }
+function finishClear(uid) {
+  const I0 = isl(), o = obstById(uid); if (!o || !o.clr || now() < o.clr.end) return; const z = OBST_SIZE[o.size];
+  I0.obstacles = I0.obstacles.filter(x => x !== o); addXP(z.xp); let msg = `${OBST_NAME[o.kind]} cleared! +${z.xp} XP`;
+  if (Math.random() < z.gem) { const g = o.size === 'l' ? 2 : 1; S.shards += g; msg += ` and ${g} gem${g > 1 ? 's' : ''}!`; }
+  Audio.sfx('levelup'); FX.burst(o.x, o.y - 40, 'spark', 22); UI.toast(msg, 'good'); markDirty();
+}
 const structsOf = (kind, I0 = isl()) => I0.structs.filter(s => s.kind === kind);
 const structById = (uid, I0 = isl()) => I0.structs.find(s => s.uid === uid);
 function hatchSlots(I0 = isl()) { return structsOf('hatchery', I0).length; } // each Hatchery holds one egg
 function hatchTime(id, I0 = isl()) { const h = structsOf('hatchery', I0)[I0.hatch.length] || structsOf('hatchery', I0)[0]; return SHAPE[id].time * 1000 * (h && h.lvl > 1 ? 0.75 : 1); }
 function addEgg(id, I0 = isl()) { I0.hatch.push({ id, start: now(), end: now() + hatchTime(id, I0) }); }
 function defaultState() {
-  const s = { v: 3, found: { shape: { bobble: true } }, food: 100, coins: 600, shards: 5, xp: 0, level: 1, discovered: { bobble: true }, unlocked: { shape: true }, current: 'shape',
+  const s = { v: 3, obstV: 1, found: { shape: { bobble: true } }, food: 100, coins: 600, shards: 5, xp: 0, level: 1, discovered: { bobble: true }, unlocked: { shape: true }, current: 'shape',
     islands: {}, claimed: [], settings: { music: 0.8, sfx: 0.7 }, uid: 1, stats: { bred: 0, hatched: 0, fed: 0, col: 0 }, seenIntro: false };
-  s.islands.shape = newIsland(s);
+  s.islands.shape = newIsland(s, 'shape');
   s.islands.shape.monsters.push({ uid: s.uid++, id: 'bobble', x: -80, y: 70, level: 1, feeds: 0, last: Date.now(), muted: false });
   s.islands.shape.decos.push({ uid: s.uid++, id: 'bush', x: 140, y: 150 }, { uid: s.uid++, id: 'flowers', x: -200, y: 190 }, { uid: s.uid++, id: 'lolli', x: 230, y: 40 });
+  genObstacles(s.islands.shape, 'shape', s);
   return s;
 }
 let S = defaultState();
@@ -1786,8 +1870,16 @@ function normalizeSave(src) {
   }
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.lvl > 2) st.lvl = 2; }));
   if (!d.found) { d.found = {}; for (const [iid, I0] of Object.entries(d.islands)) { d.found[iid] = {}; I0.monsters.forEach(m => d.found[iid][m.id] = true); } }
+  if (!d.obstV) { // bigger islands: put the original Breeding Structure + Hatchery on their platforms and add obstacles
+    d.obstV = 1;
+    for (const [iid, I0] of Object.entries(d.islands || {})) {
+      const rx = ISLAND_RX + (I0.expand || 0) * EXPAND_RX, b = (I0.structs || []).find(x => x.kind === 'breeder'), h = (I0.structs || []).find(x => x.kind === 'hatchery');
+      if (b) { b.x = -(rx + PLATFORM.off); b.y = PLATFORM.y + 8; } if (h) { h.x = rx + PLATFORM.off; h.y = PLATFORM.y + 8; }
+      if (!I0.obstacles) genObstacles(I0, iid, d);
+    }
+  }
   const st = Object.assign(defaultState(), d);
-  for (const id of Object.keys(st.unlocked)) if (!st.islands[id]) st.islands[id] = newIsland(st);
+  for (const id of Object.keys(st.unlocked)) if (!st.islands[id]) st.islands[id] = newIsland(st, id);
   return st;
 }
 function readLocal(key) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
@@ -1808,7 +1900,7 @@ function monCap(m, I0) { return Math.round(monRate(m, I0) * 180); }
 function monBank(m, I0) { return Math.min(monCap(m, I0), Math.floor(monRate(m, I0) * (now() - m.last) / 60000)); }
 function feedCost(m) { return 5 * SHAPE[m.id].tier * m.level; } // food per treat
 function capacity(I0 = isl()) { return CASTLE_LEVELS[I0.castle].cap; }
-function islandRadius(I0 = isl()) { const rx = 560 + I0.expand * 110; return { rx, ry: rx * 0.45 }; }
+function islandRadius(I0 = isl()) { const rx = ISLAND_RX + I0.expand * EXPAND_RX; return { rx, ry: rx * 0.45 }; }
 function discoveredCount() { return SHAPES.filter(s => S.discovered[s.id]).length; }
 
 function addCoins(n) { S.coins += n; markDirty(); }
@@ -1903,8 +1995,9 @@ function speedEgg(i) {
 }
 
 // ---------- admin ----------
-function finishIsland(I0) { I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); }); I0.hatch.forEach(e => e.end = now()); }
+function finishIsland(I0) { (I0.obstacles || []).forEach(o => { if (o.clr) o.clr.end = now(); }); I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); }); I0.hatch.forEach(e => e.end = now()); }
 const Admin = {
+  clearObstacles() { isl().obstacles = []; markDirty(); UI.toast('All obstacles removed from this island', 'good'); },
   food(n) { S.food += n; markDirty(); UI.toast(`+${fmt(n)} food`, 'good'); },
   coins(n) { addCoins(n); UI.toast(`+${fmt(n)} coins`, 'good'); },
   gems(n) { S.shards += n; markDirty(); UI.toast(`+${n} gems`, 'good'); },
@@ -1915,8 +2008,8 @@ const Admin = {
   fillBanks() { isl().monsters.forEach(m => m.last = now() - 3 * 3600e3); markDirty(); UI.toast('Coin banks filled', 'good'); },
   discoverAll() { SHAPES.forEach(s => S.discovered[s.id] = true); ISLANDS.forEach(I => I.shapes.forEach(id => markFound(id, I.id))); markDirty(); UI.toast('All Shapes discovered', 'good'); },
   resetCollection() { S.discovered = {}; S.found = {}; Object.entries(S.islands).forEach(([iid, I0]) => { I0.monsters.forEach(m => { S.discovered[m.id] = true; markFound(m.id, iid); }); }); S.claimed = []; markDirty(); UI.toast('Collection reset (placed Shapes stay known)'); },
-  unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id]) { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S); } }); markDirty(); UI.toast('All islands unlocked', 'good'); },
-  maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; I0.expand = EXPANSIONS.length - 1; Render.resetCam(); markDirty(); UI.toast('Castle and island maxed', 'good'); },
+  unlockIslands() { ISLANDS.forEach(i => { if (!S.unlocked[i.id]) { S.unlocked[i.id] = true; S.islands[i.id] = newIsland(S, i.id); } }); markDirty(); UI.toast('All islands unlocked', 'good'); },
+  maxUpgrades() { const I0 = isl(); I0.castle = CASTLE_LEVELS.length - 1; const dE = EXPANSIONS.length - 1 - I0.expand; I0.structs.forEach(st => { if (onPlatform(st.x, st.y, I0, 1)) st.x += Math.sign(st.x) * EXPAND_RX * dE; }); I0.expand = EXPANSIONS.length - 1; Render.resetCam(); markDirty(); UI.toast('Castle and island maxed', 'good'); },
   maxLevels() { isl().monsters.forEach(m => { m.level = MAX_LEVEL; m.feeds = 0; }); markDirty(); UI.toast(`All Shapes here set to level ${MAX_LEVEL}`, 'good'); },
   spawnEgg(id) { const I0 = isl(); if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); return UI.toast('Hatchery is full', 'bad'); } I0.hatch.push({ id, start: now() - 1000, end: now() }); markDirty(); UI.toast(`${SHAPE[id].name} egg added (ready to hatch)`, 'good'); },
   spawnNow(id) { const I0 = isl(); const p = findFreeSpot(); I0.monsters.push({ uid: S.uid++, id, x: p.x, y: p.y, level: 1, feeds: 0, last: now(), muted: false }); const first = !S.discovered[id]; S.discovered[id] = true; markFound(id); syncAudio(); FX.burst(p.x, p.y - 50, 'spark', 14); Audio.sfx(first ? 'discover' : 'place'); markDirty(); UI.toast(`${SHAPE[id].name} placed`, 'good'); },
@@ -1984,7 +2077,8 @@ function eggReady(e) { return now() >= e.end; }
 let placing = null; // {kind:'hatch'|'deco'|'move'|'movedeco', id, idx, uid, x, y, valid}
 function inIsland(x, y, I0 = isl(), pad = 0.9) { const { rx, ry } = islandRadius(I0); return (x * x) / (rx * rx * pad * pad) + (y * y) / (ry * ry * pad * pad) < 1; }
 function validSpot(x, y, ignoreUid, big) {
-  const I0 = isl(); if (!inIsland(x, y, I0, big ? 0.8 : 0.9)) return false;
+  const I0 = isl(); if (!(inIsland(x, y, I0, big ? 0.8 : 0.9) || (big && onPlatform(x, y, I0)))) return false;
+  for (const o of I0.obstacles || []) { const rr = OBST_SIZE[o.size].r + (big ? 90 : 30); if (((x - o.x) / rr) ** 2 + ((y - o.y) / (rr * 0.5)) ** 2 < 1) return false; }
   if (big) { // structures need more room from everything
     for (const k in STRUCT) { const s = STRUCT[k], rr = s.r + 110; const dx = (x - s.x) / rr, dy = (y - s.y) / (rr * 0.8); if (dx * dx + dy * dy < 1) return false; }
     for (const s of I0.structs) if (s.uid !== ignoreUid) { const rr = STRUCTS[s.kind].r + 100; const dx = (x - s.x) / rr, dy = (y - s.y) / (rr * 0.8); if (dx * dx + dy * dy < 1) return false; }
@@ -2046,13 +2140,13 @@ function upgradeCastle() {
 }
 function expandIsland() {
   const I0 = isl(), nx = EXPANSIONS[I0.expand + 1]; if (!nx) return;
-  if (!spend(0, nx.shards)) return; I0.expand++; Audio.sfx('levelup'); UI.toast('Island expanded!', 'good'); Render.resetCam(); markDirty();
+  if (!spend(0, nx.shards)) return; I0.structs.forEach(st => { if (onPlatform(st.x, st.y, I0, 1)) st.x += Math.sign(st.x) * EXPAND_RX; }); I0.expand++; Audio.sfx('levelup'); UI.toast('Island expanded!', 'good'); Render.resetCam(); markDirty();
 }
 function unlockIsland(id) {
   const d = ISLAND[id]; if (S.unlocked[id]) return;
   if (S.level < d.req.level) { Audio.sfx('error'); return UI.toast(`Requires level ${d.req.level}`, 'bad'); }
   if (!spend(d.req.coins)) return;
-  S.unlocked[id] = true; S.islands[id] = newIsland(S); addXP(200); Audio.sfx('discover'); UI.toast(`${d.name} unlocked!`, 'good'); markDirty();
+  S.unlocked[id] = true; S.islands[id] = newIsland(S, id); addXP(200); Audio.sfx('discover'); UI.toast(`${d.name} unlocked!`, 'good'); markDirty();
 }
 function travel(id) {
   if (!S.unlocked[id]) return; document.getElementById('map').classList.add('hidden'); S.current = id; placing = null; UI.placeBar(false); UI.closeAll(); UI.closeSheet();
@@ -2135,7 +2229,7 @@ const Render = (() => {
     requestAnimationFrame(frame);
   }
   function resize() { dpr = Math.min(2, window.devicePixelRatio || 1); W = VIEW.w; H = VIEW.h; cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; fitZoom(); }
-  function fitZoom() { const { rx, ry } = islandRadius(); const z = Math.min(W / (rx * 2.2), H * 0.9 / (ry * 2 + 420)); cam.minZ = z * 0.75; cam.maxZ = Math.max(z * 3, 1.6); return z; }
+  function fitZoom() { const { rx, ry } = islandRadius(); const z = Math.min(W / ((rx + 335) * 2.02), H * 0.9 / (ry * 2 + 420)); cam.minZ = z * 0.75; cam.maxZ = Math.max(z * 3, 1.6); return z; }
   function resetCam() { cam.z = cam.tz = fitZoom(); cam.x = 0; cam.y = -95; }
 
   function buildTerrain() {
@@ -2183,7 +2277,7 @@ const Render = (() => {
     window.addEventListener('keydown', e => { if (e.key === 'Escape') { if (placing) cancelPlace(); else { UI.closeAll(); UI.closeSheet(); } } });
   }
   const clampZ = z => Math.max(cam.minZ || 0.3, Math.min(cam.maxZ || 2, z));
-  function clampCam() { const { rx, ry } = islandRadius(); cam.x = Math.max(-rx, Math.min(rx, cam.x)); cam.y = Math.max(-ry - 250, Math.min(ry + 50, cam.y)); }
+  function clampCam() { const { rx, ry } = islandRadius(); cam.x = Math.max(-rx - 330, Math.min(rx + 330, cam.x)); cam.y = Math.max(-ry - 250, Math.min(ry + 50, cam.y)); }
 
   function tap(sx, sy) {
     const w = toWorld(sx, sy);
@@ -2194,11 +2288,13 @@ const Render = (() => {
     Audio.sfx('tap');
     if (hit.type === 'mon') { const m = isl().monsters.find(x => x.uid === hit.uid); if (monBank(m) > 0) collect(m); selected = hit; UI.openMonster(m); }
     else if (hit.type === 'deco') { selected = hit; UI.openDeco(isl().decos.find(x => x.uid === hit.uid)); }
+    else if (hit.type === 'obst') { selected = null; UI.closeSheet(); const o = obstById(hit.uid); if (o.clr && now() >= o.clr.end) finishClear(o.uid); else UI.openObstacle(o); }
     else { selected = null; UI.closeSheet(); UI.openStruct(hit.key, hit.sid); }
   }
   function pick(x, y) {
     const I0 = isl(); const cands = [];
     I0.monsters.forEach(m => { const R = 34 * (SHAPE[m.id].look.size || 1) * (1 + m.level * 0.015); const top = m.y - R * 2.8, dx = (x - m.x) / (R * 1.3); if (Math.abs(dx) < 1 && y > top && y < m.y + 10) cands.push({ type: 'mon', uid: m.uid, y: m.y }); });
+    (I0.obstacles || []).forEach(o => { const r = OBST_SIZE[o.size].r; if (Math.abs(x - o.x) < r && y > o.y - r * 2.2 && y < o.y + 12) cands.push({ type: 'obst', uid: o.uid, y: o.y }); });
     I0.decos.forEach(d => { if (Math.abs(x - d.x) < 30 && y > d.y - 70 && y < d.y + 8) cands.push({ type: 'deco', uid: d.uid, y: d.y }); });
     for (const k in STRUCT) { const s = STRUCT[k], hgt = k === 'castle' ? 300 : 160; if (Math.abs(x - s.x) < s.r * 0.95 && y > s.y - hgt && y < s.y + 20) cands.push({ type: 'struct', key: k, y: s.y }); }
     I0.structs.forEach(s => { if (placing && placing.uid === s.uid) return; const r = STRUCTS[s.kind].r; if (Math.abs(x - s.x) < r * 0.95 && y > s.y - 160 && y < s.y + 20) cands.push({ type: 'struct', key: s.kind, sid: s.uid, y: s.y }); });
@@ -2262,6 +2358,22 @@ const Render = (() => {
     // strata lines
     c.strokeStyle = 'rgba(30,10,40,0.18)'; c.lineWidth = 3; for (let k = 1; k <= 2; k++) { c.beginPath(); c.ellipse(0, k * 32, rx * (1 - k * 0.02), ry, 0, 0.1, Math.PI - 0.1); c.stroke(); }
     if (th === 'cave') { c.strokeStyle = `rgba(60,240,255,${0.35 + 0.3 * Math.max(0, Math.sin(beat * Math.PI * 2))})`; c.lineWidth = 3; c.beginPath(); for (let i = 0; i < 10; i++) { const a = 0.2 + i * 0.28; c.moveTo(Math.cos(a) * rx * 0.98, Math.sin(a) * ry); c.lineTo(Math.cos(a) * rx * 0.95 + 8, Math.sin(a) * ry + 50 + (i % 3) * 15); } c.stroke(); }
+    // platforms joined to the island edge
+    const stone = { snow: '#c8d6ee', cave: '#4a4478', desert: '#e8c890', lagoon: '#f6e2a8' }[th] || '#d8c8a8';
+    platforms(isl()).forEach(p => {
+      const pd = 70, cg = c.createLinearGradient(0, p.y, 0, p.y + p.ry + pd); cg.addColorStop(0, cliff[0]); cg.addColorStop(1, cliff[1]);
+      c.fillStyle = cg; c.strokeStyle = OUTLINE; c.lineWidth = 5; c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, Math.PI); c.lineTo(p.x - p.rx * 0.8, p.y + pd * 0.5);
+      c.quadraticCurveTo(p.x, p.y + p.ry + pd * 1.4, p.x + p.rx * 0.8, p.y + pd * 0.5); c.closePath(); c.fill(); c.stroke();
+      // land bridge to the island
+      const ex = p.side * (rx - 40), ix = p.x - p.side * p.rx * 0.7;
+      c.fillStyle = top[1]; c.beginPath(); c.moveTo(ex, p.y - 34); c.lineTo(ix, p.y - 30); c.lineTo(ix, p.y + 30); c.lineTo(ex, p.y + 36); c.closePath(); c.fill();
+      c.strokeStyle = OUTLINE; c.lineWidth = 4; c.beginPath(); c.moveTo(ex, p.y - 34); c.lineTo(ix, p.y - 30); c.moveTo(ix, p.y + 30); c.lineTo(ex, p.y + 36); c.stroke();
+      c.fillStyle = cliff[0]; c.beginPath(); c.moveTo(ex, p.y + 36); c.lineTo(ix, p.y + 30); c.lineTo(ix, p.y + 52); c.lineTo(ex, p.y + 60); c.closePath(); c.fill(); c.stroke();
+      // stone-rimmed platform top
+      const tg = c.createRadialGradient(p.x - p.rx * 0.3, p.y - p.ry * 0.3, 10, p.x, p.y, p.rx); tg.addColorStop(0, top[0]); tg.addColorStop(1, top[1]);
+      c.fillStyle = tg; c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = stone; c.strokeStyle = OUTLINE; c.lineWidth = 2.5; for (let i = 0; i < 22; i++) { const a = i / 22 * TAU, sx = p.x + Math.cos(a) * p.rx * 0.9, sy = p.y + Math.sin(a) * p.ry * 0.86; c.beginPath(); c.ellipse(sx, sy, 13, 7, a, 0, TAU); c.fill(); c.stroke(); }
+    });
     // top
     g = c.createRadialGradient(-rx * 0.2, -ry * 0.3, 20, 0, 0, rx); g.addColorStop(0, top[0]); g.addColorStop(1, top[1]);
     c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, TAU); c.fill(); c.strokeStyle = OUTLINE; c.lineWidth = 5; c.stroke();
@@ -2310,10 +2422,14 @@ const Render = (() => {
     drawWater(t, beat); drawIsland(t, beat);
     const I0 = isl(), th = terrain.th;
     // placement footprint
-    if (placing) { const { rx, ry } = islandRadius(); c.save(); c.setLineDash([12, 10]); c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 0, rx * 0.9, ry * 0.9, 0, 0, TAU); c.stroke(); c.restore(); }
+    if (placing) { const { rx, ry } = islandRadius(); c.save(); c.setLineDash([12, 10]); c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 3; c.beginPath(); c.ellipse(0, 0, rx * 0.9, ry * 0.9, 0, 0, TAU); c.stroke(); if (placing.big) platforms(I0).forEach(p => { c.beginPath(); c.ellipse(p.x, p.y, p.rx * 0.72, p.ry * 0.72, 0, 0, TAU); c.stroke(); }); c.restore(); }
     const items = [];
     for (const k in STRUCT) items.push({ y: STRUCT[k].y, f: () => drawStruct(k, t, beat) });
     I0.structs.forEach(st => { if (placing && placing.kind === 'movestruct' && placing.uid === st.uid) return; items.push({ y: st.y, f: () => drawPlaced(st, t, beat) }); });
+    (I0.obstacles || []).forEach(o => items.push({ y: o.y, f: () => { c.save(); c.translate(o.x, o.y); drawObstacle(c, o.kind, OBST_SIZE[o.size].r, t);
+      if (o.clr) { const done = now() >= o.clr.end, p = Math.min(1, (now() - o.clr.start) / (o.clr.end - o.clr.start)), top = -OBST_SIZE[o.size].r * 2.1;
+        if (done) label('Ready!', top, true); else { c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 8; c.beginPath(); c.arc(0, top, 16, 0, TAU); c.stroke(); c.strokeStyle = '#ffd23a'; c.lineWidth = 6; c.beginPath(); c.arc(0, top, 16, -Math.PI / 2, -Math.PI / 2 + TAU * p); c.stroke(); if (Math.random() < 0.15) FX.spark(o.x, o.y - 30, '#e8c890'); } }
+      c.restore(); } }));
     I0.decos.forEach(d => { if (placing && placing.kind === 'movedeco' && placing.uid === d.uid) return; items.push({ y: d.y, f: () => { c.save(); c.translate(d.x, d.y); if (selected && selected.type === 'deco' && selected.uid === d.uid) selRing(30); drawDeco(c, DECO[d.id].kind, t, th); c.restore(); } }); });
     I0.monsters.forEach(m => { if (placing && placing.kind === 'move' && placing.uid === m.uid) return; items.push({ y: m.y, f: () => drawMon(m, t, beat) }); });
     if (placing) items.push({ y: placing.y, f: () => drawGhost(t, beat) });
@@ -2506,7 +2622,7 @@ const UI = (() => {
       if (modalKind === 'mixer') updateMixer();
     }
   }
-  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'market' && currentTab) openMarket(currentTab, true); }
+  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
 
   // ---------- MARKET ----------
   let currentTab = null;
@@ -2830,7 +2946,7 @@ const UI = (() => {
       <div class="sec">⏱️ Timers</div><div class="info row">${B('finishTimers', 'Finish timers (this island)', 'blue')}${B('finishAllIslands', 'Finish timers (all islands)', 'blue')}${B('fillBanks', 'Fill coin banks')}</div>
       <div class="sec">🥚 Spawn a Shape</div><div class="info"><select id="ad-shape" style="width:100%;font:inherit;font-weight:800;padding:8px;border:3px solid var(--ink);border-radius:11px;margin-bottom:8px">${opts}</select><div class="row">${B('spawnEgg', 'Add ready egg to Hatchery', 'green')}${B('spawnNow', 'Place on island now', 'pink')}</div></div>
       <div class="sec">📖 Collection & islands</div><div class="info row">${B('discoverAll', 'Discover all Shapes', 'green')}${B('resetCollection', 'Reset collection')}${B('unlockIslands', 'Unlock all islands', 'blue')}</div>
-      <div class="sec">🏰 This island</div><div class="info row">${B('maxUpgrades', 'Max castle + expansion', 'blue')}${B('maxLevels', 'Max level all Shapes', 'green')}${B('clearDecos', 'Remove decorations', 'red')}${B('clearIsland', 'Remove all Shapes', 'red')}</div>`;
+      <div class="sec">🏰 This island</div><div class="info row">${B('maxUpgrades', 'Max castle + expansion', 'blue')}${B('clearObstacles', 'Remove obstacles', 'red')}${B('maxLevels', 'Max level all Shapes', 'green')}${B('clearDecos', 'Remove decorations', 'red')}${B('clearIsland', 'Remove all Shapes', 'red')}</div>`;
     open('admin', 'Admin Panel', '#5a3ab0', 'gear', body);
     const sel = modal.querySelector('#ad-shape'); const firstOk = [...sel.options].find(o => !o.disabled); if (firstOk) sel.value = firstOk.value;
     modal.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
@@ -2881,6 +2997,24 @@ const UI = (() => {
     vb.querySelector('#vb-home').onclick = endVisit;
     const lb = vb.querySelector('[data-like]'); lb.onclick = async () => { lb.disabled = true; try { const x = await NET.like(VISIT.id, VISIT.island); VISIT.likes = x.likes; VISIT.myLikes.push(VISIT.island); Audio.sfx('levelup'); FX.burst(0, -120, 'heart', 16); toast(`You liked ${VISIT.name}'s ${islDef().name}!`, 'good'); visitMode(true); refreshHUD(); } catch (e) { toast(e.message, 'bad'); lb.disabled = false; } };
   }
+
+  // ---------- OBSTACLES ----------
+  function openObstacle(o, keep) {
+    const z = OBST_SIZE[o.size], name = OBST_NAME[o.kind], sizeName = { s: 'Small', m: 'Medium', l: 'Large' }[o.size];
+    let body = `<div class="center"><div class="stage" style="display:inline-grid;width:190px;height:170px;margin-bottom:10px"><canvas id="ob-cv" width="380" height="340" style="width:190px;height:170px"></canvas></div>
+      <div class="muted">${sizeName} obstacle · clearing frees up room on the island</div>`;
+    if (!o.clr) body += `<div class="kv" style="display:inline-grid;text-align:left;margin:12px auto"><b>Cost</b><span>${ic('coin')} ${fmt(z.coins)}</span><b>Time</b><span>${fmtTime(z.time * 1000)}</span><b>Reward</b><span>${z.xp} XP · ${Math.round(z.gem * 100)}% chance of ${o.size === 'l' ? '2 gems' : 'a gem'}</span></div><div><button class="btn green" data-clear>Clear it</button></div>`;
+    else if (now() < o.clr.end) body += `<div style="max-width:320px;margin:12px auto"><div class="bar"><i style="width:${(now() - o.clr.start) / (o.clr.end - o.clr.start) * 100}%"></i></div><div class="timer" data-end="${o.clr.end}" data-start="${o.clr.start}">${fmtTime(o.clr.end - now())}</div></div><button class="btn purple" data-cspeed>⚡ Finish now ${ic('shard')} <span data-cost="${o.clr.end}" data-cm="min">${speedCostMin(o.clr.end)}</span></button>`;
+    else body += `<div style="margin-top:12px"><button class="btn green" data-cdone>Collect reward</button></div>`;
+    body += '</div>';
+    if (keep && modalKind === 'obst') setBody(body); else open('obst', name, '', null, body);
+    curObst = o.uid;
+    const cv = modal.querySelector('#ob-cv'), cx = cv.getContext('2d'); cx.scale(2, 2); cx.translate(95, 150); const sc = 60 / z.r; cx.scale(sc, sc); drawObstacle(cx, o.kind, z.r, 0);
+    const b1 = modal.querySelector('[data-clear]'); if (b1) b1.onclick = () => { startClear(o.uid); openObstacle(o, true); };
+    const b2 = modal.querySelector('[data-cspeed]'); if (b2) b2.onclick = () => { speedClear(o.uid); openObstacle(o, true); };
+    const b3 = modal.querySelector('[data-cdone]'); if (b3) b3.onclick = () => { finishClear(o.uid); closeAll(); };
+  }
+  let curObst = null;
 
   // ---------- MIXER ----------
   function openMixer() {
@@ -2991,7 +3125,7 @@ const UI = (() => {
   $('#b-goals').onclick = () => { const g = $('#goal'); g.classList.toggle('hidden'); setDot('#b-goals', 0); Audio.sfx('tap'); clearTimeout(g._t); if (!g.classList.contains('hidden')) g._t = setTimeout(() => g.classList.add('hidden'), 7000); };
   $('#lvl-pill').onclick = () => toast(`Level ${S.level} · ${S.xp}/${xpForLevel(S.level)} XP`);
 
-  return { visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
+  return { openObstacle, visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
 })();
 
 // ===================== BOOT =====================
