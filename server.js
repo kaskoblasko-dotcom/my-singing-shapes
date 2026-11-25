@@ -176,6 +176,7 @@ const routes = {
     if (!other) return [404, { error: 'No player found with that name or code' }];
     if (other.id === me.id) return [400, { error: "That's you!" }];
     if (await db.areFriends(me.id, other.id)) return [400, { error: `You're already friends with ${other.username}` }];
+    if (body.invite) { await db.delRequest(other.id, me.id); await db.delRequest(me.id, other.id); await db.addFriend(me.id, other.id); return [200, { ok: true, friended: other.username }]; } // opened their invite link
     if (await db.hasRequest(other.id, me.id)) { await db.delRequest(other.id, me.id); await db.addFriend(me.id, other.id); return [200, { ok: true, friended: other.username }]; }
     await db.addRequest(me.id, other.id); return [200, { ok: true, sent: other.username }];
   },
