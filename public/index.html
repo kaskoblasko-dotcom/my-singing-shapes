@@ -190,8 +190,9 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 #map-close{position:absolute;right:calc(18px*var(--u));bottom:calc(26px*var(--u));}
 
 /* ===== MONSTER BAR ===== */
-#sheet{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(14px*var(--u));z-index:8;animation:sheetIn .2s ease-out;}
-@keyframes sheetIn{from{transform:translate(-50%,30px);opacity:0}}
+#sheet{position:absolute;left:calc(16px*var(--u));right:calc(16px*var(--u));bottom:calc(14px*var(--u));z-index:8;display:flex;justify-content:space-between;align-items:flex-end;gap:calc(14px*var(--u));pointer-events:none;animation:sheetIn .2s ease-out;}
+#sheet>*{pointer-events:auto;}
+@keyframes sheetIn{from{transform:translateY(30px);opacity:0}}
 .sh-card{position:relative;background:var(--plum2);border:4px solid var(--wood);box-shadow:0 0 0 3px var(--woodD),inset 0 0 0 2px var(--woodD),0 6px 0 var(--woodD);border-radius:18px;padding:calc(18px*var(--u)) calc(14px*var(--u)) calc(12px*var(--u));display:flex;align-items:center;gap:calc(10px*var(--u));}
 .sh-name{position:absolute;left:50%;top:calc(-20px*var(--u));transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:var(--leaf);border:3px solid var(--leafD);border-radius:10px;padding:2px 12px 2px 4px;white-space:nowrap;}
 .sh-name .nm{font-size:calc(18px*var(--u));color:#fff;text-shadow:var(--ol);font-weight:900;font-variant:small-caps;letter-spacing:.5px;}
@@ -205,9 +206,13 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .foodbar i{flex:1;height:calc(14px*var(--u));border-radius:4px;border:2px solid var(--woodD);background:#150a1e;}
 .foodbar i.on{background:#e0508a;}
 .foodbar .lvnext{font-size:11px;color:#fff;font-weight:900;margin-left:4px;white-space:nowrap;}
-.sh-btns{display:flex;gap:calc(10px*var(--u));align-items:flex-end;padding-bottom:calc(12px*var(--u));}
+.sh-btns{display:flex;gap:calc(12px*var(--u));align-items:flex-end;padding-bottom:calc(20px*var(--u));margin-left:auto;}
 .sh-btns .rbtn{--rb:calc(50px*var(--u));}
 #sh-feed{--rb:calc(64px*var(--u));}
+#root:not(.small) .sh-btns{gap:calc(16px*var(--u));}
+#root:not(.small) .sh-btns .rbtn{--rb:calc(62px*var(--u));}
+#root:not(.small) .sh-btns .rbtn .rlbl{font-size:calc(14px*var(--u));bottom:calc(-22px*var(--u));}
+#root:not(.small) #sh-feed{--rb:calc(78px*var(--u));}
 .sh-card .xbtn{width:calc(36px*var(--u));height:calc(36px*var(--u));font-size:calc(22px*var(--u));right:calc(-14px*var(--u));top:calc(-14px*var(--u));}
 .small #sheet .sh-pp{display:none;}
 
@@ -2990,7 +2995,7 @@ const UI = (() => {
     if (m) closeSheet();
     const d = SHAPE[id], k = (knownHere != null ? knownHere : S.discovered[id]) || !!m, secret = d.variant !== 'common';
     const isles = ISLANDS.filter(i => i.shapes.includes(id)).map(i => i.name).join(', ');
-    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span><b>Incubation</b><span>${k ? fmtTime(d.time * 1000) : '???'}</span><b>Movement</b><span>${ANIM_DESC[d.baseId] || CATS[d.cat].anim}</span><b>How to get</b><span>${recipeText(d)}</span></div>`;
+    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span></div>`;
     const bio = k ? `<p class="bio">${d.desc}</p>` : `<p class="bio">Not discovered yet.</p>`;
     const likesTab = !k ? `<p class="bio">Not discovered yet.</p>` : `<p class="bio" style="margin-bottom:8px">${d.name} is happier, and earns up to <b>+${Math.round(LIKE_BONUS * 100)}%</b> coins, when the things it likes are close by.</p>${likesHTML(m, id)}${m ? '' : '<p class="muted" style="margin-top:8px">Tap a placed Shape and open its Info to see which likes are nearby.</p>'}`;
     const body = `<div class="infoscr"><div class="icard"><div class="iname">${k ? d.name : '???'}</div><div class="iart"><div data-portrait="${id}" data-size="${Math.round(180 * VIEW.u)}" data-sil="${k ? 0 : 1}" ${k ? 'data-anim="solo"' : ''}></div></div><div class="medals">${(k || !secret ? d.el : []).map(e => `<span class="medal" style="background:${ELEMENTS[e].color}">${ELEMENTS[e].icon}</span>`).join('')}</div></div>
@@ -3160,7 +3165,7 @@ const UI = (() => {
         <button class="rbtn c-purple" id="sh-info"><span>${ICONS.info}</span><span class="rlbl">Info</span></button>
         <button class="rbtn c-red" id="sh-sell"><span>${ICONS.sell}</span><span class="rlbl">Sell</span></button>
       </div></div>`;
-    sheet.classList.remove('hidden'); hudButtons(false);
+    { const sb = sheet.querySelector('.sh-btns'); if (sb) sheet.appendChild(sb); } sheet.classList.remove('hidden'); hudButtons(false);
     const cv = portrait(d, 84); $('#sheet-pp').appendChild(cv); sheetAnim = { cv, def: d, size: 84, uid: m.uid };
     anims = anims.filter(a => !a.sheet); anims.push(Object.assign(sheetAnim, { sheet: true }));
     sheet.querySelector('[data-x]').onclick = closeSheet;
@@ -3182,7 +3187,7 @@ const UI = (() => {
     sheet.innerHTML = `<div class="sh-card"><button class="xbtn" data-x>✕</button><div class="sh-name"><span class="nm" style="padding-left:10px">${def.name}</span></div><div class="sh-pp"><div data-deco="${d.id}"></div></div>
       <div class="sh-mid"><div class="muted">+${def.bonus}% coin income for every Shape on this island</div></div>
       <div class="sh-btns"><button class="rbtn c-teal" id="dc-move"><span>${ICONS.move}</span><span class="rlbl">Move</span></button><button class="rbtn c-red" id="dc-sell"><span>${ICONS.sell}</span><span class="rlbl">Sell</span></button></div></div>`;
-    hydrate(sheet); sheet.classList.remove('hidden'); hudButtons(false);
+    hydrate(sheet); { const sb = sheet.querySelector('.sh-btns'); if (sb) sheet.appendChild(sb); } sheet.classList.remove('hidden'); hudButtons(false);
     sheet.querySelector('[data-x]').onclick = closeSheet;
     $('#dc-move').onclick = () => { closeSheet(); beginPlace({ kind: 'movedeco', uid: d.uid, x: d.x, y: d.y }); };
     const s2 = $('#dc-sell'); s2.onclick = () => { if (!s2.dataset.armed) { s2.dataset.armed = 1; s2.querySelector('.rlbl').textContent = 'Sure?'; return; } sellDeco(d.uid); closeSheet(); };
