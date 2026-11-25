@@ -223,6 +223,9 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .burst .info{color:var(--cream);}
 .rays{display:none;}
 .small .burst .stage{transform:scale(.8);margin:-12px auto !important;}
+.tiny .burst .stage{transform:scale(.6);margin:-34px auto !important;}
+.tiny .burst{padding:8px 16px;}
+.tiny .burst h1{font-size:24px;}
 
 /* ===== BOOK ===== */
 #book{position:absolute;inset:0;z-index:15;}
@@ -256,6 +259,24 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 #title .tap{position:relative;margin-top:calc(20px*var(--u));font-size:calc(22px*var(--u));font-weight:900;color:#fff;text-shadow:var(--ol);animation:pulse 1.2s infinite;}
 @keyframes pulse{50%{transform:scale(1.08)}}
 #title .note{position:relative;margin-top:10px;font-size:calc(14px*var(--u));font-weight:900;color:#fff;text-shadow:var(--ol);}
+
+#tut{position:absolute;inset:0;z-index:35;pointer-events:none;}
+#tut.hidden{display:none;}
+.tut-ring{position:absolute;left:0;top:0;border:4px solid #ffd34a;box-shadow:0 0 0 3px rgba(58,29,14,.7),0 0 22px 6px rgba(255,211,74,.75);animation:tutPulse 1s ease-in-out infinite;}
+@keyframes tutPulse{50%{box-shadow:0 0 0 3px rgba(58,29,14,.7),0 0 34px 12px rgba(255,211,74,.95);}}
+.tut-arrow{position:absolute;left:0;top:0;width:40px;height:52px;transform-origin:20px 26px;filter:drop-shadow(0 3px 2px rgba(0,0,0,.35));}
+.tut-arrow svg{width:100%;height:100%;display:block;}
+.tut-bub{position:absolute;left:0;top:0;pointer-events:auto;display:flex;gap:calc(10px*var(--u));align-items:flex-start;max-width:calc(400px*var(--u));background:#fff8e6;border:4px solid #3a1d0e;border-radius:18px;padding:calc(10px*var(--u)) calc(12px*var(--u));box-shadow:0 6px 0 rgba(58,29,14,.45);flex-wrap:wrap;}
+.tut-bub.pop{animation:tutPop .25s ease-out;}
+@keyframes tutPop{from{scale:.85;opacity:.4}to{scale:1;opacity:1}}
+.tut-who{flex:none;width:54px;height:54px;border-radius:50%;background:#bfe8ff;border:3px solid #3a1d0e;overflow:hidden;display:grid;place-items:center;}
+.tut-txt{flex:1;min-width:calc(180px*var(--u));font-weight:700;font-size:calc(15px*var(--u));line-height:1.4;color:#3a1d0e;}
+.tut-btns{flex-basis:100%;display:flex;justify-content:flex-end;gap:8px;}
+.likes{display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:center;margin-top:4px;font-size:calc(12px*var(--u));font-weight:800;}
+.likes .like{background:#eadfc8;border:2px solid #8a6a4a;border-radius:10px;padding:1px 7px;color:#5a3a20;}
+.likes .like.ok{background:#c8f0b0;border-color:#3f9a2a;color:#1f5a10;}
+.likes .like.no{opacity:.75;}
+.likes .happy{color:#e2407a;font-size:calc(14px*var(--u));margin-left:4px;}
 </style>
 </head>
 <body>
@@ -346,7 +367,7 @@ const VIEW = (() => {
   // drag-to-scroll for scroll areas while the UI is rotated (native touch scrolling would go the wrong way)
   let ds = null, suppress = false;
   document.addEventListener('pointerdown', e => {
-    if (!v.rot) return; const el = e.target.closest && e.target.closest('.panel-body, .scrollx'); if (!el || e.target.closest('input,select')) return;
+    if (!v.rot) return; const el = e.target.closest && e.target.closest('.panel-body, .scrollx, .burst'); if (!el || e.target.closest('input,select')) return;
     ds = { el, x: e.clientX, y: e.clientY, st: el.scrollTop, sl: el.scrollLeft, moved: false };
   }, true);
   document.addEventListener('pointermove', e => {
@@ -689,6 +710,20 @@ const DECOS = [
 ];
 const DECO = {}; DECOS.forEach(d => DECO[d.id] = d);
 
+// ---------- LIKES (each base Shape likes 2 decorations + 1 other Shape; variants share them) ----------
+const LIKE_RADIUS = 320, LIKE_BONUS = 0.25; // a like counts within this distance; full happiness = +25% income
+const LIKES = {};
+SHAPES.filter(s => !s.base).forEach((s, i) => {
+  const rnd = seededRand(4241 * (i + 11));
+  const pool = DECOS.filter(d => s.tier <= 1 ? d.cost && d.cost <= 900 : s.tier <= 3 ? d.cost : true).map(d => d.id);
+  const decos = []; while (decos.length < 2) { const d = pool[Math.floor(rnd() * pool.length)]; if (!decos.includes(d)) decos.push(d); }
+  const home = ISLANDS.find(I => I.commons.includes(s.id)) || ISLANDS[0];
+  const mates = home.commons.filter(id => id !== s.id && SHAPE[id].tier <= Math.max(1, s.tier - 1 || 1));
+  const shape = mates.length ? mates[Math.floor(rnd() * mates.length)] : home.singles.find(id => id !== s.id);
+  LIKES[s.id] = { decos, shape };
+});
+const likesOf = id => LIKES[SHAPE[id].baseId];
+
 const CASTLE_LEVELS = [ // capacity, cost, required level
   { cap:6,  cost:0,      lvl:1 },
   { cap:10, cost:3000,   lvl:3 },
@@ -703,9 +738,12 @@ const STRUCTS = {
               up:[{}, { gems:75 }], info: l => l > 1 ? 'Enhanced: breeding is 25% faster' : 'Standard', next: () => 'Enhanced: 25% faster breeding' },
   hatchery: { name:'Hatchery', r:90, max:2, buy:{ coins:12000, lvl:4 },
               up:[{}, { gems:75 }], info: l => l > 1 ? 'Holds 1 egg · Enhanced: hatches 25% faster' : 'Holds 1 egg', next: () => 'Enhanced: 25% faster hatching' },
-  bakery:   { name:'Bakery', r:80, max:1, buy:{ coins:5000, lvl:1 },
+  bakery:   { name:'Bakery', r:80, max:4, buy:{ coins:200, lvl:1 },
               up:[{}, { gems:50 }], info: l => l > 1 ? 'Enhanced: all 5 recipes' : '3 recipes', next: () => 'Enhanced: unlocks all 5 recipes' },
+  mine:     { name:'Gem Mine', r:78, max:1, buy:{ gems:20, lvl:1 },
+              up:[{}], info: () => 'Digs up 1 gem every 24 hours', next: () => '' },
 };
+const MINE_TIME = 24 * 3600; // seconds per gem
 const RECIPES = [
   { id:'toast',  name:'Tune Toast',      food:30,   coins:50,    time:30 },
   { id:'snack',  name:'Shape Snacks',    food:150,  coins:250,   time:300 },
@@ -714,7 +752,7 @@ const RECIPES = [
   { id:'feast',  name:'Grand Finale Feast', food:9000, coins:11000, time:28800 },
 ];
 const ISLAND_RX = 840, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
-const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 } };
+const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 }, mine:{ x:-440, y:170 } };
 // obstacles: sizes (cost, time in seconds, XP, chance of a gem, footprint) and the kinds found on each island theme
 const OBST_SIZE = {
   s: { coins:500,   time:120,  xp:20,  gem:0.15, r:42 },
@@ -1713,6 +1751,32 @@ function drawBakery(c, t, baking, ready, progress, lvl = 1) {
   if (baking && !ready) { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(0, -30, 22, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
 }
 
+// Gem Mine: a rocky cave mouth with a mine cart; a gem pops up when ready
+function drawMine(c, t, ready, progress) {
+  c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
+  c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 82, 18, 0, 0, TAU); c.fill();
+  // rock mound
+  c.fillStyle = '#8a7a8e'; c.beginPath(); c.moveTo(-76, 0); c.lineTo(-70, -48); c.lineTo(-44, -92); c.lineTo(-8, -112); c.lineTo(30, -104); c.lineTo(62, -70); c.lineTo(76, 0); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#a898ac'; c.beginPath(); c.moveTo(-44, -92); c.lineTo(-8, -112); c.lineTo(30, -104); c.lineTo(10, -84); c.lineTo(-24, -80); c.closePath(); c.fill();
+  c.strokeStyle = 'rgba(40,20,50,0.4)'; c.lineWidth = 2; [[-60, -30, -40, -50], [40, -40, 58, -22], [-14, -60, 6, -70]].forEach(([a, b, d, e]) => { c.beginPath(); c.moveTo(a, b); c.lineTo(d, e); c.stroke(); });
+  // gems in the rock
+  const gem = (x, y, s, col) => { c.fillStyle = col; c.strokeStyle = OUTLINE; c.lineWidth = 2.5; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x + s * 0.8, y - s * 0.2); c.lineTo(x, y + s); c.lineTo(x - s * 0.8, y - s * 0.2); c.closePath(); c.fill(); c.stroke(); c.fillStyle = 'rgba(255,255,255,0.6)'; c.beginPath(); c.moveTo(x, y - s); c.lineTo(x - s * 0.4, y - s * 0.2); c.lineTo(x, y); c.closePath(); c.fill(); };
+  gem(-50, -56, 8, '#ff7ad9'); gem(46, -58, 7, '#6ad8ff'); gem(16, -92, 6, '#ff7ad9');
+  // cave mouth with wooden frame
+  c.strokeStyle = OUTLINE; c.lineWidth = 4;
+  c.fillStyle = '#2a1830'; c.beginPath(); c.moveTo(-30, 0); c.lineTo(-30, -44); c.arc(0, -44, 30, Math.PI, 0); c.lineTo(30, 0); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#b07a42'; c.beginPath(); c.rect(-38, -78, 10, 78); c.rect(28, -78, 10, 78); c.fill(); c.stroke(); c.beginPath(); c.rect(-42, -84, 84, 12); c.fill(); c.stroke();
+  const glow = 0.25 + 0.2 * Math.sin(t * 3); c.fillStyle = `rgba(255,122,217,${ready ? 0.7 : glow})`; c.beginPath(); c.ellipse(0, -16, 18, 12, 0, 0, TAU); c.fill();
+  // rails + cart
+  c.strokeStyle = '#5a4030'; c.lineWidth = 3; [-8, 8].forEach(o => { c.beginPath(); c.moveTo(-6 + o, -2); c.lineTo(40 + o * 2, 16); c.stroke(); });
+  c.save(); c.translate(52, -6); c.strokeStyle = OUTLINE; c.lineWidth = 3.5; c.fillStyle = '#6a6a7a'; c.beginPath(); c.moveTo(-20, -24); c.lineTo(20, -24); c.lineTo(15, 0); c.lineTo(-15, 0); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#3a3040'; [-9, 9].forEach(x => { c.beginPath(); c.arc(x, 2, 5, 0, TAU); c.fill(); c.stroke(); });
+  if (ready) { gem(-6, -28, 7, '#ff7ad9'); gem(7, -30, 6, '#6ad8ff'); }
+  c.restore();
+  if (ready) { const y = -128 + Math.sin(t * 4) * 5; c.save(); c.translate(0, y); c.scale(1.6, 1.6); gem(0, 0, 10, '#ff7ad9'); c.restore(); }
+  else { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(0, -28, 14, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
+}
+
 function drawMarket(c, t, beat) {
   c.lineWidth = 4; c.strokeStyle = OUTLINE;
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 85, 18, 0, 0, TAU); c.fill();
@@ -1803,8 +1867,8 @@ const SAVE_KEY = 'mySingingShapes_save_v2';
 const STRUCT = { // fixed buildings
   castle:   { x: 0,    y: -150, r: 150, name: 'Castle' },
 };
-function newStruct(kind, x, y, st) { return { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; }
-function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: ['breeder', 'hatchery', 'bakery'].map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; genObstacles(I0, id || 'shape', st); return I0; }
+function newStruct(kind, x, y, st) { const o = { uid: (st || S).uid++, kind, x, y, lvl: 1, br: null, bake: null }; if (kind === 'mine') o.mine = now(); return o; }
+function newIsland(st, id) { const P = STRUCT_DEFAULT_POS; const I0 = { monsters: [], decos: [], hatch: [], castle: 0, expand: 0, structs: ['breeder', 'hatchery'].map(k => newStruct(k, P[k].x, P[k].y, st)), obstacles: [] }; genObstacles(I0, id || 'shape', st); return I0; }
 // ---------- platforms (fixed, joined to the island edge) ----------
 function platforms(I0) { const { rx } = islandRadius(I0); return [-1, 1].map(sd => ({ side: sd, x: sd * (rx + PLATFORM.off), y: PLATFORM.y, rx: PLATFORM.rx, ry: PLATFORM.ry })); }
 function onPlatform(x, y, I0, pad = 0.72) { return platforms(I0).some(p => ((x - p.x) / (p.rx * pad)) ** 2 + ((y - p.y) / (p.ry * pad)) ** 2 < 1); }
@@ -1817,7 +1881,7 @@ function genObstacles(I0, id, st) {
     if ((x / (rx * 0.86)) ** 2 + (y / (ry * 0.86)) ** 2 > 1) return false;
     for (const k in STRUCT) { const sc = STRUCT[k]; if (((x - sc.x) / (sc.r + r + 30)) ** 2 + ((y - sc.y) / ((sc.r + r) * 0.6)) ** 2 < 1) return false; }
     for (const sc of I0.structs) { const rr = STRUCTS[sc.kind].r + r + 30; if (((x - sc.x) / rr) ** 2 + ((y - sc.y) / (rr * 0.6)) ** 2 < 1) return false; }
-    for (const m of I0.monsters) if (((x - m.x) / (r + 60)) ** 2 + ((y - m.y) / (r * 0.5 + 40)) ** 2 < 1) return false;
+    for (const m of I0.monsters) if (((x - m.x) / (r + 60)) ** 2 + ((y - m.y) / (y > m.y ? r * 2.3 + 20 : r * 0.5 + 40)) ** 2 < 1) return false; // never in front of (hiding) a Shape
     for (const d of I0.decos) if (((x - d.x) / (r + 40)) ** 2 + ((y - d.y) / (r * 0.5 + 25)) ** 2 < 1) return false;
     for (const o of I0.obstacles) { const rr = OBST_SIZE[o.size].r + r + 20; if (((x - o.x) / rr) ** 2 + ((y - o.y) / (rr * 0.55)) ** 2 < 1) return false; }
     if (Math.abs(x) < 70 && y > -60) return false; // keep the castle path clear
@@ -1846,13 +1910,12 @@ const structsOf = (kind, I0 = isl()) => I0.structs.filter(s => s.kind === kind);
 const structById = (uid, I0 = isl()) => I0.structs.find(s => s.uid === uid);
 function hatchSlots(I0 = isl()) { return structsOf('hatchery', I0).length; } // each Hatchery holds one egg
 function hatchTime(id, I0 = isl()) { const h = structsOf('hatchery', I0)[I0.hatch.length] || structsOf('hatchery', I0)[0]; return SHAPE[id].time * 1000 * (h && h.lvl > 1 ? 0.75 : 1); }
-function addEgg(id, I0 = isl()) { I0.hatch.push({ id, start: now(), end: now() + hatchTime(id, I0) }); }
+function addEgg(id, I0 = isl()) { I0.hatch.push({ id, start: now(), end: now() + (tutOn() ? 3000 : hatchTime(id, I0)) }); }
 function defaultState() {
   const s = { v: 3, obstV: 1, found: { shape: { bobble: true } }, food: 100, coins: 600, shards: 5, xp: 0, level: 1, discovered: { bobble: true }, unlocked: { shape: true }, current: 'shape',
-    islands: {}, claimed: [], settings: { music: 0.8, sfx: 0.7 }, uid: 1, stats: { bred: 0, hatched: 0, fed: 0, col: 0 }, seenIntro: false };
+    islands: {}, claimed: [], settings: { music: 0.8, sfx: 0.7 }, uid: 1, stats: { bred: 0, hatched: 0, fed: 0, col: 0 }, seenIntro: false, tut: 0 };
   s.islands.shape = newIsland(s, 'shape');
   s.islands.shape.monsters.push({ uid: s.uid++, id: 'bobble', x: -80, y: 70, level: 1, feeds: 0, last: Date.now(), muted: false });
-  s.islands.shape.decos.push({ uid: s.uid++, id: 'bush', x: 140, y: 150 }, { uid: s.uid++, id: 'flowers', x: -200, y: 190 }, { uid: s.uid++, id: 'lolli', x: 230, y: 40 });
   genObstacles(s.islands.shape, 'shape', s);
   return s;
 }
@@ -1869,6 +1932,8 @@ function normalizeSave(src) {
     for (const I0 of Object.values(d.islands)) { const mk = k => ({ uid: d.uid++, kind: k, x: P[k].x, y: P[k].y, lvl: 1, br: null, bake: null }); I0.structs = [mk('breeder'), mk('hatchery'), mk('bakery')]; I0.structs[0].br = I0.breeder || null; delete I0.breeder; }
   }
   Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.lvl > 2) st.lvl = 2; }));
+  if (d.tut == null) d.tut = d.seenIntro ? TUT_DONE : 0; // existing players skip the tutorial
+  Object.values(d.islands || {}).forEach(I0 => (I0.structs || []).forEach(st => { if (st.kind === 'mine' && !st.mine) st.mine = Date.now(); }));
   if (!d.found) { d.found = {}; for (const [iid, I0] of Object.entries(d.islands)) { d.found[iid] = {}; I0.monsters.forEach(m => d.found[iid][m.id] = true); } }
   if (!d.obstV) { // bigger islands: put the original Breeding Structure + Hatchery on their platforms and add obstacles
     d.obstV = 1;
@@ -1895,7 +1960,14 @@ const now = () => Date.now();
 
 // ---------- economy ----------
 function decoBonus(I0 = isl()) { return Math.min(60, I0.decos.reduce((a, d) => a + (DECO[d.id] ? DECO[d.id].bonus : 0), 0)); }
-function monRate(m, I0 = isl()) { const d = SHAPE[m.id]; return d.rate * (1 + 0.2 * (m.level - 1)) * (1 + decoBonus(I0) / 100); }
+function likeStatus(m, I0 = isl()) {
+  const L = likesOf(m.id), near = (x, y) => Math.hypot(x - m.x, (y - m.y) * 1.6) <= LIKE_RADIUS;
+  const decos = L.decos.map(id => ({ id, ok: I0.decos.some(d => d.id === id && near(d.x, d.y)) }));
+  const shape = { id: L.shape, ok: I0.monsters.some(o => o !== m && SHAPE[o.id].baseId === L.shape && near(o.x, o.y)) };
+  const n = decos.filter(d => d.ok).length + (shape.ok ? 1 : 0);
+  return { decos, shape, n, happy: n / 3 };
+}
+function monRate(m, I0 = isl()) { const d = SHAPE[m.id]; return d.rate * (1 + 0.2 * (m.level - 1)) * (1 + decoBonus(I0) / 100) * (1 + LIKE_BONUS * likeStatus(m, I0).happy); }
 function monCap(m, I0) { return Math.round(monRate(m, I0) * 180); }
 function monBank(m, I0) { return Math.min(monCap(m, I0), Math.floor(monRate(m, I0) * (now() - m.last) / 60000)); }
 function feedCost(m) { return 5 * SHAPE[m.id].tier * m.level; } // food per treat
@@ -1922,7 +1994,7 @@ function addXP(n) {
 function collect(m, silent) {
   const b = monBank(m); m.last = now();
   if (b <= 0) return 0;
-  addCoins(b); addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
+  addCoins(b); Tut.ev('collect'); addXP(Math.max(1, b / 60)); S.stats.col = (S.stats.col || 0) + 1;
   const sp = worldPosOf(m); FX.coinText(sp.x, sp.y - 90, b);
   if (!silent) Audio.sfx('coin');
   markDirty(); return b;
@@ -1969,8 +2041,9 @@ function startBreed(ua, ub, sid) {
   const a = I0.monsters.find(m => m.uid === ua), b = I0.monsters.find(m => m.uid === ub);
   if (!a || !b || a === b) return UI.toast('Pick two different Shapes');
   if (a.level < BREED_MIN_LEVEL || b.level < BREED_MIN_LEVEL) return UI.toast(`Both Shapes must be level ${BREED_MIN_LEVEL}+ (feed them!)`, 'bad');
-  const res = rollOutcome(breedOutcomes(a.id, b.id, S.current));
-  const t = SHAPE[res].time * 1000 * (st.lvl > 1 ? 0.75 : 1);
+  const outs = breedOutcomes(a.id, b.id, S.current); let res = rollOutcome(outs);
+  if (tutOn()) { const top = Math.max(SHAPE[a.id].tier, SHAPE[b.id].tier), nw = Object.keys(outs).find(id => SHAPE[id].variant === 'common' && SHAPE[id].tier > top); if (nw) res = nw; }
+  const t = tutOn() ? 4000 : SHAPE[res].time * 1000 * (st.lvl > 1 ? 0.75 : 1); Tut.ev('breed');
   st.br = { a: a.id, b: b.id, ua: a.uid, ub: b.uid, res, start: now(), end: now() + t };
   S.stats.bred++; addXP(15); Audio.sfx('breed'); markDirty();
   FX.burst(st.x, st.y - 130, 'heart', 10);
@@ -1978,7 +2051,7 @@ function startBreed(ua, ub, sid) {
 function collectBreed(sid) {
   const I0 = isl(), st = structById(sid), br = st && st.br; if (!br || now() < br.end) return;
   if (I0.hatch.length >= hatchSlots()) { UI.toast('Hatchery is full! Hatch an egg first.', 'bad'); return; }
-  addEgg(br.res); st.br = null;
+  addEgg(br.res); st.br = null; Tut.ev('breedcol');
   Audio.sfx('place'); UI.toast('Egg moved to the Hatchery', 'good'); markDirty();
 }
 
@@ -1995,7 +2068,7 @@ function speedEgg(i) {
 }
 
 // ---------- admin ----------
-function finishIsland(I0) { (I0.obstacles || []).forEach(o => { if (o.clr) o.clr.end = now(); }); I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); }); I0.hatch.forEach(e => e.end = now()); }
+function finishIsland(I0) { (I0.obstacles || []).forEach(o => { if (o.clr) o.clr.end = now(); }); I0.structs.forEach(s => { if (s.br) s.br.end = now(); if (s.bake) s.bake.end = now(); if (s.kind === 'mine') s.mine = now() - MINE_TIME * 1000; }); I0.hatch.forEach(e => e.end = now()); }
 const Admin = {
   clearObstacles() { isl().obstacles = []; markDirty(); UI.toast('All obstacles removed from this island', 'good'); },
   food(n) { S.food += n; markDirty(); UI.toast(`+${fmt(n)} food`, 'good'); },
@@ -2034,13 +2107,18 @@ function sellEgg(i) {
 
 // ---------- bakery ----------
 function bakeRecipes(st) { return RECIPES.slice(0, st.lvl > 1 ? 5 : 3); }
+function mineReady(st) { return now() - (st.mine || now()) >= MINE_TIME * 1000; }
+function collectMine(sid) {
+  const st = structById(sid); if (!st || st.kind !== 'mine' || !mineReady(st)) return false;
+  st.mine = now(); S.shards += 1; Audio.sfx('coin'); FX.burst(st.x, st.y - 70, 'spark', 14); addXP(15); UI.toast('+1 gem from the Gem Mine', 'good'); markDirty(); return true;
+}
 function startBake(sid, rid) {
   const st = structById(sid), r = RECIPES.find(x => x.id === rid); if (!st || st.bake || !r) return;
-  if (!spend(r.coins)) return; st.bake = { rid, start: now(), end: now() + r.time * 1000 }; Audio.sfx('buy'); addXP(Math.max(2, r.coins / 50)); markDirty();
+  if (!spend(r.coins)) return; st.bake = { rid, start: now(), end: now() + (tutOn() ? 4000 : r.time * 1000) }; Tut.ev('bake'); Audio.sfx('buy'); addXP(Math.max(2, r.coins / 50)); markDirty();
 }
 function collectBake(sid) {
   const st = structById(sid), b = st && st.bake; if (!b || now() < b.end) return; const r = RECIPES.find(x => x.id === b.rid);
-  S.food += r.food; st.bake = null; Audio.sfx('coin'); FX.foodText(st.x, st.y - 120, r.food); UI.toast(`+${fmt(r.food)} food`, 'good'); markDirty();
+  S.food += r.food; st.bake = null; Tut.ev('food'); Audio.sfx('coin'); FX.foodText(st.x, st.y - 120, r.food); UI.toast(`+${fmt(r.food)} food`, 'good'); markDirty();
 }
 function speedBake(sid) { const st = structById(sid), b = st && st.bake; if (!b) return; const c = speedCost(b.end); if (!c) return; if (!spend(0, c)) return; b.end = now(); Audio.sfx('buy'); markDirty(); }
 // ---------- structures ----------
@@ -2048,7 +2126,7 @@ function buyStructStatus(kind) {
   const d = STRUCTS[kind], have = structsOf(kind).length;
   if (have >= d.max) return { ok: false, why: have ? 'Owned' : '' , owned: true };
   if (S.level < d.buy.lvl) return { ok: false, why: `Requires level ${d.buy.lvl}` };
-  return { ok: true, coins: d.buy.coins };
+  return { ok: true, coins: d.buy.coins || 0, gems: d.buy.gems || 0 };
 }
 function upgradeStruct(sid) {
   const st = structById(sid), d = STRUCTS[st.kind], nx = d.up[st.lvl]; if (!nx) return;
@@ -2068,7 +2146,7 @@ function buyShape(id) {
   const I0 = isl(), st = marketStatus(id); if (!st.ok) return;
   if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); UI.toast('Hatchery is full!', 'bad'); return; }
   if (!spend(st.coins || 0, st.shards || 0)) return;
-  addEgg(id);
+  addEgg(id); Tut.ev('buy_' + SHAPE[id].baseId);
   addXP(Math.max(5, st.coins ? st.coins / 25 : st.shards * 2)); Audio.sfx('buy'); UI.toast(`${SHAPE[id].name} egg sent to the Hatchery`, 'good'); markDirty(); return true;
 }
 function eggReady(e) { return now() >= e.end; }
@@ -2120,8 +2198,8 @@ function confirmPlace() {
   } else if (p.kind === 'move') {
     const m = I0.monsters.find(x => x.uid === p.uid); if (m) { m.x = p.x; m.y = p.y; } Audio.sfx('place');
   } else if (p.kind === 'buystruct') {
-    const st = buyStructStatus(p.skind); if (!st.ok) { cancelPlace(); return; } if (!spend(st.coins)) return;
-    I0.structs.push(newStruct(p.skind, p.x, p.y)); Audio.sfx('levelup'); FX.burst(p.x, p.y - 60, 'spark', 16); addXP(st.coins / 40); UI.toast(`${STRUCTS[p.skind].name} built!`, 'good');
+    const st = buyStructStatus(p.skind); if (!st.ok) { cancelPlace(); return; } if (!spend(st.coins, st.gems)) return;
+    I0.structs.push(newStruct(p.skind, p.x, p.y)); Audio.sfx('levelup'); FX.burst(p.x, p.y - 60, 'spark', 16); addXP(Math.max(10, st.coins / 40 + st.gems * 5)); Tut.ev('built_' + p.skind); UI.toast(`${STRUCTS[p.skind].name} built!`, 'good');
   } else if (p.kind === 'movestruct') {
     const st = structById(p.uid); if (st) { st.x = p.x; st.y = p.y; } Audio.sfx('place');
   } else if (p.kind === 'movedeco') {
@@ -2242,6 +2320,7 @@ const Render = (() => {
     ambient = [];
   }
 
+  const toScreen = (wx, wy) => ({ x: (wx - cam.x) * cam.z + W / 2, y: (wy - cam.y) * cam.z + H / 2 });
   const toWorld = (sx, sy) => ({ x: (sx - W / 2) / cam.z + cam.x, y: (sy - H / 2) / cam.z + cam.y });
 
   // ---------- input ----------
@@ -2496,10 +2575,11 @@ const Render = (() => {
       const eggs = []; for (let i = 0; i < n; i++) { const e = I0.hatch[off + i]; eggs.push(e ? { id: e.id, ready: eggReady(e), p: Math.min(1, (now() - e.start) / (e.end - e.start)) } : null); }
       drawHatchery(c, t, eggs, st.lvl); if (!ghost && eggs.some(e => e && e.ready)) label('Hatch!', 22, true);
     } else if (st.kind === 'bakery') { const b = st.bake, ready = b && now() >= b.end; drawBakery(c, t, !!b, ready, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, st.lvl); if (ready && !ghost) label('Food ready!', 22, true); }
+    else if (st.kind === 'mine') { const ready = mineReady(st); drawMine(c, t, ready, Math.min(1, (now() - (st.mine || now())) / (MINE_TIME * 1000))); if (ready && !ghost) label('Gem ready!', 22, true); }
     if (st.lvl > 1 && !ghost) { c.fillStyle = '#ff7ad9'; c.strokeStyle = OUTLINE; c.lineWidth = 2.5; for (let i = 1; i < st.lvl; i++) { c.beginPath(); starPts(5, 9, 4.5, -Math.PI / 2).forEach((q, k) => k ? c.lineTo(q[0] - 70 + i * 20, q[1] + 8) : c.moveTo(q[0] - 70 + i * 20, q[1] + 8)); c.closePath(); c.fill(); c.stroke(); } }
     c.restore();
   }
-  return { init, resetCam, buildTerrain, get selected() { return selected; }, set selected(v) { selected = v; }, cam };
+  return { init, resetCam, buildTerrain, toScreen, get selected() { return selected; }, set selected(v) { selected = v; }, cam };
 })();
 
 // ===================== UI =====================
@@ -2622,7 +2702,7 @@ const UI = (() => {
       if (modalKind === 'mixer') updateMixer();
     }
   }
-  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
+  function rerender() { const k = modalKind; if (!k) return; if (k === 'breed') openBreed(true); else if (k === 'hatch') openHatch(true); else if (k === 'bakery') openBakery(true); else if (k === 'mine') openMine(true); else if (k === 'obst') { const o = obstById(curObst); if (o) openObstacle(o, true); } else if (k === 'market' && currentTab) openMarket(currentTab, true); }
 
   // ---------- MARKET ----------
   let currentTab = null;
@@ -2661,7 +2741,7 @@ const UI = (() => {
     } else if (tab === 'structures') {
       title = 'Structures';
       body = `<div class="muted center" style="margin-bottom:8px">Tap a structure on the island to upgrade (once, with gems) or move it.</div><div class="wgrid">${Object.entries(STRUCTS).map(([k, d]) => { const st = buyStructStatus(k), have = structsOf(k).length;
-        return `<div class="wcard ${st.ok ? '' : 'locked'}"><div class="wname">${d.name}</div><div class="wprice"><span>${ic('coin')} ${fmt(d.buy.coins)}</span><span>${have}/${d.max}</span></div><div class="wart"><div data-struct="${k}"></div>${st.ok ? '' : `<div class="req">${st.owned ? 'All built' : st.why.replace(/(\d+)$/, '<b>$1</b>')}</div>`}</div>${st.ok ? `<button class="btn green sm wbuy" data-sbuy="${k}">Build</button>` : ''}</div>`; }).join('')}</div>`;
+        return `<div class="wcard ${st.ok ? '' : 'locked'}"><div class="wname">${d.name}</div><div class="wprice"><span>${d.buy.gems ? ic('shard') + ' ' + fmt(d.buy.gems) : ic('coin') + ' ' + fmt(d.buy.coins)}</span><span>${have}/${d.max}</span></div><div class="wart"><div data-struct="${k}"></div>${st.ok ? '' : `<div class="req">${st.owned ? 'All built' : st.why.replace(/(\d+)$/, '<b>$1</b>')}</div>`}</div>${st.ok ? `<button class="btn green sm wbuy" data-sbuy="${k}">Build</button>` : ''}</div>`; }).join('')}</div>`;
     } else {
       title = 'Currency';
       body = `<div class="muted center" style="margin-bottom:8px">Trade gems for coins or food</div><div class="wgrid">${CUR_TRADES.map((t, i) => `<div class="wcard"><div class="wname">${t.c ? fmt(t.c) + ' coins' : fmt(t.f) + ' food'}</div><div class="wprice"><span>${ic('shard')} ${t.g}</span><span></span></div><div class="wart"><div style="width:${70 + (i % 3) * 14}px;height:${70 + (i % 3) * 14}px">${ICONS[t.c ? 'coin' : 'food']}</div></div><button class="btn green sm wbuy" data-trade="${i}">Buy</button></div>`).join('')}</div>`;
@@ -2670,12 +2750,12 @@ const UI = (() => {
     if (keep && modalKind === 'market') { modal.querySelector('.plaque h2').textContent = title; const br = modal.querySelector('.backrow'); if (br) br.remove(); if (tabs) modal.querySelector('.panel-head').insertAdjacentHTML('afterend', tabs); setBody(body); }
     else open('market', title, '', 'market', body, tabs);
     modal.querySelectorAll('[data-catart]').forEach(el => el.replaceWith(catArt(el.dataset.catart)));
-    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
+    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
     modal.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { Audio.sfx('open'); openMarket(b.dataset.cat, true); });
     const bk = modal.querySelector('[data-back]'); if (bk) bk.onclick = () => { Audio.sfx('close'); openMarket(null, true); };
     modal.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (buyShape(b.dataset.buy)) openMarket('shapes', true); });
     modal.querySelectorAll('[data-deco-buy]').forEach(b => b.onclick = () => { const d = DECO[b.dataset.decoBuy]; if (S.coins < (d.cost || 0) || S.shards < (d.shards || 0)) { Audio.sfx('error'); toast('Not enough ' + (d.shards ? 'gems' : 'coins'), 'bad'); return; } beginPlace({ kind: 'deco', id: d.id }); });
-    modal.querySelectorAll('[data-sbuy]').forEach(b => b.onclick = () => { const k = b.dataset.sbuy; if (S.coins < STRUCTS[k].buy.coins) { Audio.sfx('error'); toast('Not enough coins', 'bad'); return; } beginPlace({ kind: 'buystruct', skind: k }); });
+    modal.querySelectorAll('[data-sbuy]').forEach(b => b.onclick = () => { const k = b.dataset.sbuy, bc = STRUCTS[k].buy; if (S.coins < (bc.coins || 0)) { Audio.sfx('error'); toast('Not enough coins', 'bad'); return; } if (S.shards < (bc.gems || 0)) { Audio.sfx('error'); toast('Not enough gems', 'bad'); return; } beginPlace({ kind: 'buystruct', skind: k }); });
     modal.querySelectorAll('[data-trade]').forEach(b => b.onclick = () => { const t = CUR_TRADES[+b.dataset.trade]; if (!spend(0, t.g)) return; if (t.c) addCoins(t.c); else S.food += t.f; Audio.sfx('buy'); toast(t.c ? `+${fmt(t.c)} coins` : `+${fmt(t.f)} food`, 'good'); refreshHUD(); });
   }
   function upgradesHTML() {
@@ -2791,6 +2871,29 @@ const UI = (() => {
     const s1 = modal.querySelector('[data-bspeed]'); if (s1) s1.onclick = () => { speedBake(st.uid); openBakery(true); };
   }
 
+  // ---------- GEM MINE ----------
+  let curMine = null;
+  function openMine(keep, sid) {
+    if (sid != null) curMine = sid;
+    const st = structById(curMine); if (!st || st.kind !== 'mine') return;
+    const ready = mineReady(st), start = st.mine, end = st.mine + MINE_TIME * 1000;
+    let body = `<div class="center"><div class="stage" style="display:inline-grid;width:150px;height:130px;margin-bottom:10px"><div style="width:84px;height:84px">${ICONS.shard || ''}</div></div>
+      <div class="muted" style="margin-bottom:8px">The Gem Mine digs up <b>1 gem</b> every 24 hours, even while you're away.</div>
+      ${ready ? `<button class="btn green" data-mcollect>Collect ${ic('shard')} 1</button>` : `<div style="max-width:320px;margin:10px auto"><div class="bar"><i style="width:${(now() - start) / (end - start) * 100}%"></i></div><div class="timer" data-end="${end}" data-start="${start}">${fmtTime(end - now())}</div></div>`}</div>`;
+    body += structFooter(st);
+    if (keep && modalKind === 'mine') setBody(body); else open('mine', 'Gem Mine', '', 'shard', body);
+    wireFooter(st, openMine);
+    const c1 = modal.querySelector('[data-mcollect]'); if (c1) c1.onclick = () => { collectMine(st.uid); refreshHUD(); openMine(true); };
+  }
+
+  // ---------- LIKES ----------
+  function likesHTML(m, id) {
+    const L = likesOf(id), ls = m ? likeStatus(m) : null;
+    const chip = (name, ok, kind) => `<span class="like ${ls ? (ok ? 'ok' : 'no') : ''}">${kind === 's' ? '◆' : '❀'} ${name}${ls ? (ok ? ' ✓' : '') : ''}</span>`;
+    const chips = [chip(SHAPE[L.shape].name, ls && ls.shape.ok, 's'), ...L.decos.map((d, i) => chip(DECO[d].name, ls && ls.decos[i].ok, 'd'))].join('');
+    return `<div class="likes"><b>Likes</b>${chips}${ls ? `<span class="happy">${'♥'.repeat(ls.n)}${'♡'.repeat(3 - ls.n)} +${Math.round(LIKE_BONUS * 100 * ls.happy)}%</span>` : ''}</div>`;
+  }
+
   // ---------- BOOK ----------
   function recipeText(d) {
     if (d.variant === 'rare' || d.variant === 'epic' || d.variant === 'ruin') return 'Bred from a secret pairing. Nobody knows the recipe... yet.';
@@ -2864,7 +2967,7 @@ const UI = (() => {
     if (m) closeSheet();
     const d = SHAPE[id], k = (knownHere != null ? knownHere : S.discovered[id]) || !!m, secret = d.variant !== 'common';
     const isles = ISLANDS.filter(i => i.shapes.includes(id)).map(i => i.name).join(', ');
-    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Sound</b><span>${k ? d.sound : '???'}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span><b>Incubation</b><span>${k ? fmtTime(d.time * 1000) : '???'}</span><b>Movement</b><span>${ANIM_DESC[d.baseId] || CATS[d.cat].anim}</span><b>How to get</b><span>${recipeText(d)}</span></div>`;
+    const stats = `<div class="kv"><b>Rarity</b><span>${RARITY[d.variant].name}</span><b>Sound</b><span>${k ? d.sound : '???'}</span><b>Elements</b><span>${k || !secret ? d.el.map(e => ELEMENTS[e].name).join(', ') : '???'}</span><b>Lives on</b><span>${isles}</span><b>Income</b><span>${k ? (m ? fmt(monRate(m)) + ' coins/min' : d.rate + ' coins/min at level 1') : '???'}</span><b>Incubation</b><span>${k ? fmtTime(d.time * 1000) : '???'}</span><b>Movement</b><span>${ANIM_DESC[d.baseId] || CATS[d.cat].anim}</span><b>How to get</b><span>${recipeText(d)}</span><b>Likes</b><span>${k ? (() => { const L = likesOf(d.id); return [SHAPE[L.shape].name, ...L.decos.map(x => DECO[x].name)].join(', '); })() : '???'}</span>${m ? `<b>Happiness</b><span>${(() => { const ls = likeStatus(m); return `${ls.n}/3 likes nearby · +${Math.round(LIKE_BONUS * 100 * ls.happy)}% coins`; })()}</span>` : ''}</div>`;
     const bio = k ? `<p class="bio">${d.desc}</p>` : `<p class="bio">Not discovered yet.</p>`;
     const body = `<div class="infoscr"><div class="icard"><div class="iname">${k ? d.name : '???'}</div><div class="iart"><div data-portrait="${id}" data-size="${Math.round(180 * VIEW.u)}" data-sil="${k ? 0 : 1}" ${k ? 'data-anim="solo"' : ''}></div></div><div class="medals">${(k || !secret ? d.el : []).map(e => `<span class="medal" style="background:${ELEMENTS[e].color}">${ELEMENTS[e].icon}</span>`).join('')}</div></div>
       <div class="ipanel"><div class="itabs"><button class="itab ${tab === 'bio' ? 'on' : ''}" data-itab="bio">Bio</button><button class="itab ${tab === 'stats' ? 'on' : ''}" data-itab="stats">Stats</button></div><div class="itext">${tab === 'bio' ? bio : stats}</div>
@@ -2932,7 +3035,7 @@ const UI = (() => {
     modal.querySelector('[data-save]').onclick = async () => { save(); if (NET.user) await NET.pushNow(); toast(NET.user ? 'Saved to the server' : 'Game saved', 'good'); };
     const rb = modal.querySelector('[data-reset]'); rb.onclick = () => {
       if (!rb.dataset.armed) { rb.dataset.armed = 1; rb.textContent = 'Tap again to erase everything'; setTimeout(() => { if (rb.isConnected) { delete rb.dataset.armed; rb.textContent = 'Reset progress'; } }, 3000); return; }
-      localStorage.removeItem(saveKey()); S = defaultState(); S.seenIntro = true; travel('shape'); markDirty(); NET.pushNow(); toast('Progress reset');
+      localStorage.removeItem(saveKey()); S = defaultState(); S.seenIntro = true; travel('shape'); markDirty(); NET.pushNow(); toast('Progress reset'); closeAll(); Tut.start();
     };
   }
 
@@ -3034,7 +3137,7 @@ const UI = (() => {
   setInterval(() => { if (modalKind === 'mixer') updateMixer(); }, 60);
 
   // ---------- STRUCT ----------
-  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'castle') openCastle(); }
+  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'castle') openCastle(); }
 
   // ---------- MONSTER SHEET ----------
   const sheet = $('#sheet'); let sheetAnim = null;
@@ -3043,7 +3146,7 @@ const UI = (() => {
     sheet.innerHTML = `<div class="sh-card"><button class="xbtn" data-x>✕</button>
       <div class="sh-name"><div class="sh-lv">${ICONS.star}<span id="sh-lv">${m.level}</span></div><span class="nm">${d.name}</span>${elBadges(d.el)}</div>
       <div class="sh-pp" id="sheet-pp"></div>
-      <div class="sh-mid"><div class="muted">${d.sound}</div><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div></div>
+      <div class="sh-mid"><div class="muted">${d.sound}</div><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div><div id="sh-likes"></div></div>
       <div class="sh-btns">
         <button class="rbtn c-green" id="sh-feed"><span>${ICONS.food}</span><span class="rlbl" id="sh-feedcost"></span></button>
         <button class="rbtn ${m.muted ? 'c-gray' : 'c-blue'}" id="sh-mute"><span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span></button>
@@ -3064,7 +3167,7 @@ const UI = (() => {
   }
   function updateSheet() {
     if (!sheetFor || sheetFor.type !== 'mon') return; const m = isl().monsters.find(x => x.uid === sheetFor.uid); if (!m) { closeSheet(); return; }
-    $('#sh-lv').textContent = m.level; $('#sh-rate').textContent = `${fmt(monRate(m))}/min · ${fmt(monBank(m))}/${fmt(monCap(m))}`;
+    $('#sh-lv').textContent = m.level; $('#sh-likes').innerHTML = likesHTML(m, m.id); $('#sh-rate').textContent = `${fmt(monRate(m))}/min · ${fmt(monBank(m))}/${fmt(monCap(m))}`;
     $('#sh-pips').innerHTML = m.level >= MAX_LEVEL ? '<span class="lvnext">MAX LEVEL</span>' : Array.from({ length: FEEDS_PER_LEVEL }, (_, i) => `<i class="${i < m.feeds ? 'on' : ''}"></i>`).join('') + `<span class="lvnext">→ Lv ${m.level + 1}</span>`;
     const f = $('#sh-feed'), fc = $('#sh-feedcost'); if (m.level >= MAX_LEVEL) { f.disabled = true; f.style.filter = 'grayscale(.8)'; fc.textContent = 'Max'; } else fc.innerHTML = `${ic('food')}-${fmt(feedCost(m))}`;
   }
@@ -3092,7 +3195,7 @@ const UI = (() => {
     if (!p.classList.contains('hidden')) { popQ.push([html, onClose]); return; } p.innerHTML = `<div class="burst"><div class="rays"></div>${html}<div style="margin-top:14px"><button class="btn green" data-ok>Awesome!</button></div></div>`; p.classList.remove('hidden');
     hydrate(p);
     const close = () => { Audio.sfx('close'); p.classList.add('hidden'); p.innerHTML = ''; anims = anims.filter(a => a.cv.isConnected); onClose && onClose(); if (popQ.length) setTimeout(() => popup(...popQ.shift()), 200); };
-    p.querySelector('[data-ok]').onclick = close;
+    p.querySelector('[data-ok]').onclick = close; p.onclick = e => { if (e.target === p) close(); };
   }
   function discovered(id) { const d = SHAPE[id]; popup(`<h1>New Shape!</h1><div style="font-weight:900;font-size:24px">${d.name}</div><div class="stage" style="width:200px;height:200px;margin:10px auto"><div data-portrait="${id}" data-size="190" data-anim="1"></div></div>${elBadges(d.el)}<p style="font-weight:700;max-width:320px;margin:8px auto">${d.desc}</p><div class="muted">Added to your Collection Book · ${discoveredCount()}/${SHAPES.length}</div>`); const a = anims[anims.length - 1]; if (a) { const m = isl().monsters.slice().reverse().find(x => x.id === id); if (m) a.uid = m.uid; } }
   function levelUp(l, sh) { setTimeout(() => popup(`<h1>Level Up!</h1><div style="font-size:64px;font-weight:900;-webkit-text-stroke:2px #2a1f3d;color:#ffd23a;text-shadow:0 4px 0 #2a1f3d">${l}</div><div style="font-weight:800">+${sh} ${ic('shard')} gem${sh > 1 ? 's' : ''}</div>${unlocksAt(l)}`), 250); }
@@ -3125,7 +3228,161 @@ const UI = (() => {
   $('#b-goals').onclick = () => { const g = $('#goal'); g.classList.toggle('hidden'); setDot('#b-goals', 0); Audio.sfx('tap'); clearTimeout(g._t); if (!g.classList.contains('hidden')) g._t = setTimeout(() => g.classList.add('hidden'), 7000); };
   $('#lvl-pill').onclick = () => toast(`Level ${S.level} · ${S.xp}/${xpForLevel(S.level)} XP`);
 
-  return { openObstacle, visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
+  const sheetMon = () => sheetFor && sheetFor.type === 'mon' ? isl().monsters.find(x => x.uid === sheetFor.uid) : null;
+  return { sheetMon, openObstacle, visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
+})();
+
+// ===================== TUTORIAL =====================
+// S.tut: 0 = not started, 1..N = current step, TUT_DONE = finished or skipped. S.tutF holds flags set by game events.
+const TUT_DONE = 99;
+function tutOn() { return typeof S !== 'undefined' && S.tut > 0 && S.tut < TUT_DONE && !VISIT; }
+const Tut = (() => {
+  const $ = s => document.querySelector(s);
+  const mon = id => isl().monsters.find(m => SHAPE[m.id].baseId === id);
+  const bakery = () => structsOf('bakery')[0], breeder = () => structsOf('breeder')[0], hatchery = () => structsOf('hatchery')[0];
+  const flag = k => S.tutF && S.tutF[k];
+  const W = (fn, text) => ({ world: fn, text }), D = (sel, text) => ({ sel, text });
+  const placing_ = kind => () => placing && placing.kind === kind;
+  const PLACE = (kind, text) => ({ sel: '#pb-ok', when: placing_(kind), text });
+  const MARKET = text => D('#b-market', text);
+  const BACK = D('.backrow [data-back]', 'Go back to the Market menu.');
+
+  const STEPS = [
+    { // 1
+      targets: [W(() => mon('bobble'), 'Welcome to <b>My Singing Shapes</b>! This is <b>Bobble</b>, your first Shape. Every Shape plays its own part in the island song.')],
+      btn: "Let's go!",
+    },
+    { // 2 build a bakery
+      done: () => !!bakery(),
+      targets: [PLACE('buystruct', 'Drag the Bakery to a good spot, then tap ✓ to build it.'),
+        D('[data-sbuy="bakery"]', 'Build a <b>Bakery</b>. It turns coins into food.'),
+        D('[data-cat="structures"]', 'Open <b>Structures</b>.'), BACK,
+        MARKET('Shapes need <b>food</b> to grow. Tap the <b>Market</b> to build a Bakery.')],
+    },
+    { // 3 bake
+      done: () => flag('bake'),
+      targets: [D('[data-bake="toast"]', 'Bake some <b>Tune Toast</b>.'), W(bakery, 'Tap your new <b>Bakery</b>.')],
+    },
+    { // 4 collect food
+      done: () => flag('food'),
+      targets: [D('[data-bcollect]', 'Collect your food!'), D('#modal-wrap .timer', 'Baking... only a few seconds this time!'), W(bakery, 'Tap the Bakery when it says <b>Food ready!</b>')],
+    },
+    { // 5 buy tikki
+      enter: () => UI.closeAll(),
+      done: () => flag('buy_tikki') || !!mon('tikki') || isl().hatch.some(e => SHAPE[e.id].baseId === 'tikki'),
+      targets: [D('[data-buy="tikki"]', 'Buy a <b>Tikki</b> egg. Bobble loves Tikki!'), D('[data-cat="shapes"]', 'Open <b>Shapes</b>.'), BACK,
+        MARKET('Time for a new Shape! Open the <b>Market</b>.')],
+    },
+    { // 6 hatch tikki
+      enter: () => UI.closeAll(),
+      done: () => !!mon('tikki'),
+      targets: [PLACE('hatch', 'Place Tikki <b>near Bobble</b>, then tap ✓.'), D('[data-hatch]', 'Hatch it!'), D('#modal-wrap .timer', 'Hatching... just a moment!'), W(hatchery, 'Tap the <b>Hatchery</b> to hatch your egg.')],
+    },
+    { // 7 collect coins
+      done: () => flag('collect'),
+      enter: () => { const m = mon('bobble'); if (m && monBank(m) < 60) m.last = now() - Math.ceil(120 / monRate(m)) * 60000; }, // give Bobble some coins to collect
+      targets: [W(() => mon('bobble'), 'Shapes make coins while they sing. Tap <b>Bobble</b> to collect.')],
+    },
+    { // 8 feed to level 2
+      done: () => ['bobble', 'tikki'].every(id => mon(id) && mon(id).level >= BREED_MIN_LEVEL),
+      targets: [
+        { sel: '#sh-feed', when: () => { const m = UI.sheetMon && UI.sheetMon(); return m && m.level < BREED_MIN_LEVEL && ['bobble', 'tikki'].includes(SHAPE[m.id].baseId); }, text: 'Feed it until it reaches <b>level 2</b>.' },
+        W(() => ['bobble', 'tikki'].map(mon).find(m => m && m.level < BREED_MIN_LEVEL), 'Shapes must be <b>level 2</b> to breed. Tap this Shape to feed it.')],
+    },
+    { // 9 breed
+      done: () => flag('breed'),
+      targets: [D('#modal-wrap [data-go]:not([disabled])', 'Tap <b>Breed!</b>'),
+        { sel: '#modal-wrap [data-pick]:not(.sel):not(.locked)', text: 'Pick <b>Bobble</b> and <b>Tikki</b>.' },
+        W(breeder, 'Now let\'s make a brand new Shape! Tap the <b>Breeding Structure</b>.')],
+    },
+    { // 10 move egg to hatchery
+      done: () => flag('breedcol'),
+      targets: [D('#modal-wrap [data-collect]', 'Send the egg to the Hatchery.'), D('#modal-wrap .timer', 'Breeding... just a few seconds!'), W(breeder, 'Tap the Breeding Structure when it says <b>Ready!</b>')],
+    },
+    { // 11 hatch the new shape
+      done: () => isl().monsters.some(m => !['bobble', 'tikki'].includes(SHAPE[m.id].baseId)),
+      targets: [PLACE('hatch', 'Place your new Shape, then tap ✓.'), D('[data-hatch]', 'Hatch it!'), D('#modal-wrap .timer', 'Hatching... just a moment!'), W(hatchery, 'Tap the <b>Hatchery</b> to hatch your new Shape.')],
+    },
+    { // 12 likes
+      targets: [W(() => mon('bobble'), () => { const L = likesOf('bobble'); return `Shapes have <b>likes</b>! Bobble likes <b>${SHAPE[L.shape].name}</b>, <b>${DECO[L.decos[0]].name}</b> and <b>${DECO[L.decos[1]].name}</b>. Keep what a Shape likes nearby to make it happier, and it earns up to <b>${Math.round(LIKE_BONUS * 100)}%</b> more coins.`; })],
+      btn: 'Got it',
+    },
+    { // 13 finish
+      targets: [{ none: true, text: `You're all set! Here's <b>1,000 coins</b> and <b>15 gems</b> to get you going.<br><br>Tip: a <b>Gem Mine</b> (20 gems, in Structures) digs up a free gem every day.` }],
+      btn: 'Finish', finish: true,
+    },
+  ];
+
+  let el, bub, txt, btn, arrow, ring, raf = 0, lastStep = -1;
+  function build() {
+    el = document.createElement('div'); el.id = 'tut';
+    el.innerHTML = `<div class="tut-ring"></div><div class="tut-arrow"><svg viewBox="0 0 40 52"><path d="M20 50 L4 26 H14 V2 H26 V26 H36 Z" fill="#ffd34a" stroke="#3a1d0e" stroke-width="3.5" stroke-linejoin="round"/></svg></div>
+      <div class="tut-bub"><div class="tut-who"></div><div class="tut-txt"></div><div class="tut-btns"><button class="btn sm wood tut-skip">Skip tutorial</button><button class="btn sm green tut-next">Next</button></div></div>`;
+    $('#root').appendChild(el);
+    bub = el.querySelector('.tut-bub'); txt = el.querySelector('.tut-txt'); btn = el.querySelector('.tut-next'); arrow = el.querySelector('.tut-arrow'); ring = el.querySelector('.tut-ring');
+    const who = el.querySelector('.tut-who'); who.appendChild(portrait(SHAPE.bobble, 54));
+    btn.onclick = () => { Audio.sfx('tap'); const st = STEPS[S.tut - 1]; if (st && st.finish) finish(); else next(); };
+    el.querySelector('.tut-skip').onclick = () => { if (!el.dataset.armed) { el.dataset.armed = 1; el.querySelector('.tut-skip').textContent = 'Sure? Tap again'; return; } skip(); };
+  }
+  function visible(n) { if (!n) return false; const r = n.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false; if (n.closest('.hidden')) return false; return getComputedStyle(n).visibility !== 'hidden'; }
+  function localRect(n) {
+    const r = n.getBoundingClientRect(), a = VIEW.toLocal(r.left, r.top), b = VIEW.toLocal(r.right, r.bottom);
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+  }
+  // is the element actually on top (not hidden under a window)? the tutorial overlay itself is click-through
+  function onTop(n) { const r = n.getBoundingClientRect(), h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !h || n === h || n.contains(h) || h.closest('#tut'); }
+  function closeTarget() { const x = [...document.querySelectorAll('#modal-wrap .xbtn, #book .xbtn, #map .xbtn, #sheet .xbtn')].find(n => visible(n) && onTop(n)); return { t: { text: 'Close this window to continue.' }, rect: x ? localRect(x) : null, close: true }; }
+  function resolve(st) {
+    for (const t of st.targets) {
+      if (t.when && !t.when()) continue;
+      if (t.none) return { t, rect: null };
+      if (t.sel) { const n = [...document.querySelectorAll(t.sel)].find(visible); if (n) return onTop(n) ? { t, rect: localRect(n) } : closeTarget(); continue; }
+      if (t.world) {
+        const o = t.world(); if (!o) continue;
+        const blocked = !$('#modal-wrap').classList.contains('hidden') || !$('#book').classList.contains('hidden') || !$('#map').classList.contains('hidden');
+        if (blocked) return closeTarget();
+        const p = Render.toScreen(o.x, o.y), z = Render.cam.z, r = (o.kind ? STRUCTS[o.kind].r * 1.1 : 70) * z;
+        const cy0 = p.y - r * 0.65, cl = VIEW.rot ? { x: innerWidth - cy0, y: p.x } : { x: p.x, y: cy0 }, hit = document.elementFromPoint(cl.x, cl.y);
+        if (hit && hit.tagName !== 'CANVAS' && !hit.closest('#tut') && hit.closest('#sheet')) return closeTarget(); // a Shape's panel is covering it
+        return { t, rect: { x: p.x - r, y: p.y - r * 1.6, w: r * 2, h: r * 1.9 }, world: true };
+      }
+    }
+    const c = closeTarget(); if (c.rect) return c;
+    return { t: st.targets[st.targets.length - 1], rect: null };
+  }
+  function loop() {
+    raf = requestAnimationFrame(loop);
+    if (!tutOn()) { el.classList.add('hidden'); return; }
+    const st = STEPS[S.tut - 1]; if (!st) { finish(); return; }
+    if (st.done && st.done()) { next(); return; }
+    const popupOpen = !$('#popup').classList.contains('hidden');
+    el.classList.toggle('hidden', popupOpen);
+    const R = resolve(st), text = typeof R.t.text === 'function' ? R.t.text() : R.t.text;
+    if (txt.dataset.k !== text) { txt.innerHTML = text; txt.dataset.k = text; }
+    btn.style.display = st.btn ? '' : 'none'; if (st.btn) btn.textContent = st.btn;
+    const VW = el.clientWidth, VH = el.clientHeight, u = VIEW.u, bw = bub.offsetWidth, bh = bub.offsetHeight;
+    let bx, by;
+    if (R.rect) {
+      const { x, y, w, h } = R.rect, cx = x + w / 2, bounce = Math.sin(performance.now() / 160) * 7 * u;
+      ring.style.display = ''; Object.assign(ring.style, { left: x - 6 + 'px', top: y - 6 + 'px', width: w + 12 + 'px', height: h + 12 + 'px', borderRadius: R.world ? '50%' : '16px' });
+      arrow.style.display = '';
+      const below = y < VH * 0.42; // target near the top: arrow sits under it pointing up
+      arrow.style.transform = `translate(${cx - 20}px, ${below ? y + h + 4 + bounce : y - 56 + bounce}px) scale(${u}) rotate(${below ? 180 : 0}deg)`;
+      bx = cx - bw / 2; by = below ? y + h + 66 * u : y - 66 * u - bh;
+      if (by < 6 || by + bh > VH - 6) { by = Math.max(6, Math.min(VH - bh - 6, y + h / 2 - bh / 2)); bx = cx + w / 2 + 60 * u; if (bx + bw > VW - 6) bx = x - w / 2 - 60 * u - bw; }
+    } else { ring.style.display = 'none'; arrow.style.display = 'none'; bx = VW / 2 - bw / 2; by = VH * 0.3 - bh / 2; }
+    bx = Math.max(6, Math.min(VW - bw - 6, bx)); by = Math.max(6, Math.min(VH - bh - 6, by));
+    bub.style.transform = `translate(${bx}px, ${by}px)`;
+    if (S.tut !== lastStep) { lastStep = S.tut; bub.classList.remove('pop'); void bub.offsetWidth; bub.classList.add('pop'); }
+  }
+  function enter() { const st = STEPS[S.tut - 1]; if (st && st.enter) st.enter(); }
+  function next() { S.tut++; markDirty(); Audio.sfx('open'); if (S.tut > STEPS.length) finish(); else enter(); }
+  function finish() { if (S.tut === TUT_DONE) return; S.tut = TUT_DONE; addCoins(1000); S.shards += 15; Audio.sfx('levelup'); UI.toast('Tutorial complete! +1,000 coins, +15 gems', 'good'); UI.refreshHUD(); markDirty(); el.classList.add('hidden'); }
+  function skip() { S.tut = TUT_DONE; markDirty(); el.classList.add('hidden'); UI.toast('Tutorial skipped'); }
+  function start() { if (!el) build(); if (!S.tut) { S.tut = 1; S.tutF = {}; markDirty(); } enter(); if (!raf) loop(); }
+  function ev(name) { if (!tutOn()) return; S.tutF = S.tutF || {}; S.tutF[name] = 1; }
+  function restart() { S.tut = 0; start(); }
+  return { start, ev, restart, steps: STEPS.length };
 })();
 
 // ===================== BOOT =====================
@@ -3163,9 +3420,8 @@ const UI = (() => {
     document.querySelector('#hud').classList.remove('hidden');
     UI.refreshHUD(); Audio.sfx('open');
     const away = now() - (S.savedAt || now());
-    if (!S.seenIntro) {
-      S.seenIntro = true; markDirty();
-      UI.popup(`<h1>Welcome${NET.user ? ', ' + NET.user.username : ''}!</h1><div class="stage" style="width:170px;height:170px;margin:8px auto"><div data-portrait="bobble" data-size="160" data-anim="1"></div></div><p style="font-weight:700;max-width:340px;margin:6px auto;line-height:1.45">This is <b>Bobble</b>, the heartbeat of Shape Island. Every Shape you add plays its own part in the island song.<br><br>Head to the <b>Market</b> and buy a <b>Tikki</b> egg to start the band!</p>`);
+    if (!S.seenIntro || tutOn()) {
+      S.seenIntro = true; markDirty(); Tut.start();
     } else if (away > 60000) {
       const bank = isl().monsters.reduce((a, m) => a + monBank(m), 0);
       UI.toast(`Welcome back! Your Shapes earned ${fmt(bank)} coins while you were away.`, 'good');
