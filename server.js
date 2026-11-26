@@ -122,6 +122,11 @@ function readBody(req) {
   });
 }
 const publicUser = u => ({ id: u.id, username: u.username, code: u.code, level: u.level });
+// Admin panel: only the usernames in ADMIN_USERS (comma separated, max 2) can open it, and only with ADMIN_PASSWORD
+const ADMIN_USERS = (process.env.ADMIN_USERS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean).slice(0, 2);
+const isAdmin = u => ADMIN_USERS.includes(String(u.username).toLowerCase());
+const selfUser = u => ({ ...publicUser(u), admin: isAdmin(u) });
+const sha = x => crypto.createHash('sha256').update(String(x)).digest();
 const validName = n => typeof n === 'string' && /^[a-z0-9_]{3,16}$/.test(n);
 
 // simple per-IP limiter for login/signup
@@ -150,17 +155,23 @@ const routes = {
       catch (e) { if (e.code === '23505' && /username/.test(e.detail || e.constraint || 'username')) { if (await db.userByName(username)) return [409, { error: 'That username is taken' }]; } else throw e; }
     }
     const token = newToken(); await db.addSession(token, user.id);
-    return [200, { token, user: publicUser(user), save: null }];
+    return [200, { token, user: selfUser(user), save: null }];
   },
   'POST /api/login': async (req, body) => {
     if (limited(req.socket.remoteAddress, 'login', 20, 15 * 60 * 1000)) return [429, { error: 'Too many attempts. Wait a few minutes.' }];
     const username = String(body.username || '').trim().toLowerCase(), user = await db.userByName(username);
     if (!user || !checkPassword(String(body.password || ''), user.pass)) return [401, { error: 'Wrong username or password' }];
     const token = newToken(); await db.addSession(token, user.id);
-    return [200, { token, user: publicUser(user), save: await db.getSave(user.id), likes: await db.likeCounts(user.id) }];
+    return [200, { token, user: selfUser(user), save: await db.getSave(user.id), likes: await db.likeCounts(user.id) }];
   },
   'POST /api/logout': async (req, body, me, token) => { if (token) await db.delSession(token); return [200, { ok: true }]; },
-  'GET /api/me': async (req, body, me) => [200, { user: publicUser(me), save: await db.getSave(me.id), likes: await db.likeCounts(me.id) }],
+  'POST /api/admin/unlock': async (req, body, me) => {
+    if (!isAdmin(me)) return [403, { error: 'This account is not an admin' }];
+    if (!process.env.ADMIN_PASSWORD) return [403, { error: 'No admin password is set on the server (ADMIN_PASSWORD)' }];
+    if (!crypto.timingSafeEqual(sha(body.password || ''), sha(process.env.ADMIN_PASSWORD))) { await new Promise(r => setTimeout(r, 900)); return [403, { error: 'Wrong admin password' }]; }
+    return [200, { ok: true }];
+  },
+  'GET /api/me': async (req, body, me) => [200, { user: selfUser(me), save: await db.getSave(me.id), likes: await db.likeCounts(me.id) }],
   'POST /api/save': async (req, body, me) => {
     const data = body.data; if (!data || typeof data !== 'object') return [400, { error: 'No save data' }];
     await db.putSave(me.id, data, Math.max(1, Math.min(999, parseInt(data.level) || 1)));
@@ -224,15 +235,17 @@ const server = http.createServer(async (req, res) => {
       const [status, obj] = await fn(req, body, me, token, url);
       return send(res, status, obj);
     }
-    if (url.pathname === '/favicon.ico') { res.writeHead(204); return res.end(); }
+    if (url.pathname === '/favicon.ico') { res.writeHead(302, { Location: '/icons/icon-192.png' }); return res.end(); }
+    // Android app (Trusted Web Activity) verification: paste the assetlinks.json from PWABuilder into the ASSETLINKS_JSON env var
+    if (url.pathname === '/.well-known/assetlinks.json') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(process.env.ASSETLINKS_JSON || '[]'); }
     // static files
     let file = url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname);
     const full = path.join(PUBLIC, path.normalize(file).replace(/^(\.\.[/\\])+/, ''));
     if (!full.startsWith(PUBLIC)) return send(res, 403, { error: 'Forbidden' });
     fs.readFile(full, (err, data) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
-      const ext = path.extname(full).toLowerCase(), types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon' };
-      res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream' }); res.end(data);
+      const ext = path.extname(full).toLowerCase(), types = { '.webmanifest': 'application/manifest+json', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon' };
+      res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream', 'Cache-Control': ext === '.html' || full.endsWith('sw.js') || ext === '.webmanifest' ? 'no-cache' : 'public, max-age=3600' }); res.end(data);
     });
   } catch (e) {
     console.error(e); send(res, e.status || 500, { error: e.status ? e.message : 'Server error' });
