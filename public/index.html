@@ -737,6 +737,37 @@ SHAPES.push(
   // the quint (Shattered Island)
   RF('shatterheart', 'Shatterheart', ['regal','twist','glitch','rune','odd'], 'special', 'dodeca', 'opera', 0.519, 'C', { body:'#f0e8ff', body2:'#ff5ad8', eyes:3, eye:'sparkle', mouth:'singer', acc:['rays','crystals','crown'], pat:'gems', size:1.5, acol:'#5ad8ff' }, 'Shattered opera', 'Shatterheart is every Ruin at once, glued together with light. When it smiles, the whole island glows.', mel([7, 9, 7, 4, 2, 4, 7, null], 2, 0.8, 2).slice(0, 28)),
 );
+// every Ruin except the 5 singles gets its own silhouette, palette and accessories
+{ const RD = {
+  spiralord:   ['shield',   '#3ad0d8', '#ffcf3a', 2, 'calm',    'smirk',    ['crown', 'swirl'],               'swirls',   1.15, 2],
+  pixelking:   ['pixel',    '#ffd84a', '#c05a1a', 2, 'pixel',   'pixel',    ['crown', 'bowtie'],              'scan',     1.15, 2, '#3a8ad8'],
+  throneheart: ['heart',    '#ff5a7a', '#ffcf3a', 2, 'lashes',  'small',    ['crown', 'wings'],               'none',     1.15, 0],
+  blobbess:    ['blob',     '#c08aff', '#ff9ae8', 3, 'big',     'o',        ['tiara', 'bow'],                 'dots',     1.15, 0, '#ffcf3a'],
+  glitchloop:  ['ring',     '#3aff8a', '#1a3a2a', 2, 'pixel',   'small',    ['pixels', 'antenna'],            'scan',     1.15, 0],
+  runewhirl:   ['octagon',  '#8a90b8', '#4ae0ff', 1, 'visor',   'small',    ['runes', 'wisps'],               'facets',   1.15, 2],
+  wobbleknot:  ['teardrop', '#4ab8ff', '#ff8ae8', 2, 'dizzy',   'grin',     ['swirl'],                        'bubbles',  1.1, 0],
+  bytestone:   ['mono',     '#2a3a2a', '#5aff7a', 1, 'visor',   'pixel',    ['antenna', 'pixels'],            'circuits', 1.15, 2],
+  gloopix:     ['cloud',    '#ff9ae8', '#7aff9a', 3, 'odd',     'teeth',    ['drip'],                         'spots',    1.2, 0],
+  hauntolith:  ['capsule',  '#e8e0ff', '#8a7ab0', 2, 'sleepy',  'o',        ['wisps', 'runes'],               'cracks',   1.1, 0],
+  kaleidrone:  ['pentagon', '#ffb04a', '#5ad8ff', 2, 'sparkle', 'grin',     ['shine', 'twinkle'],             'facets',   1.15, 2],
+  chronoliss:  ['hourglass','#f0d890', '#7a5a3a', 2, 'monocle', 'mustache', ['clock', 'tophat'],              'none',     1.1, 2, '#3a2a4a'],
+  marquessa:   ['star',     '#ff6ab8', '#8a3ab0', 2, 'lashes',  'singer',   ['crown', 'cape'],                'sparkle',  1.15, 0],
+  circuitcrown:['square',   '#1a5a6a', '#ffcf3a', 2, 'visor',   'small',    ['crown', 'antenna'],             'circuits', 1.15, 2],
+  jesterbyte:  ['triangle', '#ff5a5a', '#3ae0a0', 2, 'happy',   'grin',     ['horns', 'bowtie'],              'zigzag',   1.15, 2, '#ffcf3a'],
+  phantomarch: ['kite',     '#4a3a6a', '#c8b8ff', 2, 'closed',  'o',        ['crown', 'cape', 'wisps'],       'none',     1.1, 0],
+  fractalith:  ['gem',      '#7affd8', '#2a8a9a', 1, 'calm',    'small',    ['crystals'],                     'facets',   1.2, 0, '#c8fff0'],
+  snarlwave:   ['spiky',    '#5a3a9a', '#ff5ad8', 2, 'angry',   'teeth',    [],                               'zigzag',   1.15, 2],
+  echoshade:   ['crescent', '#c8d8ff', '#5a6ab0', 2, 'sleepy',  'small',    ['starorbit'],                    'none',     1.2, 0, '#fff6b0'],
+  corruptus:   ['cross',    '#6a5a7a', '#3aff6a', 3, 'odd',     'pixel',    ['pixels'],                       'cracks',   1.15, 2],
+  prismatrix:  ['hexagon',  '#f0f4ff', '#9a8aff', 2, 'visor',   'small',    ['crystals', 'halo'],             'gems',     1.3, 2, '#7ad8ff'],
+  carnivault:  ['circle',   '#ff8a3a', '#ffcf3a', 3, 'big',     'grin',     ['mane', 'tophat'],               'stripes',  1.3, 2, '#e0405a'],
+  elderspire:  ['egg',      '#d8e0c8', '#6a8a5a', 2, 'closed',  'mustache', ['halo', 'aurora'],               'cracks',   1.25, 0],
+  sovereign:   ['bean',     '#7a3ab0', '#ffcf3a', 2, 'cool',    'smirk',    ['crown', 'cape'],                'gems',     1.3, 2],
+  nullvoid:    ['diamond',  '#2a2060', '#ff5ad8', 2, 'sparkle', 'o',        ['glow', 'shards'],               'sparkle',  1.3, 0, '#b05aff'],
+  shatterheart:['dodeca',   '#ffffff', '#ff5ad8', 3, 'sparkle', 'singer',   ['rays', 'crystals', 'crown'],    'gems',     1.5, 0, '#5ad8ff'],
+};
+  Object.entries(RD).forEach(([id, [shape, body, body2, eyes, eye, mouth, acc, pat, size, legs, acol]]) => { const sh = SHAPES.find(x => x.id === id); sh.cat = ['star', 'triangle', 'square', 'diamond', 'hexagon', 'circle'].includes(shape) ? shape : 'special';
+    sh.look = { shape, body, body2, eyes, eye, mouth, acc, pat, size, legs, ...(acol ? { acol } : {}) }; }); }
 const RUIN_DOUBLES = ['spiralord','pixelking','throneheart','blobbess','glitchloop','runewhirl','wobbleknot','bytestone','gloopix','hauntolith'];
 const SHATTER_IDS = ['kaleidrone','chronoliss','marquessa','circuitcrown','jesterbyte','phantomarch','fractalith','snarlwave','echoshade','corruptus','prismatrix','carnivault','elderspire','sovereign','nullvoid','shatterheart'];
 // ---------- PARANORMAL PARK: Day Shapes with Night forms, woken up by zapping eggs ----------
@@ -1476,6 +1507,11 @@ function polyPts(n, r, rot, sx = 1, sy = 1) { const p = []; for (let i = 0; i < 
 function starPts(n, ro, ri, rot) { const p = []; for (let i = 0; i < n * 2; i++) { const a = rot + i * Math.PI / n, r = i % 2 ? ri : ro; p.push([Math.cos(a) * r, Math.sin(a) * r]); } return p; }
 
 // shape geometry: returns {bottom, faceY, path(c, R, t, hit)}
+// crescent: a circle with a bite out of its top-right
+function crescentPath(c, R) { const cx = 0.72 * R, cy = -0.62 * R, r2 = 0.62 * R, d = Math.hypot(cx, cy), a = (R * R - r2 * r2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, R * R - a * a)), bx = cx * a / d, by = cy * a / d;
+  const p1 = [bx + h * cy / d, by - h * cx / d], p2 = [bx - h * cy / d, by + h * cx / d], a1 = Math.atan2(p1[1], p1[0]), a2 = Math.atan2(p2[1], p2[0]);
+  c.beginPath(); c.arc(0, 0, R, a2, a1 + (a1 < a2 ? TAU : 0)); c.arc(cx, cy, r2, Math.atan2(p1[1] - cy, p1[0] - cx), Math.atan2(p2[1] - cy, p2[0] - cx), true); c.closePath(); }
+const sc = (pts, R) => pts.map(([x, y]) => [x * R, y * R]);
 const GEO = {
   circle:   { bottom: 1.0,  faceY: -0.08, path: (c, R) => { c.beginPath(); c.arc(0, 0, R, 0, TAU); } },
   square:   { bottom: 0.92, faceY: -0.08, path: (c, R) => roundPoly(c, [[-0.95 * R, -0.92 * R], [0.95 * R, -0.92 * R], [0.95 * R, 0.92 * R], [-0.95 * R, 0.92 * R]], R * 0.32) },
@@ -1488,6 +1524,21 @@ const GEO = {
   ring:     { bottom: 1.0,  faceY: -0.0,  path: (c, R) => { c.beginPath(); c.ellipse(0, 0, R * 1.1, R, 0, 0, TAU); c.ellipse(0, -R * 0.45, R * 0.34, R * 0.22, 0, 0, TAU, true); } },
   mono:     { bottom: 1.0,  faceY: -0.25, path: (c, R) => roundPoly(c, [[-0.66 * R, -1.35 * R], [0.66 * R, -1.35 * R], [0.82 * R, 1.0 * R], [-0.82 * R, 1.0 * R]], R * 0.28) },
   pixel:    { bottom: 0.95, faceY: -0.05, path: (c, R) => { const u = R / 4, h = u * 0.95, hw = [3, 4, 5, 5, 5, 5, 5, 4]; c.beginPath(); c.moveTo(-hw[0] * u, -4 * h); for (let i = 0; i < 8; i++) { c.lineTo(hw[i] * u, (i - 4) * h); c.lineTo(hw[i] * u, (i - 3) * h); } for (let i = 7; i >= 0; i--) { c.lineTo(-hw[i] * u, (i - 3) * h); c.lineTo(-hw[i] * u, (i - 4) * h); } c.closePath(); } },
+  heart:    { bottom: 0.98, faceY: -0.12, top: 0.9, path: (c, R) => { c.beginPath(); c.moveTo(0, 0.98 * R); c.bezierCurveTo(-0.55 * R, 0.55 * R, -1.15 * R, 0.1 * R, -1.05 * R, -0.42 * R); c.bezierCurveTo(-0.95 * R, -0.98 * R, -0.25 * R, -1.05 * R, 0, -0.55 * R); c.bezierCurveTo(0.25 * R, -1.05 * R, 0.95 * R, -0.98 * R, 1.05 * R, -0.42 * R); c.bezierCurveTo(1.15 * R, 0.1 * R, 0.55 * R, 0.55 * R, 0, 0.98 * R); c.closePath(); } },
+  octagon:  { bottom: 0.94, faceY: -0.05, top: 0.94, path: (c, R) => roundPoly(c, polyPts(8, R * 1.02, Math.PI / 8), R * 0.14) },
+  pentagon: { bottom: 0.84, faceY: 0.02,  top: 1.08, path: (c, R) => roundPoly(c, polyPts(5, R * 1.08, -Math.PI / 2), R * 0.2) },
+  teardrop: { bottom: 1.0,  faceY: 0.1,   top: 1.45, path: (c, R) => { c.beginPath(); c.moveTo(0, -1.45 * R); c.bezierCurveTo(0.35 * R, -0.9 * R, 1.0 * R, -0.45 * R, 1.0 * R, 0.1 * R); c.arc(0, 0.1 * R, R, 0, Math.PI); c.bezierCurveTo(-1.0 * R, -0.45 * R, -0.35 * R, -0.9 * R, 0, -1.45 * R); c.closePath(); } },
+  cloud:    { bottom: 0.82, faceY: 0.02,  top: 0.95, path: (c, R) => { c.beginPath(); c.moveTo(-1.05 * R, 0.82 * R); c.arc(-0.78 * R, 0.3 * R, 0.52 * R, Math.PI * 0.62, Math.PI * 1.45); c.arc(-0.3 * R, -0.35 * R, 0.6 * R, Math.PI * 1.1, Math.PI * 1.82); c.arc(0.38 * R, -0.3 * R, 0.62 * R, Math.PI * 1.2, Math.PI * 1.95); c.arc(0.82 * R, 0.3 * R, 0.5 * R, Math.PI * 1.5, Math.PI * 0.38); c.closePath(); } },
+  capsule:  { bottom: 1.0,  faceY: -0.32, top: 1.35, path: (c, R) => { c.beginPath(); c.roundRect(-0.72 * R, -1.35 * R, 1.44 * R, 2.35 * R, 0.72 * R); } },
+  shield:   { bottom: 1.08, faceY: -0.18, top: 0.92, path: (c, R) => roundPoly(c, sc([[-1.0, -0.92], [1.0, -0.92], [1.0, 0.12], [0, 1.08], [-1.0, 0.12]], R), R * 0.26) },
+  kite:     { bottom: 1.08, faceY: -0.1, top: 1.15, path: (c, R) => roundPoly(c, sc([[0, -1.15], [0.92, -0.18], [0, 1.08], [-0.92, -0.18]], R), R * 0.22) },
+  gem:      { bottom: 1.02, faceY: -0.3,  top: 0.9,  path: (c, R) => roundPoly(c, sc([[-0.62, -0.9], [0.62, -0.9], [1.05, -0.36], [0, 1.02], [-1.05, -0.36]], R), R * 0.14) },
+  spiky:    { bottom: 0.98, faceY: 0.0,   top: 1.15, path: (c, R) => roundPoly(c, starPts(11, R * 1.15, R * 0.84, -Math.PI / 2), R * 0.08) },
+  crescent: { bottom: 1.0,  faceY: 0.12,  top: 0.95, path: (c, R) => crescentPath(c, R) },
+  cross:    { bottom: 1.05, faceY: -0.02, top: 1.05, path: (c, R) => roundPoly(c, sc([[-0.38, -1.05], [0.38, -1.05], [0.38, -0.4], [1.05, -0.4], [1.05, 0.38], [0.38, 0.38], [0.38, 1.05], [-0.38, 1.05], [-0.38, 0.38], [-1.05, 0.38], [-1.05, -0.4], [-0.38, -0.4]], R), R * 0.2) },
+  hourglass:{ bottom: 1.05, faceY: -0.48, top: 1.1,  path: (c, R) => roundPoly(c, sc([[-1.0, -1.1], [1.0, -1.1], [0.48, -0.02], [0.95, 1.05], [-0.95, 1.05], [-0.48, -0.02]], R), R * 0.3) },
+  egg:      { bottom: 1.0,  faceY: -0.05, top: 1.2, path: (c, R) => { c.beginPath(); c.moveTo(0, -1.2 * R); c.bezierCurveTo(0.7 * R, -1.2 * R, 0.95 * R, -0.2 * R, 0.92 * R, 0.25 * R); c.bezierCurveTo(0.9 * R, 0.8 * R, 0.45 * R, 1.0 * R, 0, 1.0 * R); c.bezierCurveTo(-0.45 * R, 1.0 * R, -0.9 * R, 0.8 * R, -0.92 * R, 0.25 * R); c.bezierCurveTo(-0.95 * R, -0.2 * R, -0.7 * R, -1.2 * R, 0, -1.2 * R); c.closePath(); } },
+  bean:     { bottom: 0.88, faceY: -0.05, top: 0.85, path: (c, R) => { c.beginPath(); c.moveTo(-0.6 * R, -0.85 * R); c.bezierCurveTo(-0.1 * R, -0.95 * R, 0.0, -0.55 * R, 0.45 * R, -0.75 * R); c.bezierCurveTo(1.1 * R, -1.0 * R, 1.35 * R, 0.25 * R, 0.85 * R, 0.68 * R); c.bezierCurveTo(0.4 * R, 1.05 * R, -0.6 * R, 0.95 * R, -1.0 * R, 0.5 * R); c.bezierCurveTo(-1.35 * R, 0.05 * R, -1.15 * R, -0.75 * R, -0.6 * R, -0.85 * R); c.closePath(); } },
 };
 function geoOf(def) { return GEO[def.look.shape || def.cat]; }
 
@@ -1918,7 +1969,7 @@ function accMotion(c, a, R, t, env, sus, beat, seed, topY) {
   else if (ACC_SWAY.has(a)) { const rot = Math.sin(t * 2.1 + seed) * 0.05 + env * 0.12 * side + sus * 0.05; c.translate(0, -R * 0.3); c.rotate(rot); c.translate(0, R * 0.3); }
 }
 function drawAcc(c, def, R, t, env, sus, beat, layer, seed, geo) {
-  const L = def.look, acc = L.acc || [], topY = -(L.shape === 'ring' ? R : L.shape === 'mono' ? 1.35 * R : (def.cat === 'triangle' ? 1.3 : def.cat === 'star' ? 1.25 : def.cat === 'diamond' ? 1.2 : def.cat === 'hexagon' ? 1.0 : 0.95) * R);
+  const L = def.look, acc = L.acc || [], topY = (GEO[L.shape] && GEO[L.shape].top) ? -GEO[L.shape].top * R : -(L.shape === 'ring' ? R : L.shape === 'mono' ? 1.35 * R : (def.cat === 'triangle' ? 1.3 : def.cat === 'star' ? 1.25 : def.cat === 'diamond' ? 1.2 : def.cat === 'hexagon' ? 1.0 : 0.95) * R);
   c.lineWidth = 3; c.strokeStyle = OUTLINE; c.lineJoin = 'round'; c.lineCap = 'round';
   for (const a of acc) { c.save(); accMotion(c, a, R, t, env, sus, beat, seed, topY); try {
     const X = ACC2[a]; if (X) { if (!!X.back === (layer === 'back')) { c.save(); X.f(c, L, R, t, env, seed, topY); c.restore(); c.lineWidth = 3; c.strokeStyle = OUTLINE; } continue; }
@@ -2246,7 +2297,7 @@ function portrait(def, size, opts = {}) {
 function renderPortrait(c, def, size, opts = {}) {
   c.clearRect(0, 0, size, size);
   const acc = def.look.acc || [], tall = acc.some(a => ['mane', 'crystals', 'antlers', 'witchhat', 'tophat', 'feather', 'frost', 'bunny'].includes(a)), wide = acc.some(a => ['starorbit', 'firering', 'shards', 'leafwings', 'bubbleorb'].includes(a));
-  const s = size / 130 * (tall ? 0.84 : wide ? 0.9 : 1) * Math.min(1, 1.25 / (def.look.size || 1));
+  const s = size / 130 * (tall ? 0.84 : wide ? 0.9 : 1) * Math.min(1, 1.25 / (def.look.size || 1)) * (() => { const g = geoOf(def); return g && g.top > 1 ? 1 / Math.pow(g.top, 1.3) : 1; })();
   c.save(); c.translate(size / 2, size * (tall ? 0.9 : 0.86)); c.scale(s, s);
   if (opts.silhouette) { drawShape(c, def, { t: 0, seed: 3 }); c.globalCompositeOperation = 'source-atop'; c.fillStyle = opts.silCol || '#3a2f55'; c.fillRect(-100, -200, 200, 260); }
   else drawShape(c, def, { t: opts.t || 0, seed: 3, hi: opts.hi, playing: opts.playing, beat: opts.beat });
