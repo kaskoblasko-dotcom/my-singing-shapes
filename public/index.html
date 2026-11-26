@@ -6,6 +6,13 @@
 <meta name="theme-color" content="#1f6fc8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2a1f3d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="icon" href="/icons/icon-192.png">
 <title>My Singing Shapes</title>
 <style>
 :root{
@@ -117,7 +124,7 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 /* wooden cards */
 .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(170px*var(--u)),1fr));gap:calc(18px*var(--u)) calc(14px*var(--u));padding:4px 4px 18px;}
 .small .wgrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}
-.wgrid.hrow{display:grid;grid-auto-flow:column;grid-template-columns:none;grid-template-rows:auto;grid-auto-columns:calc(170px*var(--u));overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;touch-action:pan-x;padding:4px 4px 14px;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:var(--wood) transparent;}
+.wgrid.hrow{display:grid;grid-auto-flow:column;grid-template-columns:none;grid-template-rows:auto;grid-auto-columns:calc(170px*var(--u));overflow-x:auto;overflow-y:hidden;overscroll-behavior:contain;touch-action:pan-x;padding:4px 4px calc(28px*var(--u));scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:var(--wood) transparent;}
 .wgrid.hrow>.wcard{scroll-snap-align:start;}
 .small .wgrid.hrow{grid-auto-columns:150px;grid-template-columns:none;}
 .rot .wgrid.hrow{touch-action:none;}
@@ -368,13 +375,13 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 <script>
 // ===================== VIEW (auto-landscape) =====================
 const VIEW = (() => {
-  const v = { w: innerWidth, h: innerHeight, rot: false, u: 1 };
+  const v = { w: innerWidth, h: innerHeight, rot: false, u: 1, typing: false };
   const coarse = () => matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
   function update() {
     const sw = innerWidth, sh = innerHeight;
-    v.rot = sh > sw && coarse();
+    v.rot = sh > sw && coarse() && !v.typing; // never rotate while typing, so the keyboard isn't sideways
     v.w = v.rot ? sh : sw; v.h = v.rot ? sw : sh;
-    v.u = Math.max(0.62, Math.min(1.05, v.h / 760));
+    v.u = Math.max(0.8, Math.min(1.25, v.h / 600));
     const r = document.getElementById('root');
     if (r) {
       r.style.width = v.w + 'px'; r.style.height = v.h + 'px';
@@ -386,6 +393,17 @@ const VIEW = (() => {
   // screen (client) coords -> local landscape coords
   v.toLocal = (x, y) => v.rot ? { x: y, y: innerWidth - x } : { x, y };
   v.update = update;
+  // typing: show the page upright while a text box has focus
+  const isText = el => el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && !el.readOnly;
+  document.addEventListener('focusin', e => { if (isText(e.target) && !v.typing) { v.typing = true; update(); window.dispatchEvent(new Event('viewchange')); } });
+  document.addEventListener('focusout', e => { if (isText(e.target)) setTimeout(() => { if (!isText(document.activeElement) && v.typing) { v.typing = false; update(); window.dispatchEvent(new Event('viewchange')); } }, 60); });
+  // real landscape: on phones, go fullscreen and lock the screen sideways (Android browsers). Installed apps use the manifest instead.
+  v.lockLandscape = async () => {
+    if (!coarse() || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches) return;
+    try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) {}
+    try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (e) {}
+    setTimeout(() => { update(); window.dispatchEvent(new Event('viewchange')); }, 300);
+  };
   window.addEventListener('resize', () => { update(); window.dispatchEvent(new Event('viewchange')); });
   window.addEventListener('orientationchange', () => setTimeout(() => { update(); window.dispatchEvent(new Event('viewchange')); }, 120));
 
@@ -441,6 +459,7 @@ const NET = (() => {
   setInterval(tick, 3000);
 
   const friends = () => api('GET', '/api/friends').then(r => { likes = r.likes || likes; return r; });
+  const adminUnlock = password => api('POST', '/api/admin/unlock', { password });
   const request = (query, invite) => api('POST', '/api/friends/request', { query, invite: !!invite });
   const respond = (id, accept) => api('POST', '/api/friends/respond', { id, accept });
   const cancel = id => api('POST', '/api/friends/cancel', { id });
@@ -451,7 +470,7 @@ const NET = (() => {
   const claim = id => api('POST', '/api/gifts/claim', { id });
 
   return { online, get user() { return user; }, get likes() { return likes; }, get hasToken() { return !!token; },
-    resume, login, signup, logout, markCloud, pushNow, flush, friends, request, respond, cancel, remove, visit, like, gift, claim };
+    resume, login, signup, logout, markCloud, pushNow, flush, adminUnlock, friends, request, respond, cancel, remove, visit, like, gift, claim };
 })();
 
 // ===================== DATA =====================
@@ -482,7 +501,7 @@ const TIER = {
   4:{name:'Quad',   col:'#9a4fe0', price:150000,xpHatch:300, feed:110},
   5:{name:'Ruin',   col:'#5a4a8a', price:0,     xpHatch:600, feed:220},
 };
-const RARITY = { common:{ name:'Common', col:'#6a8a5a' }, rare:{ name:'Rare', col:'#2f86de' }, epic:{ name:'Epic', col:'#c0761a' }, ruin:{ name:'Ruin', col:'#5a4a8a' } };
+const RARITY = { common:{ name:'Common', col:'#6a8a5a' }, rare:{ name:'Rare', col:'#2f86de' }, epic:{ name:'Epic', col:'#c0761a' }, ruin:{ name:'Ruin', col:'#5a4a8a' }, night:{ name:'Night', col:'#4a3a9a' } };
 
 // pattern helpers: event = [step(0-63), offset (scale steps from chord root) | array | drum id, length(steps), velocity]
 const rep4 = (bar) => { const o=[]; for(let b=0;b<4;b++) for(const e of bar) o.push([e[0]+16*b, ...e.slice(1)]); return o; };
@@ -2497,7 +2516,7 @@ let placing = null; // {kind:'hatch'|'deco'|'move'|'movedeco', id, idx, uid, x, 
 function inIsland(x, y, I0 = isl(), pad = 0.9) { const { rx, ry } = islandRadius(I0); return (x * x) / (rx * rx * pad * pad) + (y * y) / (ry * ry * pad * pad) < 1; }
 function validSpot(x, y, ignoreUid, big) {
   const I0 = isl(); if (!(inIsland(x, y, I0, big ? 0.8 : 0.9) || (big && onPlatform(x, y, I0)))) return false;
-  for (const o of I0.obstacles || []) { const rr = OBST_SIZE[o.size].r + (big ? 90 : 30); if (((x - o.x) / rr) ** 2 + ((y - o.y) / (rr * 0.5)) ** 2 < 1) return false; }
+  for (const o of I0.obstacles || []) { const r0 = OBST_SIZE[o.size].r, rr = r0 + (big ? 90 : 30); if (((x - o.x) / rr) ** 2 + ((y - o.y) / (rr * 0.5)) ** 2 < 1) return false; if (!big && o.y > y && o.y - y < r0 * 1.8 && Math.abs(x - o.x) < r0 * 0.9) return false; } // not hidden behind an obstacle
   if (big) { // structures need more room from everything
     for (const k in STRUCT) { const s = STRUCT[k], rr = s.r + 110; const dx = (x - s.x) / rr, dy = (y - s.y) / (rr * 0.8); if (dx * dx + dy * dy < 1) return false; }
     for (const s of I0.structs) if (s.uid !== ignoreUid) { const rr = STRUCTS[s.kind].r + 100; const dx = (x - s.x) / rr, dy = (y - s.y) / (rr * 0.8); if (dx * dx + dy * dy < 1) return false; }
@@ -2847,7 +2866,7 @@ const Render = (() => {
     I0.decos.forEach(d => { if (Math.abs(x - d.x) < 30 && y > d.y - 70 && y < d.y + 8) cands.push({ type: 'deco', uid: d.uid, y: d.y }); });
     for (const k in STRUCT) { const s = STRUCT[k], hgt = k === 'castle' ? 300 : 160; if (Math.abs(x - s.x) < s.r * 0.95 && y > s.y - hgt && y < s.y + 20) cands.push({ type: 'struct', key: k, y: s.y }); }
     I0.structs.forEach(s => { if (placing && placing.uid === s.uid) return; const r = STRUCTS[s.kind].r; if (Math.abs(x - s.x) < r * 0.95 && y > s.y - 160 && y < s.y + 20) cands.push({ type: 'struct', key: s.kind, sid: s.uid, y: s.y }); });
-    cands.sort((a, b) => b.y - a.y); return cands[0];
+    cands.sort((a, b) => (b.type === 'mon') - (a.type === 'mon') || b.y - a.y); return cands[0]; // a tapped Shape wins over things around it
   }
 
   // ---------- drawing ----------
@@ -3537,7 +3556,7 @@ const UI = (() => {
       <div class="sec">🔔 Sound effects <span class="muted" id="sv">${Math.round(S.settings.sfx * 100)}%</span></div><input type="range" min="0" max="100" value="${S.settings.sfx * 100}" id="r-sfx"></div>
       <div class="sec">📊 Progress</div><div class="info kv" style="margin:0"><b>Level</b><span>${S.level}</span><b>Shapes discovered</b><span>${discoveredCount()} / ${SHAPES.length}</span><b>Shapes bred</b><span>${S.stats.bred}</span><b>Eggs hatched</b><span>${S.stats.hatched}</span><b>Treats fed</b><span>${S.stats.fed}</span></div>
       <div class="sec">👤 Account</div><div class="info">${NET.user ? `<div>Logged in as <b>${NET.user.username}</b> · Friend code <b>${NET.user.code}</b></div><div class="muted">Your progress saves to the server automatically.</div><div class="row" style="margin-top:8px"><button class="btn sm wood" data-logout>Log out</button></div>` : `<div class="muted">Playing offline on this device. Open the game from your server to log in, sync your progress and add friends.</div>`}</div>
-      <div class="sec">🛠️ Admin</div><div class="info"><div class="muted">Cheats and testing tools: currency, levels, timers, spawning Shapes and more.</div><div class="row" style="margin-top:8px"><button class="btn purple sm" data-admin>Open Admin Panel</button></div></div>
+      ${NET.user && NET.user.admin ? `<div class="sec">🛠️ Admin</div><div class="info"><div class="muted">Cheats and testing tools: currency, levels, timers, spawning Shapes and more.</div><div class="row" style="margin-top:8px"><button class="btn purple sm" data-admin>Open Admin Panel</button></div></div>` : ''}
       <div class="sec">💾 Save</div><div class="info"><div class="muted">Progress saves automatically on this device.</div><div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save now</button><button class="btn red sm" data-reset>Reset progress</button></div></div>
       <div class="sec">❓ How to play</div><div class="info" style="font-size:14px;font-weight:600;line-height:1.5">Buy eggs at the <b>Market</b>, hatch them in the <b>Hatchery</b> and place them on the island. Shapes earn coins over time, so tap them to collect. <b>Feed</b> Shapes to level them up, then pair two level ${BREED_MIN_LEVEL}+ Shapes in the <b>Breeding Structure</b> to discover new ones. Drag to pan, and pinch or scroll to zoom.</div>`;
     open('settings', 'Settings', '#7a6a9a', 'gear', body);
@@ -3545,7 +3564,7 @@ const UI = (() => {
     rm.oninput = () => { S.settings.music = rm.value / 100; Audio.setMusicVol(S.settings.music); modal.querySelector('#mv').textContent = rm.value + '%'; markDirty(); };
     rs.oninput = () => { S.settings.sfx = rs.value / 100; Audio.setSfxVol(S.settings.sfx); modal.querySelector('#sv').textContent = rs.value + '%'; markDirty(); };
     rs.onchange = () => Audio.sfx('coin');
-    modal.querySelector('[data-admin]').onclick = openAdmin;
+    const adb = modal.querySelector('[data-admin]'); if (adb) adb.onclick = openAdmin;
     const lo = modal.querySelector('[data-logout]'); if (lo) lo.onclick = async () => { lo.disabled = true; save(); await NET.logout(); location.reload(); };
     modal.querySelector('[data-save]').onclick = async () => { save(); if (NET.user) await NET.pushNow(); toast(NET.user ? 'Saved to the server' : 'Game saved', 'good'); };
     const rb = modal.querySelector('[data-reset]'); rb.onclick = () => {
@@ -3555,7 +3574,15 @@ const UI = (() => {
   }
 
   // ---------- ADMIN ----------
+  let adminOK = false; // unlocked with the admin password for this session
   function openAdmin() {
+    if (!NET.user || !NET.user.admin) { toast('Only admin accounts can open the Admin Panel', 'bad'); return; }
+    if (!adminOK) {
+      open('adminlock', 'Admin Panel', '#5a3ab0', 'gear', `<div class="center"><p class="muted">Enter the admin password to continue.</p><input id="ad-pw" type="password" autocomplete="current-password" style="width:min(320px,90%);font:inherit;font-weight:800;padding:10px 14px;border-radius:12px;border:3px solid var(--wood);background:var(--deep);color:#fff"><div id="ad-err" class="muted" style="color:#ff9a9a;min-height:22px;margin-top:6px"></div><button class="btn purple" data-adgo>Unlock</button></div>`);
+      const pw = modal.querySelector('#ad-pw'), go = modal.querySelector('[data-adgo]'), err = modal.querySelector('#ad-err');
+      const tryIt = async () => { if (!pw.value) return; go.disabled = true; err.textContent = ''; try { await NET.adminUnlock(pw.value); adminOK = true; pw.blur(); Audio.sfx('discover'); openAdmin(); } catch (e) { Audio.sfx('error'); err.textContent = e.message || 'Could not unlock'; go.disabled = false; pw.select(); } };
+      go.onclick = tryIt; pw.onkeydown = e => { if (e.key === 'Enter') tryIt(); }; setTimeout(() => pw.focus(), 50); return;
+    }
     const opts = SHAPES.map(d => `<option value="${d.id}" ${islDef().shapes.includes(d.id) ? '' : 'disabled'}>${d.name} (${RARITY[d.variant].name})${islDef().shapes.includes(d.id) ? '' : ' (not on this island)'}</option>`).join('');
     const B = (a, label, cls = '') => `<button class="btn sm ${cls}" data-a="${a}">${label}</button>`;
     const body = `<div class="muted" style="margin-bottom:10px">Actions apply instantly. Island actions affect <b>${islDef().name}</b>.</div>
@@ -3564,7 +3591,7 @@ const UI = (() => {
       <div class="sec">⏱️ Timers</div><div class="info row">${B('finishTimers', 'Finish timers (this island)', 'blue')}${B('finishAllIslands', 'Finish timers (all islands)', 'blue')}${B('fillBanks', 'Fill coin banks')}</div>
       <div class="sec">🥚 Spawn a Shape</div><div class="info"><select id="ad-shape" style="width:100%;font:inherit;font-weight:800;padding:8px;border:3px solid var(--ink);border-radius:11px;margin-bottom:8px">${opts}</select><div class="row">${B('spawnEgg', 'Add ready egg to Hatchery', 'green')}${B('spawnNow', 'Place on island now', 'pink')}</div></div>
       <div class="sec">📖 Collection & islands</div><div class="info row">${B('discoverAll', 'Discover all Shapes', 'green')}${B('resetCollection', 'Reset collection')}${B('unlockIslands', 'Unlock all islands', 'blue')}</div>
-      <div class="sec">🏰 This island</div><div class="info row">${B('maxUpgrades', 'Max castle + expansion', 'blue')}${B('clearObstacles', 'Remove obstacles', 'red')}${B('maxLevels', 'Max level all Shapes', 'green')}${B('clearDecos', 'Remove decorations', 'red')}${B('clearIsland', 'Remove all Shapes', 'red')}</div>`;
+      <div class="sec">🏰 This island</div><div class="info row">${B('maxUpgrades', 'Max castle', 'blue')}${B('clearObstacles', 'Remove obstacles', 'red')}${B('maxLevels', 'Max level all Shapes', 'green')}${B('clearDecos', 'Remove decorations', 'red')}${B('clearIsland', 'Remove all Shapes', 'red')}</div>`;
     open('admin', 'Admin Panel', '#5a3ab0', 'gear', body);
     const sel = modal.querySelector('#ad-shape'); const firstOk = [...sel.options].find(o => !o.disabled); if (firstOk) sel.value = firstOk.value;
     modal.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
@@ -3928,7 +3955,7 @@ const Tut = (() => {
     for (const t of st.targets) {
       if (t.when && !t.when()) continue;
       if (t.none) return { t, rect: null };
-      if (t.sel) { const n = [...document.querySelectorAll(t.sel)].find(visible); if (n) return onTop(n) ? { t, rect: localRect(n) } : closeTarget(); continue; }
+      if (t.sel) { const n = [...document.querySelectorAll(t.sel)].find(visible); if (n) { if (!onTop(n) && n.closest('.panel-body, .scrollx')) { try { n.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} } return onTop(n) ? { t, rect: localRect(n) } : closeTarget(); } continue; }
       if (t.world) {
         const o = t.world(); if (!o) continue;
         const blocked = !$('#modal-wrap').classList.contains('hidden') || !$('#book').classList.contains('hidden') || !$('#map').classList.contains('hidden');
@@ -4004,6 +4031,8 @@ const Tut = (() => {
   requestAnimationFrame(titleFrame);
 
   const titleEl = document.getElementById('title'), tapMsg = document.getElementById('tap-msg'), authEl = document.getElementById('auth');
+  // installable app / Android APK: the service worker keeps the app in step with the website
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('/sw.js').catch(() => {});
   // friend invite links: ?friend=CODE is remembered until the player is logged in, then a friend request is sent
   try { const inv = new URLSearchParams(location.search).get('friend'); if (inv) { localStorage.setItem('mss_invite', inv.trim().slice(0, 24)); history.replaceState(null, '', location.pathname); } } catch (e) {}
   async function useInvite() {
@@ -4052,6 +4081,7 @@ const Tut = (() => {
 
   titleEl.addEventListener('pointerup', async e => {
     if (!titleOn || !authEl.classList.contains('hidden') || tapMsg.dataset.busy) return;
+    VIEW.lockLandscape();
     Audio.init(); // unlock audio during the tap
     if (!NET.online) { load(); startGame(); return; } // opened as a local file: play offline
     if (NET.hasToken) {
