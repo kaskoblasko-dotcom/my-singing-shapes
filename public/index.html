@@ -64,6 +64,8 @@ button{font-family:var(--font);cursor:pointer;color:var(--cream);}
 .slbl,.rlbl{position:absolute;left:50%;bottom:calc(-19px*var(--u));transform:translateX(-50%);font-size:calc(12.5px*var(--u));color:#fff;text-shadow:var(--ol);font-weight:900;white-space:nowrap;font-variant:small-caps;letter-spacing:.5px;}
 #br{position:absolute;right:calc(12px*var(--u));bottom:calc(26px*var(--u));display:flex;gap:calc(10px*var(--u));align-items:flex-end;}
 #b-goals{--sb:calc(48px*var(--u));--sbg:#e8d6a8;}
+#b-muteall{--sb:calc(48px*var(--u));--sbg:#a8d8f0;margin-top:calc(24px*var(--u));}
+#b-muteall.on{--sbg:#b8b0c0;}
 .rbtn{position:relative;width:var(--rb,calc(54px*var(--u)));height:var(--rb,calc(54px*var(--u)));border-radius:50%;border:3px solid var(--wood);box-shadow:0 0 0 2px var(--woodD),0 4px 0 var(--woodD);padding:0;display:grid;place-items:center;background:var(--c,#3a8ad8);transition:transform .08s;}
 .rbtn:active{transform:translateY(3px);}
 .rbtn > span:first-child{width:60%;height:60%;display:block;} .rbtn > span:first-child svg{width:100%;height:100%;}
@@ -308,6 +310,14 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
 .relicbar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-bottom:10px;font-weight:900;}
 .relic{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;border:2px solid var(--rc);background:rgba(0,0,0,0.35);color:#fff;font-weight:900;}
 .relic.short{opacity:.55;border-style:dashed;}
+.studio{display:flex;gap:14px;align-items:flex-start;}
+.studio-list{display:grid;grid-template-columns:repeat(2,calc(104px*var(--u)));gap:8px;max-height:calc(var(--vh) * 0.55);overflow-y:auto;padding:4px;flex:none;}
+.studio-list .wcard{width:auto;}
+.studio-main{flex:1;min-width:0;}
+.small .studio-list{grid-template-columns:repeat(1,calc(110px*var(--u)));}
+.trackcv{display:block;border-radius:10px;border:3px solid var(--wood);max-width:100%;}
+.volrow{display:flex;align-items:center;gap:6px;margin-top:4px;font-weight:900;font-size:calc(13px*var(--u));}
+.volrow input{flex:1;min-width:70px;accent-color:#6ad04a;}
 </style>
 </head>
 <body>
@@ -318,6 +328,7 @@ input[type=range]{width:100%;accent-color:var(--leaf);height:28px;}
   <div id="tl">
     <div class="lvlbox" id="lvl-pill"><div class="star"><span data-ico="star"></span></div><div class="xpwrap"><div class="xpbar"><i id="xp"></i></div><div class="xptxt" id="xptxt">Level 1</div></div><span id="lvl"></span></div>
     <button class="sbtn" id="b-goals"><span data-ico="scroll"></span><span class="slbl">Tasks</span></button>
+    <button class="sbtn" id="b-muteall"><span data-ico="sound"></span><span class="slbl">Mute all</span></button>
     <div id="goal" class="hidden"></div>
   </div>
   <div id="tc"><div id="isle-name">Shape Island</div></div>
@@ -913,6 +924,8 @@ const STRUCTS = {
               up:[{}, { gems:50 }], info: l => l > 1 ? 'Enhanced: all 5 recipes' : '3 recipes', next: () => 'Enhanced: unlocks all 5 recipes' },
   synth:    { name:'Synthesizer', r:95, max:2, buy:{ coins:50000, lvl:1 },
               up:[{}, { gems:75 }], info: l => l > 1 ? 'Enhanced: synthesis is 25% faster' : 'Turns one Ruin plus Relics into a bigger Ruin', next: () => 'Enhanced: 25% faster synthesis' },
+  studio:   { name:'Studio', r:82, max:1, buy:{ coins:2500, lvl:3 },
+              up:[{}], info: () => 'Listen to each Shape on this island on its own', next: () => '' },
   mine:     { name:'Gem Mine', r:78, max:1, buy:{ gems:20, lvl:1 },
               up:[{}], info: () => 'Digs up 1 gem every 24 hours', next: () => '' },
 };
@@ -933,7 +946,7 @@ const RECIPES = [
 ];
 const ISLAND_RX = 840, DIAMOND_RX = 1500, EXPAND_RX = 165, PLATFORM = { off: 150, rx: 175, ry: 72, y: -10 };
 const STRUCT_DEFAULT_POS = { breeder:{ x:-(ISLAND_RX + PLATFORM.off), y:PLATFORM.y + 8 }, hatchery:{ x:ISLAND_RX + PLATFORM.off, y:PLATFORM.y + 8 }, bakery:{ x:440, y:170 }, mine:{ x:-440, y:170 } };
-STRUCT_DEFAULT_POS.synth = STRUCT_DEFAULT_POS.breeder;
+STRUCT_DEFAULT_POS.synth = STRUCT_DEFAULT_POS.breeder; STRUCT_DEFAULT_POS.studio = { x: 0, y: 260 };
 // obstacles: sizes (cost, time in seconds, XP, chance of a gem, footprint) and the kinds found on each island theme
 const OBST_SIZE = {
   s: { coins:500,   time:120,  xp:20,  gem:0.15, r:42 },
@@ -1299,7 +1312,7 @@ const Audio = (() => {
     list.forEach(x => {
       addVoice(x.uid, SHAPE[x.id]); const v = voices.get(x.uid);
       if (v.muted !== !!x.muted) setMuted(x.uid, !!x.muted);
-      const dup = 1 / Math.sqrt(counts[x.id]); if (v.dup !== dup) { v.dup = dup; v.g2.gain.setTargetAtTime(v.def.vol * dup, ctx.currentTime, 0.1); }
+      const dup = 1 / Math.sqrt(counts[x.id]), uv = x.vol == null ? 1 : x.vol; if (v.dup !== dup || v.uvol !== uv) { v.dup = dup; v.uvol = uv; if (!preview) v.g2.gain.setTargetAtTime(v.def.vol * dup * uv, ctx.currentTime, 0.1); }
     });
   }
 
@@ -1377,19 +1390,28 @@ const Audio = (() => {
     return { since, vel: v.lastVel, dur: v.lastDur, env: since < 0 ? 0 : Math.exp(-since * 9) * v.lastVel, sustain: since < v.lastDur ? v.lastVel : Math.exp(-(since - v.lastDur) * 8) * v.lastVel * (since < 4 ? 1 : 0) };
   }
 
-  function startPreview(def) {
+  function startPreview(def, opt = {}) { // opt.loop: keep playing until stopped; opt.solo: silence the rest of the island
     if (!ctx) return;
     stopPreview();
     const gain = ctx.createGain(); gain.gain.value = def.vol * 1.1; gain.connect(musicBus);
     const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.1) * 0.8; gain.connect(send); send.connect(revIn);
-    preview = { def, gain, until: ctx.currentTime + stepDur * 64 + 0.2, vo: { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 } };
+    preview = { def, gain, until: opt.loop ? Infinity : ctx.currentTime + stepDur * 64 + 0.2, vo: { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 } };
     musicBus.gain.setTargetAtTime(st.musicVol, ctx.currentTime, 0.05);
-    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup * 0.25, ctx.currentTime, 0.1);
+    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup * (v.uvol == null ? 1 : v.uvol) * (opt.solo ? 0 : 0.25), ctx.currentTime, 0.1);
   }
+  // one note of a Shape's sound (its first note), for the Studio
+  function playOne(def) {
+    if (!ctx) return; const t = ctx.currentTime + 0.03, e = def.pat[0] || [0, 0, 2, 0.8];
+    const gain = ctx.createGain(); gain.gain.value = def.vol * 1.1; gain.connect(musicBus);
+    const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.1) * 0.8; gain.connect(send); send.connect(revIn);
+    playEvents(def, [[0, e[1], Math.max(2, e[2]), 0.9]], t, gain, { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 });
+    setTimeout(() => { try { gain.disconnect(); send.disconnect(); } catch (e2) {} }, 4000);
+  }
+  function stepNow() { return ctx && isle ? Math.floor(((ctx.currentTime - startTime) / stepDur) % 64 + 64) % 64 : 0; } // the step being heard right now
   function stopPreview() {
     if (!preview) return; const p = preview; preview = null;
     p.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => { try { p.gain.disconnect(); } catch (e) {} }, 800);
-    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup, ctx.currentTime, 0.2);
+    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup * (v.uvol == null ? 1 : v.uvol), ctx.currentTime, 0.2);
   }
   function previewHit() {
     if (!preview || !ctx) return 0; const v = preview.vo, now = ctx.currentTime;
@@ -1427,7 +1449,7 @@ const Audio = (() => {
     }
   }
 
-  return { init, resume, start, setIsland, section, isResting, get musicBus() { return musicBus; }, syncVoices, setMuted, beatPhase, hitInfo, startPreview, stopPreview, previewHit,
+  return { init, resume, start, setIsland, section, isResting, get musicBus() { return musicBus; }, syncVoices, setMuted, beatPhase, hitInfo, startPreview, stopPreview, previewHit, playOne, stepNow,
            setMusicVol, setSfxVol, sfx, get ctx() { return ctx; }, get previewing() { return preview ? preview.def.id : null; }, st };
 })();
 
@@ -2122,6 +2144,29 @@ function drawSynth(c, t, busy, progress, ready, beat) {
   if (busy && !ready) { c.strokeStyle = '#fff'; c.lineWidth = 5; c.beginPath(); c.arc(cx, cy, cr + 12, -Math.PI / 2, -Math.PI / 2 + TAU * progress); c.stroke(); }
 }
 
+// Studio: a little recording booth with an ON AIR light, a mic and two speakers
+function drawStudio(c, t, live, beat) {
+  c.lineWidth = 4; c.strokeStyle = OUTLINE; c.lineJoin = 'round';
+  c.fillStyle = 'rgba(20,10,40,0.25)'; c.beginPath(); c.ellipse(0, 0, 90, 20, 0, 0, TAU); c.fill();
+  const pump = live ? Math.pow(Math.abs(Math.sin(beat * Math.PI)), 4) * 0.06 : 0;
+  // booth
+  c.fillStyle = '#5a4a8a'; c.beginPath(); c.roundRect(-60, -118, 120, 118, 14); c.fill(); c.stroke();
+  c.fillStyle = '#3a2e60'; c.beginPath(); c.roundRect(-60, -18, 120, 18, [0, 0, 14, 14]); c.fill(); c.stroke();
+  c.fillStyle = '#ffd23a'; c.beginPath(); c.roundRect(-60, -126, 120, 16, 8); c.fill(); c.stroke();
+  // window with mic
+  c.fillStyle = live ? '#ffd8a0' : '#9ad8ff'; c.beginPath(); c.roundRect(-40, -100, 80, 58, 10); c.fill(); c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.4)'; c.beginPath(); c.moveTo(-34, -94); c.lineTo(-12, -94); c.lineTo(-30, -50); c.lineTo(-34, -50); c.closePath(); c.fill();
+  c.strokeStyle = OUTLINE; c.lineWidth = 3; c.beginPath(); c.moveTo(0, -48); c.lineTo(0, -66); c.stroke();
+  c.fillStyle = '#c8c8d8'; c.beginPath(); c.roundRect(-8, -84, 16, 22, 8); c.fill(); c.stroke();
+  // ON AIR sign
+  const on = live && Math.sin(t * 6) > -0.3; c.fillStyle = on ? '#ff3a4a' : '#6a2a3a'; c.beginPath(); c.roundRect(-28, -150, 56, 20, 6); c.fill(); c.stroke();
+  if (on) { c.save(); c.shadowColor = '#ff3a4a'; c.shadowBlur = 16; c.fillStyle = '#fff'; c.font = '900 11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ON AIR', 0, -139.5); c.restore(); }
+  else { c.fillStyle = '#d8a0a8'; c.font = '900 11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('ON AIR', 0, -139.5); }
+  // speakers
+  [-1, 1].forEach(sd => { c.save(); c.translate(sd * 76, -26); c.scale(1 + pump, 1 + pump); c.fillStyle = '#2a2238'; c.beginPath(); c.roundRect(-18, -50, 36, 54, 6); c.fill(); c.stroke();
+    c.fillStyle = '#5a5070'; c.beginPath(); c.arc(0, -34, 8, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.arc(0, -10, 12, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#1a1424'; c.beginPath(); c.arc(0, -10, 5, 0, TAU); c.fill(); c.restore(); });
+}
+
 function drawMarket(c, t, beat) {
   c.lineWidth = 4; c.strokeStyle = OUTLINE;
   c.fillStyle = 'rgba(20,10,40,0.22)'; c.beginPath(); c.ellipse(0, 0, 85, 18, 0, 0, TAU); c.fill();
@@ -2371,6 +2416,9 @@ function sellMonster(m) {
   syncAudio(); markDirty();
 }
 function toggleMute(m) { m.muted = !m.muted; syncAudio(); markDirty(); }
+function allMuted(I0 = isl()) { const ms = I0.monsters.filter(m => !m.statue); return ms.length > 0 && ms.every(m => m.muted); }
+function toggleMuteAll() { const mute = !allMuted(); isl().monsters.forEach(m => { if (!m.statue) m.muted = mute; }); syncAudio(); markDirty(); return mute; }
+function setMonVol(m, v) { m.vol = Math.max(0, Math.min(1, v)); syncAudio(); markDirty(); }
 
 // ---------- breeding ----------
 function sameSet(a, b) { return a.length === b.length && a.every(x => b.includes(x)); }
@@ -2728,7 +2776,7 @@ function startVisit(friend, data, likes, myLikes) {
 }
 function visitIsland(id) { if (!VISIT || !VISIT.data.unlocked[id]) return; VISIT.island = id; UI.visitMode(true); showIsland(); }
 function endVisit() { if (!VISIT) return; VISIT = null; UI.visitMode(false); showIsland(); Audio.sfx('close'); }
-function syncAudio() { Audio.syncVoices(isl().monsters.map(m => ({ uid: m.uid, id: m.id, muted: m.muted || !!m.statue }))); }
+function syncAudio() { Audio.syncVoices(isl().monsters.map(m => ({ uid: m.uid, id: m.id, muted: m.muted || !!m.statue, vol: m.vol == null ? 1 : m.vol }))); }
 function worldPosOf(m) { return { x: m.x, y: m.y }; }
 
 function fmt(n) { n = Math.floor(n); if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(n >= 1e5 ? 0 : 1) + 'K'; return n.toLocaleString(); }
@@ -3097,6 +3145,7 @@ const Render = (() => {
       const eggs = []; for (let i = 0; i < n; i++) { const e = I0.hatch[off + i]; eggs.push(e ? { id: e.id, ready: eggReady(e), p: Math.min(1, (now() - e.start) / (e.end - e.start)) } : null); }
       drawHatchery(c, t, eggs, st.lvl); if (!ghost && eggs.some(e => e && e.ready)) label('Hatch!', 22, true);
     } else if (st.kind === 'bakery') { const b = st.bake, ready = b && now() >= b.end; drawBakery(c, t, !!b, ready, b ? Math.min(1, (now() - b.start) / (b.end - b.start)) : 0, st.lvl); if (ready && !ghost) label('Food ready!', 22, true); }
+    else if (st.kind === 'studio') { drawStudio(c, t, Audio.previewing && UI.studioOpen && UI.studioOpen(), beat); }
     else if (st.kind === 'mine') { const ready = mineReady(st); drawMine(c, t, ready, Math.min(1, (now() - (st.mine || now())) / (MINE_TIME * 1000))); if (ready && !ghost) label('Gem ready!', 22, true); }
     if (st.lvl > 1 && !ghost) { c.fillStyle = '#ff7ad9'; c.strokeStyle = OUTLINE; c.lineWidth = 2.5; for (let i = 1; i < st.lvl; i++) { c.beginPath(); starPts(5, 9, 4.5, -Math.PI / 2).forEach((q, k) => k ? c.lineTo(q[0] - 70 + i * 20, q[1] + 8) : c.moveTo(q[0] - 70 + i * 20, q[1] + 8)); c.closePath(); c.fill(); c.stroke(); } }
     c.restore();
@@ -3198,6 +3247,7 @@ const UI = (() => {
     $('#isle-name').textContent = (VISIT ? `${VISIT.name}'s ` : '') + islDef().name + (lk ? `  ❤ ${lk}` : '');
     $('#food').textContent = fmt(S.food);
     const I0 = isl(), eggs = I0.hatch.filter(eggReady).length;
+    { const am = allMuted(), b = $('#b-muteall'); if (b.dataset.st !== String(am)) { b.dataset.st = am; b.classList.toggle('on', am); b.querySelector('span').innerHTML = am ? ICONS.mute : ICONS.sound; b.querySelector('.slbl').textContent = am ? 'Unmute' : 'Mute all'; } }
     if (!VISIT) { ensureTasks(); setDot('#b-goals', S.tasks.filter(t => taskProg(t) >= t.n).length); }
     const showTray = !VISIT && S.current === 'diamond' && !placing && $('#sheet').classList.contains('hidden'); $('#dtray').classList.toggle('hidden', !showTray); if (showTray) { const n = diamondCandidates().length; $('#dtray-n').textContent = n; $('#dtray-n').style.display = n ? '' : 'none'; }
     const unl = ISLANDS.filter(canUnlock).length; setDot('#b-map', unl ? '!' : 0);
@@ -3275,7 +3325,7 @@ const UI = (() => {
     else open('market', title, '', 'market', body, tabs);
     modal.querySelectorAll('[data-catart]').forEach(el => el.replaceWith(catArt(el.dataset.catart)));
     const row = modal.querySelector('.hrow'); if (row) { row.scrollLeft = prevX; row.onwheel = e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); row.scrollLeft += e.deltaY; } }; }
-    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else if (k === 'synth') drawSynth(c, 0, false, 0, false, 0); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
+    modal.querySelectorAll('[data-struct]').forEach(el => { const cv = document.createElement('canvas'), d = Math.min(2, devicePixelRatio || 1), S0 = 130; cv.width = cv.height = S0 * d; cv.style.width = cv.style.height = S0 + 'px'; const c = cv.getContext('2d'); c.scale(d, d); c.translate(S0 / 2, S0 * 0.88); c.scale(0.62, 0.62); const k = el.dataset.struct; if (k === 'breeder') drawBreeder(c, 0, false, 0, false, 0); else if (k === 'hatchery') drawHatchery(c, 0, [null, null, null]); else if (k === 'mine') drawMine(c, 0, true, 1); else if (k === 'synth') drawSynth(c, 0, false, 0, false, 0); else if (k === 'studio') drawStudio(c, 0, false, 0); else drawBakery(c, 0, false, false, 0); el.replaceWith(cv); });
     modal.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { Audio.sfx('open'); openMarket(b.dataset.cat, true); });
     const bk = modal.querySelector('[data-back]'); if (bk) bk.onclick = () => { Audio.sfx('close'); openMarket(null, true); };
     modal.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => { if (buyShape(b.dataset.buy)) openMarket('shapes', true); });
@@ -3670,7 +3720,7 @@ const UI = (() => {
   // ---------- MIXER ----------
 
   // ---------- STRUCT ----------
-  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'synth') openSynth(false, sid); else if (k === 'castle') openCastle(); }
+  function openStruct(k, sid) { if (k === 'market') openMarket(); else if (k === 'breeder') openBreed(false, sid); else if (k === 'hatchery') openHatch(false, sid); else if (k === 'bakery') openBakery(false, sid); else if (k === 'mine') openMine(false, sid); else if (k === 'synth') openSynth(false, sid); else if (k === 'studio') openStudio(); else if (k === 'castle') openCastle(); }
 
   // ---------- MONSTER SHEET ----------
   const sheet = $('#sheet'); let sheetAnim = null;
@@ -3680,7 +3730,7 @@ const UI = (() => {
     sheet.innerHTML = `<div class="sh-card"><button class="xbtn" data-x>✕</button>
       <div class="sh-name"><div class="sh-lv">${ICONS.star}<span id="sh-lv">${m.level}</span></div><span class="nm">${d.name}</span>${elBadges(d.el)}</div>
       <div class="sh-pp" id="sheet-pp"></div>
-      <div class="sh-mid"><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div></div>
+      <div class="sh-mid"><div class="foodbar" id="sh-pips"></div><div class="muted" id="sh-rate"></div><label class="volrow">🔈<input type="range" id="sh-vol" min="0" max="100" step="5" value="${Math.round((m.vol == null ? 1 : m.vol) * 100)}"><span id="sh-volv">${Math.round((m.vol == null ? 1 : m.vol) * 100)}%</span></label></div>
       <div class="sh-btns">
         <button class="rbtn c-green" id="sh-feed"><span>${ICONS.food}</span><span class="rlbl" id="sh-feedcost"></span></button>
         <button class="rbtn ${m.muted ? 'c-gray' : 'c-blue'}" id="sh-mute"><span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span></button>
@@ -3695,6 +3745,7 @@ const UI = (() => {
     anims = anims.filter(a => !a.sheet); anims.push(Object.assign(sheetAnim, { sheet: true }));
     sheet.querySelector('[data-x]').onclick = closeSheet;
     $('#sh-feed').onclick = () => { feed(m); updateSheet(); };
+    $('#sh-vol').oninput = e => { setMonVol(m, e.target.value / 100); $('#sh-volv').textContent = e.target.value + '%'; };
     $('#sh-mute').onclick = () => { toggleMute(m); const b = $('#sh-mute'); b.className = 'rbtn ' + (m.muted ? 'c-gray' : 'c-blue'); b.innerHTML = `<span>${m.muted ? ICONS.mute : ICONS.sound}</span><span class="rlbl">${m.muted ? 'Muted' : 'Mute'}</span>`; Audio.sfx('tap'); };
     $('#sh-move').onclick = () => { closeSheet(); beginPlace({ kind: 'move', uid: m.uid, x: m.x, y: m.y }); };
     $('#sh-info').onclick = () => bookDetail(m.id, m);
@@ -3740,6 +3791,40 @@ const UI = (() => {
   function unlocksAt(l) {
     const u = []; SHAPES.forEach(s => { if (s.tier === 1 && s.lvl === l) u.push(s.name + ' in the Market'); }); ISLANDS.forEach(i => { if (i.req.level === l) u.push(i.name + ' can be unlocked'); });
     return u.length ? `<div class="info" style="margin-top:10px;font-weight:800;font-size:14px">Unlocked: ${u.join(', ')}</div>` : '';
+  }
+
+  // ---------- STUDIO: listen to each Shape on this island on its own ----------
+  let studioSel = null, studioRaf = 0;
+  const studioOpen = () => modalKind === 'studio';
+  function trackCanvas(def, w, h) { // the Shape's 64-step track as note blocks, high notes higher; drums sit in the middle
+    const cv = document.createElement('canvas'), dpr = Math.min(2, devicePixelRatio || 1); cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.className = 'trackcv';
+    const notes = def.pat.flatMap(e => (Array.isArray(e[1]) ? e[1] : [e[1]]).map(n => ({ st: e[0] % 64, n: typeof n === 'number' ? n : null, len: Math.max(1, e[2] || 1), v: e[3] || 0.8 })));
+    const nums = notes.filter(x => x.n != null).map(x => x.n), lo = nums.length ? Math.min(...nums) : 0, hi = nums.length ? Math.max(...nums) : 1;
+    cv._draw = playStep => { const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+      c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, 0, w, h); const sw = w / 64;
+      for (let i = 0; i <= 64; i++) { c.fillStyle = i % 16 === 0 ? 'rgba(255,255,255,0.35)' : i % 4 === 0 ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)'; c.fillRect(i * sw, 0, 1, h); }
+      const col = ELEMENTS[def.el[0]] ? ELEMENTS[def.el[0]].color : '#ffd23a';
+      notes.forEach(x => { const y = x.n == null ? h / 2 - 6 : h - 10 - (hi === lo ? 0.5 : (x.n - lo) / (hi - lo)) * (h - 28) - 6, on = playStep != null && playStep >= x.st && playStep < x.st + x.len;
+        c.globalAlpha = 0.55 + x.v * 0.45; c.fillStyle = on ? '#ffffff' : col; c.strokeStyle = '#1a1028'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x.st * sw + 1, y, Math.max(sw * x.len - 2, 4), 12, 3); c.fill(); c.stroke(); });
+      c.globalAlpha = 1; if (playStep != null) { c.fillStyle = '#ff4a6a'; c.fillRect(playStep * sw + sw / 2 - 1.5, 0, 3, h); } };
+    cv._draw(null); return cv;
+  }
+  function openStudio(keep) {
+    const ids = [...new Set(isl().monsters.filter(m => !m.statue).map(m => m.id))];
+    if (studioSel && !ids.includes(studioSel)) studioSel = null; if (!studioSel) studioSel = ids[0] || null;
+    const d = studioSel && SHAPE[studioSel], playing = d && Audio.previewing === d.id;
+    const body = !ids.length ? '<div class="info center" style="padding:24px">No Shapes on this island yet. Hatch some, then come back to listen to them one by one.</div>'
+      : `<div class="studio"><div class="studio-list">${ids.map(id => `<div class="wcard pick ${id === studioSel ? 'sel' : ''}" data-stsel="${id}"><div class="wname">${SHAPE[id].name}</div><div class="wart"><div data-portrait="${id}" data-size="64"></div></div></div>`).join('')}</div>
+        <div class="studio-main"><div class="row" style="gap:14px;align-items:center"><div class="stage" style="width:110px;height:110px;flex:none"><div data-portrait="${d.id}" data-size="104"></div></div><div style="flex:1;min-width:0"><div class="big-name" style="text-align:left">${d.name}</div><div class="muted">${elBadges(d.el)}</div>
+          <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn blue" data-stone>🔊 Play sound</button><button class="btn ${playing ? 'red' : 'green'}" data-sttrack>${playing ? '■ Stop track' : '▶ Play track'}</button></div></div></div>
+          <div class="sec">Track</div><div id="st-track"></div><div class="muted" style="margin-top:6px">${playing ? 'Playing on its own. The rest of the island is quiet until you stop.' : 'Play track loops this Shape\'s part by itself.'}</div></div></div>`;
+    if (keep && modalKind === 'studio') setBody(body); else open('studio', 'Studio', '#5a4a8a', null, body);
+    const tw = Math.min(560, (modal.querySelector('.studio-main') || modal).clientWidth - 4), host = modal.querySelector('#st-track');
+    let cv = null; if (host && d) { cv = trackCanvas(d, Math.max(240, tw), 110); host.appendChild(cv); }
+    cancelAnimationFrame(studioRaf); const loop = () => { if (modalKind !== 'studio') { Audio.stopPreview(); return; } if (cv) cv._draw(Audio.previewing === (d && d.id) ? Audio.stepNow() : null); studioRaf = requestAnimationFrame(loop); }; loop();
+    modal.querySelectorAll('[data-stsel]').forEach(el => el.onclick = () => { Audio.sfx('tap'); const was = Audio.previewing; studioSel = el.dataset.stsel; if (was) Audio.startPreview(SHAPE[studioSel], { loop: true, solo: true }); openStudio(true); });
+    const one = modal.querySelector('[data-stone]'); if (one) one.onclick = () => Audio.playOne(d);
+    const tr = modal.querySelector('[data-sttrack]'); if (tr) tr.onclick = () => { if (Audio.previewing === d.id) Audio.stopPreview(); else Audio.startPreview(d, { loop: true, solo: true }); openStudio(true); };
   }
 
   // ---------- SYNTHESIZER ----------
@@ -3845,10 +3930,11 @@ const UI = (() => {
   $('#b-book').onclick = () => openBook(); $('#b-map').onclick = () => openIslands(); $('#b-settings').onclick = openSettings; $('#b-info').onclick = () => openCastle();
   $('#b-friends').onclick = openFriends;
   $('#b-goals').onclick = () => openTasks();
+  $('#b-muteall').onclick = () => { const m = toggleMuteAll(); Audio.sfx('tap'); toast(m ? 'All Shapes on this island are muted' : 'All Shapes are singing again'); refreshHUD(); if (sheetFor && sheetFor.type === 'mon') { const mm = isl().monsters.find(x => x.uid === sheetFor.uid); if (mm) openMonster(mm); } };
   $('#lvl-pill').onclick = () => toast(`Level ${S.level} · ${S.xp}/${xpForLevel(S.level)} XP`);
 
   const sheetMon = () => sheetFor && sheetFor.type === 'mon' ? isl().monsters.find(x => x.uid === sheetFor.uid) : null;
-  return { sheetMon, openObstacle, visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
+  return { studioOpen, sheetMon, openObstacle, visitMode, openFriends, closeBook, hudButtons, initIcons, toast, refreshHUD, frame, openMonster, openDeco, openStruct, closeAll, closeSheet, placeBar, discovered, levelUp, popup, openMarket };
 })();
 
 // ===================== TUTORIAL =====================
