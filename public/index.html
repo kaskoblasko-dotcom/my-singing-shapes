@@ -777,7 +777,7 @@ Object.assign(ELEMENTS, {
   web:    { name:'Web',    color:'#d8d8e8', dark:'#7a7a90', icon:'🕸️', spooky: true },
   bone:   { name:'Bone',   color:'#fff4e0', dark:'#b0a080', icon:'🦴', spooky: true },
 });
-const HP = (id, name, el, cat, shape, inst, vol, sec, look, desc, pat) => ({ id, sec, name, cat, el, tier: el.length, inst, vol, rate: [0, 8, 22, 55, 130][el.length], time: [0, 120, 900, 3600, 10800][el.length], sound: '', desc,
+const HP = (id, name, el, cat, shape, inst, vol, sec, look, desc, pat) => ({ id, sec, name, cat, el, tier: el.length, inst, vol, rate: [0, 8, 22, 55, 130][el.length], time: [0, 7200, 28800, 43200, 86400][el.length], sound: '', desc,
   look: { eyes: 2, legs: 0, ...look, ...(shape ? { shape } : {}) }, pat, haunt: true });
 const HAUNT_IDS = [];
 SHAPES.push(...[
@@ -2680,7 +2680,7 @@ function feed(m) {
   if (m.feeds >= FEEDS_PER_LEVEL) { m.feeds = 0; m.level++; track('levelups'); Audio.sfx('levelup'); UI.toast(`${SHAPE[m.id].name} reached level ${m.level}!`, 'good'); FX.burst(p.x, p.y - 60, 'spark', 14); addXP(10 * SHAPE[m.id].tier); }
   markDirty();
 }
-function baseValue(d) { const b = SHAPE[d.baseId]; const v = b.tier === 1 ? b.price : b.tier === 5 ? 30000 : TIER[b.tier].price; return v * (d.variant === 'rare' ? 2 : d.variant === 'epic' ? 3 : 1); }
+function baseValue(d) { const b = SHAPE[d.baseId]; const v = b.haunt ? [0, 1500, 12000, 40000, 150000][b.tier] : b.tier === 1 ? (b.price || 150) : b.tier === 5 ? 30000 : TIER[b.tier].price; return v * (d.variant === 'rare' ? 2 : d.variant === 'epic' ? 3 : 1); }
 function sellValue(m) { return Math.round(baseValue(SHAPE[m.id]) * 0.25 + m.level * 20); }
 function sellMonster(m) {
   const I0 = isl(); const v = sellValue(m);
@@ -2729,8 +2729,8 @@ function collectBreed(sid) {
 }
 
 // ---------- gem speed-ups ----------
-function speedCostMin(end) { const left = end - now(); return left <= 0 ? 0 : Math.max(1, Math.ceil(left / 60000)); } // 1 gem per minute (breeding & hatching)
-function speedCost(end) { const left = end - now(); return left <= 0 ? 0 : Math.max(1, Math.ceil(left / 900000)); } // 1 gem per 15 min left
+function speedCostMin(end) { const left = end - now(); return left <= 0 ? 0 : Math.max(1, Math.ceil(left / 3600000)); } // 1 gem per hour left, for every speed-up
+const speedCost = speedCostMin;
 function speedBreed(sid) {
   const st = structById(sid), br = st && st.br; if (!br) return; const c = speedCostMin(br.end); if (!c) return;
   if (!spend(0, c)) return; br.end = now(); Audio.sfx('buy'); UI.toast(`Breeding finished for ${c} gem${c > 1 ? 's' : ''}!`, 'good'); markDirty();
@@ -4146,10 +4146,10 @@ const UI = (() => {
       <div style="flex:1;min-width:260px"><div class="sec" style="margin-top:0">Eggs to zap</div><div class="wgrid small-cards">${need.map(id => { const has = got.includes(id), home = NORMAL_ISLANDS.find(I => I.commons.includes(id));
         return `<div class="wcard" style="${has ? 'border-color:#6ad04a' : ''}"><div class="wname">${SHAPE[id].name}</div><div class="wart" style="${has ? '' : 'opacity:.5'}"><div data-portrait="${id}" data-size="70"></div></div><div class="muted">${has ? '✓ Zapped' : home ? home.name : ''}</div></div>`; }).join('')}</div>
         <p class="muted" style="margin-top:8px">Breed or buy these Shapes on the 5 main islands, then tap <b>Zap</b> on the egg in that island's Hatchery. If the timer runs out, the zapped eggs are lost.</p></div></div>
-      <div class="row" style="justify-content:center;gap:10px;margin-top:10px"><button class="btn wood sm" data-smove>✥ Move</button><button class="btn red sm" data-ssell>Sell statue</button></div>`;
+      <div class="row" style="justify-content:center;gap:10px;margin-top:10px"><button class="btn wood sm" data-smove>✥ Move</button><button class="btn red sm" data-ssell>Sell statue ${ic('coin')} ${fmt(sellValue(m))}</button></div>`;
     open('statue', d.name + ' Statue', '#6a5a8a', null, body);
     modal.querySelector('[data-smove]').onclick = () => { closeAll(); beginPlace({ kind: 'move', uid: m.uid }); };
-    modal.querySelector('[data-ssell]').onclick = e => { const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to sell'; return; } isl().monsters = isl().monsters.filter(x => x !== m); markDirty(); closeAll(); toast('Statue sold'); };
+    modal.querySelector('[data-ssell]').onclick = e => { const b = e.currentTarget; if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to sell'; return; } const v = sellValue(m); isl().monsters = isl().monsters.filter(x => x !== m); addCoins(v); Audio.sfx('coin'); markDirty(); closeAll(); toast(`Statue sold for ${fmt(v)} coins`, 'good'); };
   }
 
   // ---------- TELEPORT ----------
