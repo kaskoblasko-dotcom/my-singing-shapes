@@ -1008,13 +1008,213 @@ const SONG = ['V', 'C', 'V', 'C', 'B', 'C'];
 const SECTION_NAME = { V: 'Verse', C: 'Chorus', B: 'Breakdown' };
 const ARRANGE_MIN = 4; // sections kick in once this many Shapes are playing
 
+// ===================== SONGS: every island has its own key, tempo, groove and verses =====================
+// Each verse is 4 bars. Every Shape gets its own part for each verse it plays in (its "tracks").
+// Parts are composed from the Shape's role, its own seed and the island's chords, so no two Shapes play the same thing.
+const ISLAND_MUSIC = {
+  shape:     { bpm:104, root:48, scale:[0,2,4,5,7,9,11], bar:16, swing:0,    groove:'pop',     rev:0.22, bright:1.0,  mood:'Bouncy', key:'C major',
+               verses:[{ prog:[0,4,5,3], e:0.6 }, { prog:[5,3,0,4], e:0.9 }, { prog:[3,4,2,5], e:0.4 }] },
+  prism:     { bpm:84,  root:45, scale:[0,2,3,5,7,8,10], bar:16, swing:0.16, groove:'lofi',    rev:0.45, bright:0.75, mood:'Dreamy', key:'A minor',
+               verses:[{ prog:[0,5,2,6], e:0.5 }, { prog:[3,0,6,4], e:0.75 }, { prog:[5,6,0,0], e:0.35 }] },
+  volt:      { bpm:126, root:50, scale:[0,2,3,5,7,9,10], bar:16, swing:0,    groove:'four',    rev:0.16, bright:1.35, mood:'Electric', key:'D dorian', chip:true,
+               verses:[{ prog:[0,0,6,6], e:0.7 }, { prog:[0,3,6,4], e:1.0 }, { prog:[5,6,3,4], e:0.45 }] },
+  dunes:     { bpm:90,  root:52, scale:[0,1,4,5,7,8,10], bar:16, swing:0.06, groove:'half',    rev:0.32, bright:1.05, mood:'Mysterious', key:'E phrygian',
+               verses:[{ prog:[0,1,0,6], e:0.55 }, { prog:[0,6,5,1], e:0.85 }, { prog:[3,1,0,0], e:0.4 }] },
+  lagoon:    { bpm:116, root:53, scale:[0,2,4,5,7,9,10], bar:16, swing:0.2,  groove:'calypso', rev:0.26, bright:1.1,  mood:'Breezy', key:'F mixolydian',
+               verses:[{ prog:[0,3,6,3], e:0.6 }, { prog:[1,4,0,5], e:0.85 }, { prog:[3,2,1,6], e:0.45 }] },
+  diamond:   { bpm:110, root:50, scale:[0,2,4,6,7,9,11], bar:16, swing:0.05, groove:'pop',     rev:0.34, bright:1.2,  mood:'Sparkling', key:'D lydian',
+               verses:[{ prog:[0,1,4,0], e:0.6 }, { prog:[5,3,1,4], e:0.8 }, { prog:[3,4,5,5], e:0.4 }, { prog:[0,1,3,4], e:1.0 }] },
+  ruins:     { bpm:76,  root:45, scale:[0,2,3,5,7,8,11], bar:16, swing:0,    groove:'march',   rev:0.55, bright:0.85, mood:'Ancient', key:'A harmonic minor',
+               verses:[{ prog:[0,5,3,4], e:0.5 }, { prog:[0,3,4,0], e:0.8 }, { prog:[5,1,4,4], e:0.4 }] },
+  shattered: { bpm:98,  root:47, scale:[0,2,3,5,7,9,10], bar:16, swing:0.1,  groove:'broken',  rev:0.45, bright:0.95, mood:'Fractured', key:'B dorian',
+               verses:[{ prog:[0,6,5,6], e:0.6 }, { prog:[3,4,0,5], e:0.85 }, { prog:[5,3,6,4], e:0.45 }] },
+  haunt:     { bpm:138, root:46, scale:[0,2,3,5,7,8,11], bar:12, swing:0,    groove:'waltz',   rev:0.42, bright:0.9,  mood:'Spooky waltz', key:'B♭ minor',
+               verses:[{ prog:[0,3,4,0], e:0.55 }, { prog:[5,1,4,0], e:0.85 }, { prog:[0,5,3,4], e:0.4 }] },
+};
+ISLANDS.forEach(I => { const M = ISLAND_MUSIC[I.id]; if (!M) return; Object.assign(I, M); delete I.prog;
+  if (I.tag) I.tag = `${M.mood} · ${M.key} · ${M.bpm} BPM${M.bar === 12 ? ' · waltz' : M.swing >= 0.1 ? ' · swung' : ''}`; });
+
+const SONG_ROLE = { kick:'kick', snare:'snare', hat:'hat', shaker:'hat', tom:'perc', bongo:'perc', block:'perc', beatbox:'beatbox',
+  bass:'bass', wobble:'bass', tuba:'bass', didg:'drone', pad:'pad', choir:'pad', organ:'organ', swell:'swell', gong:'gong',
+  marimba:'riff', pluck:'riff', arp:'arp', steeldrum:'riff', bell:'bell', glitch:'arp', clav:'comp', stab:'comp', voiceHarm:'comp',
+  lead:'mel', flute:'mel', whistle:'mel', theremin:'glide', opera:'glide', voiceHigh:'mel', vocalSynth:'mel', brass:'brass', voiceLow:'hum' };
+const DRUM_ROLES = ['kick', 'snare', 'hat', 'perc', 'beatbox'];
+
+function strHash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const pickR = (r, a) => a[Math.floor(r() * a.length) % a.length];
+
+// how many verses a Shape plays on an island, and which ones (Rares and Epics share their base Shape's tracks)
+function songVerses(def, I) {
+  const V = (I.verses || [0, 0, 0]).length, role = SONG_ROLE[def.inst], r = mulberry(strHash(def.baseId + '|' + I.id + '|v'));
+  const all = [...Array(V).keys()];
+  let restChance = DRUM_ROLES.includes(role) ? 0.45 : role === 'pad' || role === 'drone' ? 0.25 : 0.35;
+  if (role === 'kick' || role === 'bass') restChance = 0.15;
+  if (r() < restChance) { // sit out one verse (never the first): the quiet verse for drums, a random one otherwise
+    const quiet = all.slice(1).sort((a, b) => I.verses[a].e - I.verses[b].e)[0];
+    const out = DRUM_ROLES.includes(role) ? quiet : 1 + Math.floor(r() * (V - 1));
+    return all.filter(v => v !== out);
+  }
+  return all;
+}
+
+// ---------- the composer ----------
+function composeVerse(def, I, vi) {
+  const B = I.bar || 16, L = B * 4, beat = 4, nb = B / 4, verse = I.verses[vi], e = verse.e, role = SONG_ROLE[def.inst] || 'riff';
+  const R = mulberry(strHash(def.baseId + '|' + I.id)), rv = mulberry(strHash(def.baseId + '|' + I.id + '|' + vi)), ev = [];
+  const add = (st, n, len, vel) => { if (st >= 0 && st < L) ev.push([st, n, Math.max(1, len), Math.max(0.15, Math.min(1, vel))]); };
+  const waltz = I.groove === 'waltz', half = I.groove === 'half' || I.groove === 'march';
+  const beats = [...Array(nb).keys()].map(k => k * beat);
+  // a 1-bar rhythm made of syncopated cells, seeded
+  const rhythm = (rr, density) => { const out = []; for (let s = 0; s < B; s++) { const strong = s % beat === 0 ? 0.75 : s % 2 === 0 ? 0.45 : 0.18; if (rr() < strong * density) out.push(s); } if (!out.includes(0)) out.unshift(0); return out; };
+  const chordTones = [0, 2, 4], ext = [0, 2, 4, 7, 9];
+
+  switch (role) {
+    case 'kick': {
+      const G = { pop: [0, 8, ...(R() < 0.5 ? [6] : [11])], four: [0, 4, 8, 12], half: [0, ...(R() < 0.5 ? [10] : [11])], lofi: [0, 7, 10], calypso: [0, 6, 12], broken: [0, 6, 11], march: [0, 8], waltz: [0] }[I.groove] || [0, 8];
+      for (let b = 0; b < 4; b++) {
+        let hits = G.slice(); if (e < 0.5 && !waltz) hits = hits.filter((s, i) => i % 2 === 0 || s === 0); if (e > 0.8 && !waltz) hits.push(14);
+        if (waltz && e > 0.7 && b % 2 === 1) hits.push(8);
+        hits.forEach((s, i) => add(b * B + s, 'k', 2, s === 0 ? 1 : 0.75 + rv() * 0.15));
+      }
+      if (e >= 0.6) add(L - 2, 'k', 1, 0.6);
+      break;
+    }
+    case 'snare': {
+      const back = waltz ? [4, 8] : half ? [8] : [4, 12], clap = R() < 0.5;
+      for (let b = 0; b < 4; b++) {
+        back.forEach(s => add(b * B + s, (clap && (b % 2 === 1 || waltz)) ? 'p' : 's', 1, waltz ? 0.55 : 0.95));
+        if (b === 3 && e >= 0.55) { const fill = rhythm(rv, 0.9).filter(s => s >= B / 2); fill.forEach((s, k) => add(b * B + s, 's', 1, 0.4 + k * 0.1)); }
+        else if (e > 0.75 && rv() < 0.5) add(b * B + (half ? 14 : 7), 's', 1, 0.3);
+      }
+      break;
+    }
+    case 'hat': {
+      const sixteen = (e > 0.75 && R() < 0.6) || def.inst === 'shaker', open = I.groove === 'four' || I.groove === 'calypso';
+      const accent = R() < 0.5 ? 2 : 0, rateMul = e < 0.45 ? 4 : sixteen ? 1 : 2;
+      for (let s = 0; s < L; s += rateMul) {
+        const pos = s % B, isOff = pos % beat === 2;
+        const n = def.inst === 'shaker' ? 'x' : (open && isOff && e > 0.5) ? 'o' : 'c';
+        add(s, n, 1, (pos % beat === accent ? 0.85 : 0.4) + rv() * 0.12);
+      }
+      break;
+    }
+    case 'perc': case 'beatbox': {
+      const sounds = def.inst === 'tom' ? ['h', 'm', 'l'] : def.inst === 'bongo' ? ['h', 'l'] : def.inst === 'block' ? ['w', 'w', 'b'] : ['b', 'k', 'x'];
+      const cell = rhythm(R, 0.55 + e * 0.35).map(s => [s, role === 'beatbox' ? (s % 8 === 0 ? 'b' : s % 8 === 4 ? 'k' : 'x') : pickR(R, sounds)]);
+      for (let b = 0; b < 4; b++) {
+        const fillBar = b === 3 && e >= 0.5;
+        (fillBar ? rhythm(rv, 1).map(s => [s, sounds[Math.min(sounds.length - 1, Math.floor(s / B * sounds.length))]]) : cell)
+          .forEach(([s, n]) => { if (!fillBar && b % 2 === 1 && rv() < 0.2) return; add(b * B + s, n, 1, (s % beat === 0 ? 0.85 : 0.55) + rv() * 0.15); });
+      }
+      break;
+    }
+    case 'bass': {
+      const longish = def.inst === 'wobble' ? 3 : def.inst === 'tuba' ? 1.5 : 1;
+      const pats = waltz ? [[[0, 0, 4]], [[0, 0, 4], [8, 4, 4]]]
+        : { four: [[[2, 0, 2], [6, 0, 2], [10, 0, 2], [14, 0, 2]], [[0, 0, 3], [3, 0, 2], [8, 0, 3], [11, 4, 2], [14, 0, 2]]],
+            calypso: [[[0, 0, 3], [6, 0, 2], [8, 4, 2], [12, 0, 3]], [[0, 0, 2], [3, 4, 2], [6, 0, 2], [10, 7, 2], [12, 4, 3]]],
+            half: [[[0, 0, 6], [10, 0, 2], [12, 4, 4]], [[0, 0, 8], [11, -1, 2], [14, 0, 2]]],
+            march: [[[0, 0, 4], [8, 4, 4]], [[0, 0, 3], [4, 4, 3], [8, 0, 3], [12, 4, 3]]],
+            lofi: [[[0, 0, 5], [7, 4, 2], [10, 0, 4]], [[0, 0, 3], [6, 2, 2], [10, 4, 4]]],
+            broken: [[[0, 0, 3], [6, 0, 2], [11, 4, 3]], [[0, 0, 2], [3, 0, 1], [6, 4, 3], [12, 7, 2]]],
+            pop: [[[0, 0, 3], [4, 0, 1], [6, 4, 2], [8, 0, 3], [12, 2, 2], [14, 4, 2]], [[0, 0, 4], [6, 0, 2], [8, 0, 2], [11, 4, 2], [14, 7, 2]]] }[I.groove] || [[[0, 0, 4], [8, 4, 4]]];
+      if (def.inst === 'tuba' && !waltz) pats.splice(0, pats.length, [[0, 0, 3], [8, 4, 3]], [[0, 0, 2], [4, 4, 2], [8, 0, 2], [12, 4, 2]], [[0, 0, 4], [6, 4, 2], [8, 7, 4], [14, 4, 2]]);
+      const P = pickR(R, pats), P2 = pickR(rv, pats), QUIET = pickR(R, [[[0, 0, B]], [[0, 0, B / 2 + 2], [B / 2 + 2, 4, B / 2 - 2]], [[0, 0, B - 4], [B - 4, 7, 4]], [[0, 0, 3], [B / 2, 0, B / 2]]]);
+      for (let b = 0; b < 4; b++) {
+        const use = e < 0.5 ? QUIET : (b % 2 === 1 && e > 0.7 ? P2 : P);
+        use.forEach(([s, n, len]) => add(b * B + s, n, Math.min(B - s, Math.round(len * longish)), s === 0 ? 0.95 : 0.75));
+      }
+      if (e >= 0.6 && !waltz) add(L - 2, R() < 0.5 ? 6 : 1, 2, 0.6); // pickup into the next verse
+      break;
+    }
+    case 'drone': {
+      for (let b = 0; b < 4; b += (e < 0.6 ? 2 : 1)) { add(b * B, 0, e < 0.6 ? B * 2 : B, 0.8); if (e > 0.6) add(b * B + B - beat, 4, beat, 0.55); }
+      break;
+    }
+    case 'pad': case 'organ': {
+      const voicing = pickR(R, [[0, 2, 4], [2, 4, 7], [0, 4, 7], [0, 2, 4, 6], [4, 7, 9]]);
+      const style = role === 'organ' ? (waltz ? 'pahpah' : pickR(R, ['hold', 'pulse', 'pahpah'])) : pickR(R, ['hold', 'hold', 'two', 'pulse']);
+      for (let b = 0; b < 4; b++) {
+        const vc = (b === 3 && rv() < 0.5) ? voicing.map(x => x + 1) : voicing;
+        if (style === 'hold' || e < 0.45) add(b * B, vc, B, 0.75);
+        else if (style === 'two') { add(b * B, vc, B / 2, 0.75); add(b * B + B / 2, vc.map(x => x + (rv() < 0.5 ? 0 : 2)), B / 2, 0.65); }
+        else if (style === 'pulse') beats.forEach(s => add(b * B + s, vc, beat - 1, s === 0 ? 0.8 : 0.55));
+        else beats.slice(1).forEach(s => add(b * B + s, vc, beat - 1, 0.6)); // oom-pah-pah: the "pah"s
+      }
+      break;
+    }
+    case 'swell': { const so = pickR(R, [0, beat, B / 2]); for (let b = 0; b < 4; b += 2) add(b * B + so, pickR(R, [[0, 4], [2, 4], [0, 2], [4, 7]]), B * 2 - 1 - so, 0.7); if (e > 0.7) add(3 * B, [4, 7], B, 0.6); break; }
+    case 'gong': { add(0, [0, 4], B * 2, 0.9); if (e > 0.6) add(2 * B, [0, 4], B * 2, 0.7); else if (rv() < 0.5) add(3 * B + B / 2, [0, 4], B / 2, 0.5); break; }
+    case 'bell': {
+      const spots = waltz ? [0, 8] : pickR(R, [[0, 6, 12], [0, 10], [4, 12], [0, 8, 11]]);
+      for (let b = 0; b < 4; b++) spots.forEach((s, k) => { if (e < 0.5 && k > 0 && b % 2) return; add(b * B + s, pickR(rv, [0, 2, 4, 7]), 3, 0.7 - k * 0.08); });
+      break;
+    }
+    case 'arp': {
+      const shape = pickR(R, [[0, 2, 4, 7], [0, 4, 2, 7], [7, 4, 2, 0], [0, 2, 4, 2], [0, 4, 7, 9, 7, 4], [0, 7, 4, 9]]);
+      const rate = e > 0.75 && R() < 0.6 ? 1 : 2, gap = mulberry(strHash(def.baseId + 'gap'))() < 0.4 ? 3 : 0;
+      for (let s = 0, k = 0; s < L; s += rate, k++) { if (gap && (s / rate) % 8 === gap) continue; if (e < 0.45 && s % B >= B / 2) continue; add(s, shape[k % shape.length] + (vi === 1 && k % 8 >= 4 ? 2 : 0), rate, (s % beat === 0 ? 0.8 : 0.55)); }
+      break;
+    }
+    case 'riff': case 'comp': {
+      // a syncopated 2-bar riff on chord tones; comp parts play chords on the off-beats
+      const cellA = rhythm(R, role === 'comp' ? 0.45 : 0.55 + e * 0.2), cellB = rhythm(rv, 0.5 + e * 0.25);
+      const offs = role === 'comp' ? pickR(R, [[2, 6, 10, 14], [4, 12], [3, 6, 11, 14], [2, 10, 14]]).map(s => s * B / 16) : null;
+      const chord = pickR(R, [[0, 2, 4], [2, 4, 7], [0, 4]]);
+      for (let b = 0; b < 4; b++) {
+        if (role === 'comp') { (waltz ? pickR(R, [[2, 6, 10], [6, 10], [2, 8]]) : offs).forEach(s => add(b * B + Math.round(s), chord, 1, 0.65 + rv() * 0.15)); if (b === 3 && e > 0.6) add(b * B + B - 2, chord.map(x => x + 1), 2, 0.7); continue; }
+        const cell = b % 2 === 0 ? cellA : cellB; let last = 0;
+        cell.forEach((s, k) => { const n = s % beat === 0 ? pickR(R, chordTones) : last + pickR(rv, [-1, 1, 2, -2]); last = n; add(b * B + s, n + (b === 3 ? 0 : 0), 1 + (rv() < 0.2 ? 1 : 0), s % beat === 0 ? 0.8 : 0.6); });
+      }
+      break;
+    }
+    case 'hum': { const hs = pickR(R, [0, 2, 4]); for (let b = 0; b < 4; b++) { add(b * B + hs, pickR(R, [0, [0, 4], [0, 2]]), B / 2 - hs, 0.8); if (e > 0.5) add(b * B + B / 2 + (R() < 0.5 ? 0 : 2), pickR(rv, [2, 4]), B / 2 - 2, 0.6); } break; }
+    case 'brass': {
+      const fan = pickR(R, [[[0, 0, 2], [3, 2, 1], [4, 4, 4]], [[0, 4, 3], [6, 4, 2], [8, 7, 6]], [[2, 2, 2], [4, 4, 2], [8, 0, 4]]]);
+      for (let b = 0; b < 4; b++) { if (e < 0.5 && b % 2) continue; if (b % 2 === 1 && rv() < 0.5) { add(b * B + B - 4, [2, 4], 2, 0.7); continue; } fan.forEach(([s, n, len]) => add(b * B + Math.round(s * B / 16), n + (b === 2 ? 1 : 0), len, 0.8)); }
+      break;
+    }
+    case 'mel': case 'glide': {
+      // call and answer: the Shape sings a phrase, rests or answers, then sings a variation. Each verse gets a new phrase.
+      const phase = mulberry(strHash(def.baseId + I.id + 'ph'))() * 3 | 0, glide = role === 'glide';
+      const phrase = (rr) => { const pts = glide ? beats.filter(() => rr() < 0.7).concat(0) : rhythm(rr, 0.6); const set = [...new Set(pts)].sort((a, b) => a - b); let cur = pickR(rr, [2, 4, 7]);
+        return set.map((s, k) => { cur = s % beat === 0 ? pickR(rr, ext) : cur + pickR(rr, [-1, 1, -2, 2]); const nxt = set[k + 1] == null ? B : set[k + 1]; return [s, cur, Math.max(1, Math.min(nxt - s, glide ? 6 : 3)), s === 0 ? 0.85 : 0.7]; }); };
+      const A = phrase(rv), A2 = A.map(([s, n, l, v], k) => [s, k === A.length - 1 ? 0 : n + (k % 2 ? 1 : 0), l, v]), Bp = phrase(mulberry(strHash(def.baseId + I.id + vi + 'b')));
+      const plan = phase === 0 ? [A, null, A2, Bp] : phase === 1 ? [null, A, Bp, A2] : [A, Bp, A2, e > 0.6 ? Bp : null];
+      plan.forEach((p, b) => { if (!p || (e < 0.45 && b % 2)) return; p.forEach(([s, n, l, v]) => add(b * B + s, n, l, v)); });
+      break;
+    }
+  }
+  return ev.sort((a, b) => a[0] - b[0]);
+}
+
+// per Shape and island: its tracks (verse index -> events, indexed by step), cached
+const _songCache = {};
+function songOf(def, I) {
+  const k = def.id + '@' + I.id; if (_songCache[k]) return _songCache[k];
+  const L = (I.bar || 16) * 4, plays = songVerses(def, I), tracks = {};
+  plays.forEach(vi => { const evs = composeVerse(def, I, vi), idx = Array.from({ length: L }, () => []); evs.forEach(e => idx[e[0]].push(e)); tracks[vi] = { evs, idx }; });
+  // busy parts are turned down a little, sparse parts up a little, so everyone sits at a similar loudness
+  const cover = plays.reduce((a, vi) => a + tracks[vi].evs.reduce((x, e) => x + Math.min(e[2], 4) * (Array.isArray(e[1]) ? 1.3 : 1), 0) / L, 0) / Math.max(1, plays.length);
+  const dens = Math.max(0.72, Math.min(1.35, Math.pow(Math.max(0.05, cover) / 0.6, -0.3)));
+  return (_songCache[k] = { plays, tracks, dens });
+}
+// each Shape has its own tone: a slightly different octave, brightness, EQ color and drum tuning
+function toneOf(def) {
+  const r = mulberry(strHash(def.id + '|tone')), role = SONG_ROLE[def.inst];
+  const melodic = !DRUM_ROLES.includes(role);
+  return { bright: 0.75 + r() * 0.6, pitch: 0.85 + r() * 0.35, eqF: 350 * Math.pow(2, r() * 3), eqG: -4 + r() * 8,
+    oct: melodic && (role === 'riff' || role === 'bell' || role === 'arp') && r() < 0.3 ? (r() < 0.5 ? 12 : -12) * (def.variant === 'epic' ? 0 : 1) : 0 };
+}
+
 // ===================== AUDIO ENGINE =====================
 const Audio = (() => {
   let ctx = null, master, musicBus, sfxBus, comp, revIn, revWet, dlyIn, dly, dlyFb, noiseBuf;
   const voices = new Map(); // uid -> {gain, send, dsend, def, hits:[], last:-9, lastVel:0, lastDur:0, prevFreq:0}
   let isle = null, step = 0, nextTime = 0, stepDur = 0.15, startTime = 0, running = false, timer = null;
   let preview = null; // {def, until, gain}
-  let secIdx = 0, secQ = [], heard = { idx: 0, arrange: false, t: 0 }, firstLoop = true;
+  let secQ = [], heard = { idx: 0, t: 0 };
   const LOOK = 0.14;
   const st = { musicVol: 0.8, sfxVol: 0.7 };
 
@@ -1069,54 +1269,54 @@ const Audio = (() => {
 
   // ---------- instruments ----------
   const I = {};
-  I.kick = (t, n, dur, v, out) => {
-    const o = osc('sine', 165, t, t + 0.5); o.frequency.exponentialRampToValueAtTime(46, t + 0.11);
+  I.kick = (t, n, dur, v, out, s) => { const P = (s && s.tp) || 1;
+    const o = osc('sine', 165 * P, t, t + 0.5); o.frequency.exponentialRampToValueAtTime(46 * P, t + 0.11);
     const g = gainEnv(t, 0.003, 1.1 * v, 0.02, 0.38); o.connect(g); g.connect(out);
     const nz = noiseSrc(t, 0.03), hp = filt('highpass', 3000), ng = gainEnv(t, 0.001, 0.25 * v, 0.003, 0.025); nz.connect(hp); hp.connect(ng); ng.connect(out);
   };
-  I.hat = (t, n, dur, v, out) => {
-    const open = n === 'o', nz = noiseSrc(t, open ? 0.3 : 0.08), hp = filt('highpass', 7200), bp = filt('peaking', 10000, 1); bp.gain.value = 6;
+  I.hat = (t, n, dur, v, out, s) => { const P = (s && s.tp) || 1;
+    const open = n === 'o', nz = noiseSrc(t, open ? 0.3 : 0.08), hp = filt('highpass', 7200 * P), bp = filt('peaking', 10000 * P, 1); bp.gain.value = 6;
     const g = gainEnv(t, 0.001, 0.5 * v, 0.005, open ? 0.22 : 0.045); nz.connect(hp); hp.connect(bp); bp.connect(g); g.connect(out);
   };
-  I.snare = (t, n, dur, v, out) => {
+  I.snare = (t, n, dur, v, out, s) => { const P = (s && s.tp) || 1;
     if (n === 'p') { // clap
       for (let k = 0; k < 3; k++) {
-        const tt = t + k * 0.011, nz = noiseSrc(tt, 0.2), bp = filt('bandpass', 1300, 1.2), g = gainEnv(tt, 0.001, 0.8 * v, 0.004, k === 2 ? 0.16 : 0.012);
+        const tt = t + k * 0.011, nz = noiseSrc(tt, 0.2), bp = filt('bandpass', 1300 * P, 1.2), g = gainEnv(tt, 0.001, 0.8 * v, 0.004, k === 2 ? 0.16 : 0.012);
         nz.connect(bp); bp.connect(g); g.connect(out);
       }
       return;
     }
-    const nz = noiseSrc(t, 0.25), bp = filt('bandpass', 2200, 0.8), g = gainEnv(t, 0.001, 0.75 * v, 0.01, 0.16); nz.connect(bp); bp.connect(g); g.connect(out);
-    const o = osc('triangle', 200, t, t + 0.2); o.frequency.exponentialRampToValueAtTime(150, t + 0.08); const og = gainEnv(t, 0.001, 0.6 * v, 0.01, 0.09); o.connect(og); og.connect(out);
+    const nz = noiseSrc(t, 0.25), bp = filt('bandpass', 2200 * P, 0.8), g = gainEnv(t, 0.001, 0.75 * v, 0.01, 0.16); nz.connect(bp); bp.connect(g); g.connect(out);
+    const o = osc('triangle', 200 * P, t, t + 0.2); o.frequency.exponentialRampToValueAtTime(150 * P, t + 0.08); const og = gainEnv(t, 0.001, 0.6 * v, 0.01, 0.09); o.connect(og); og.connect(out);
   };
-  I.tom = (t, n, dur, v, out) => {
-    const f = n === 'h' ? 220 : n === 'm' ? 150 : 100;
+  I.tom = (t, n, dur, v, out, s) => {
+    const f = (n === 'h' ? 220 : n === 'm' ? 150 : 100) * ((s && s.tp) || 1);
     const o = osc('sine', f * 1.6, t, t + 0.6); o.frequency.exponentialRampToValueAtTime(f, t + 0.12);
     const g = gainEnv(t, 0.002, 0.95 * v, 0.02, 0.4); o.connect(g); g.connect(out);
     const nz = noiseSrc(t, 0.05), bp = filt('bandpass', f * 4, 1), ng = gainEnv(t, 0.001, 0.2 * v, 0.004, 0.04); nz.connect(bp); bp.connect(ng); ng.connect(out);
   };
-  I.shaker = (t, n, dur, v, out) => {
-    const nz = noiseSrc(t, 0.1), bp = filt('bandpass', 6500, 1.5), g = ctx.createGain();
+  I.shaker = (t, n, dur, v, out, s) => {
+    const nz = noiseSrc(t, 0.1), bp = filt('bandpass', 6500 * ((s && s.tp) || 1), 1.5), g = ctx.createGain();
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.55 * v, t + 0.018); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
     nz.connect(bp); bp.connect(g); g.connect(out);
   };
-  I.bongo = (t, n, dur, v, out) => {
-    const f = n === 'h' ? 420 : 300;
+  I.bongo = (t, n, dur, v, out, s) => {
+    const f = (n === 'h' ? 420 : 300) * ((s && s.tp) || 1);
     const o = osc('sine', f * 1.35, t, t + 0.3); o.frequency.exponentialRampToValueAtTime(f, t + 0.03);
     const g = gainEnv(t, 0.001, 0.9 * v, 0.005, 0.17); o.connect(g); g.connect(out);
     const o2 = osc('triangle', f * 2.3, t, t + 0.1); const g2 = gainEnv(t, 0.001, 0.15 * v, 0.002, 0.04); o2.connect(g2); g2.connect(out);
   };
-  I.block = (t, n, dur, v, out) => {
+  I.block = (t, n, dur, v, out, s) => { const P = (s && s.tp) || 1;
     if (n === 'b') { // cowbell
-      const bp = filt('bandpass', 800, 3), g = gainEnv(t, 0.001, 0.4 * v, 0.01, 0.3);
-      [540, 800].forEach(f => { const o = osc('square', f, t, t + 0.4); o.connect(bp); }); bp.connect(g); g.connect(out); return;
+      const bp = filt('bandpass', 800 * P, 3), g = gainEnv(t, 0.001, 0.4 * v, 0.01, 0.3);
+      [540, 800].forEach(f => { const o = osc('square', f * P, t, t + 0.4); o.connect(bp); }); bp.connect(g); g.connect(out); return;
     }
-    const o = osc('sine', 1250, t, t + 0.1), o2 = osc('square', 1900, t, t + 0.05), bp = filt('bandpass', 1500, 4);
+    const o = osc('sine', 1250 * P, t, t + 0.1), o2 = osc('square', 1900 * P, t, t + 0.05), bp = filt('bandpass', 1500 * P, 4);
     const g = gainEnv(t, 0.001, 0.8 * v, 0.002, 0.06); o.connect(g); o2.connect(bp); bp.connect(g); g.connect(out);
   };
-  I.beatbox = (t, n, dur, v, out) => {
+  I.beatbox = (t, n, dur, v, out, s) => { const P = (s && s.tp) || 1;
     if (n === 'b') {
-      const o = osc('sine', 120, t, t + 0.3); o.frequency.exponentialRampToValueAtTime(55, t + 0.1);
+      const o = osc('sine', 120 * P, t, t + 0.3); o.frequency.exponentialRampToValueAtTime(55 * P, t + 0.1);
       const g = gainEnv(t, 0.004, 0.9 * v, 0.02, 0.18); o.connect(g); g.connect(out);
       const nz = noiseSrc(t, 0.05), lp = filt('bandpass', 400, 2), ng = gainEnv(t, 0.001, 0.4 * v, 0.01, 0.04); nz.connect(lp); lp.connect(ng); ng.connect(out);
     } else if (n === 'k') {
@@ -1314,19 +1514,28 @@ const Audio = (() => {
   const REV = { steeldrum:0.3, flute:0.45, brass:0.25, organ:0.6, whistle:0.5, gong:0.8, didg:0.15, clav:0.15, tuba:0.12, pad:0.5, bell:0.6, choir:0.8, voiceHigh:0.55, opera:0.5, theremin:0.5, swell:0.7, arp:0.3, lead:0.25, voiceHarm:0.3, marimba:0.25, pluck:0.25, stab:0.35, vocalSynth:0.3, voiceLow:0.15, snare:0.2, tom:0.2 };
   const DLY = { clav:0.15, steeldrum:0.15, whistle:0.2, arp:0.5, pluck:0.25, bell:0.2, glitch:0.35, stab:0.15, lead:0.12 };
 
-  function noteFor(off, chordDeg, I0, inst) {
+  function noteFor(off, chordDeg, I0, inst, oct) {
     const sc = I0.scale, idx = chordDeg + off, o = Math.floor(idx / 7), deg = ((idx % 7) + 7) % 7;
-    return I0.root + sc[deg] + 12 * o + (OCT[inst] || 0);
+    return I0.root + sc[deg] + 12 * o + (OCT[inst] || 0) + (oct || 0);
   }
+  // loudness of each instrument, measured offline (one note per beat, weighted like the ear hears it) so every Shape sits at a similar level
+  const LOUD = /*LOUD*/{aurielle:0.0434,banshelle:0.1034,bassoonix:0.7351,blobbess:0.1376,blocco:0.7112,bobble:0.2448,bongaroo:0.1248,bytestone:0.1202,carnivault:0.0842,celestar:0.2497,chronoliss:0.0725,circuitcrown:0.1099,clackle:0.0638,clocktri:0.0704,cobwick:0.1041,corruptus:0.2482,cryptling:0.0557,cubbit:0.0802,didgeroo:0.1561,dodecadon:0.1521,dreamweb:0.2150,echoshade:0.1442,elderspire:0.1351,fizzwick:0.0102,flutterby:0.2737,fractalith:0.1306,glitchling:0.1419,glitchloop:0.0731,gloobo:0.1877,gloopix:0.5180,grimwick:0.1099,grumblox:0.5918,hauntolith:0.1166,hexapella:0.1113,hexbloom:0.1305,howlbone:0.3006,jackolune:0.0918,jesterbyte:0.1504,kaleidrone:0.0789,kelpsong:0.1442,lanternox:0.0918,lulla:0.0669,lunette:0.1451,marquessa:0.1709,mobius:0.0939,monolith:0.0993,night_banshelle:0.2094,night_cobwick:0.4104,night_cryptling:0.1099,night_dreamweb:0.1013,night_grimwick:0.1013,night_howlbone:0.2072,night_jackolune:0.4812,night_lanternox:0.1018,night_lunette:0.3068,night_nightmoth:0.2975,night_phantasmo:0.0714,night_rattles:0.2555,night_skullwick:0.0823,night_spindle:0.0897,night_wickly:0.1521,nightmoth:0.1675,novastar:0.0787,nullvoid:0.1002,oddball:0.3012,organon:0.1826,phantasmo:0.1376,phantomarch:0.0865,pixelking:0.0514,polyphon:0.0780,prismatrix:0.0792,prismo:0.0773,rattles:0.0874,rumbletum:0.2050,runewhirl:0.1088,shatterheart:0.1375,skullwick:0.2529,snarlwave:0.5707,solara:0.1576,sovereign:0.7308,sparkplug:0.1069,spindle:0.1618,spiralord:0.1135,steamtrom:0.1141,throneheart:0.1655,tikki:0.0168,twinkla:0.1327,whirlo:0.1078,wickly:0.0820,wobbleknot:0.3008,zephyx:0.2080}/*END*/;
+  const ROLE_MUL = { kick:0.95, snare:0.85, hat:0.7, perc:0.85, beatbox:0.85, bass:0.82, drone:0.75, pad:0.72, organ:0.78, swell:0.75, gong:0.7, bell:0.9, arp:0.85, riff:0.95, comp:0.85, hum:0.85, mel:1.05, glide:1.0, brass:0.95 };
+  function volOf(def) { const m = LOUD[def.id] || LOUD[def.baseId]; return (m ? Math.min(1.8, LOUD_K / Math.pow(m, 0.72)) : 0.4) * (ROLE_MUL[SONG_ROLE[def.inst]] || 0.9); }
+  const LOUD_K = 0.092;
+  const _tone = {};
+  function toneFx(def) { return _tone[def.id] || (_tone[def.id] = toneOf(def)); }
+  function sFor(def) { const tn = toneFx(def); return { ...isle, bright: isle.bright * tn.bright, tp: tn.pitch }; }
+  function colorChain(def, dest) { const tn = toneFx(def), eq = ctx.createBiquadFilter(); eq.type = 'peaking'; eq.frequency.value = tn.eqF; eq.Q.value = 0.9; eq.gain.value = tn.eqG; eq.connect(dest); return eq; }
 
   // ---------- voices for monsters ----------
   function addVoice(uid, def) {
     if (!ctx || voices.has(uid)) return;
     const gain = ctx.createGain(); gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(1, ctx.currentTime + 0.6);
-    const g2 = ctx.createGain(); g2.gain.value = def.vol; gain.connect(g2); g2.connect(musicBus);
+    const g2 = ctx.createGain(); g2.gain.value = volOf(def); gain.connect(colorChain(def, g2)); g2.connect(musicBus);
     const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.08) * (isle ? isle.rev * 2.2 : 0.5); g2.connect(send); send.connect(revIn);
     const dsend = ctx.createGain(); dsend.gain.value = DLY[def.inst] || 0; g2.connect(dsend); dsend.connect(dlyIn);
-    voices.set(uid, { gain, g2, send, dsend, def, hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0, muted: false, dup: 1 });
+    voices.set(uid, { gain, g2, send, dsend, def, hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0, muted: false, dup: 1, s: isle ? sFor(def) : null });
   }
   function removeVoice(uid) {
     const v = voices.get(uid); if (!v) return;
@@ -1343,59 +1552,51 @@ const Audio = (() => {
     list.forEach(x => {
       addVoice(x.uid, SHAPE[x.id]); const v = voices.get(x.uid);
       if (v.muted !== !!x.muted) setMuted(x.uid, !!x.muted);
-      const dup = 1 / Math.sqrt(counts[x.id]), uv = x.vol == null ? 1 : x.vol; if (v.dup !== dup || v.uvol !== uv) { v.dup = dup; v.uvol = uv; if (!preview) v.g2.gain.setTargetAtTime(v.def.vol * dup * uv, ctx.currentTime, 0.1); }
+      const dup = 1 / Math.sqrt(counts[x.id]), uv = x.vol == null ? 1 : x.vol; if (v.dup !== dup || v.uvol !== uv) { v.dup = dup; v.uvol = uv; if (!preview) v.g2.gain.setTargetAtTime(volOf(v.def) * dup * uv, ctx.currentTime, 0.1); }
     });
   }
 
-  // pre-index patterns by step
-  const PIDX = {};
-  SHAPES.forEach(s => { const a = Array.from({ length: 64 }, () => []); s.pat.forEach(e => a[e[0] % 64].push(e)); PIDX[s.id] = a; });
+  let verse = 0, L = 64; const verseCount = () => (isle && isle.verses ? isle.verses.length : 3);
 
   function setIsland(I0) {
-    isle = { ...I0, chip: I0.theme === 'cave' };
+    isle = { ...I0, chip: !!I0.chip }; L = (isle.bar || 16) * 4;
     if (!ctx) return;
     stepDur = 60 / isle.bpm / 4;
-    for (const v of voices.values()) v.send.gain.value = (REV[v.def.inst] || 0.08) * isle.rev * 2.2;
+    for (const v of voices.values()) { v.send.gain.value = (REV[v.def.inst] || 0.08) * isle.rev * 2.2; v.s = sFor(v.def); v.g2.gain.setTargetAtTime(volOf(v.def) * v.dup * (v.uvol == null ? 1 : v.uvol), ctx.currentTime, 0.1); }
     dly.delayTime.setValueAtTime(stepDur * 3, ctx.currentTime);
-    step = 0; nextTime = ctx.currentTime + 0.12; startTime = nextTime; secIdx = 0; firstLoop = true; secQ = []; heard = { idx: 0, arrange: false, t: nextTime };
+    step = 0; verse = 0; nextTime = ctx.currentTime + 0.12; startTime = nextTime; secQ = []; heard = { idx: 0, t: nextTime };
   }
 
-  function playEvents(def, evs, t, out, vo, gainMul) {
-    const chordDeg = isle.prog[Math.floor(step / 16) % 4];
+  function playEvents(def, evs, t, out, vo, gainMul, vi, st, s) {
+    const chordDeg = isle.verses[vi].prog[Math.floor(st / (isle.bar || 16)) % 4], oct = toneFx(def).oct;
     for (const e of evs) {
       const [, off, len, vel] = e, dur = len * stepDur;
-      let notes;
-      if (typeof off === 'string') notes = off; else notes = (Array.isArray(off) ? off : [off]).map(o => noteFor(o, chordDeg, isle, def.inst));
-      try { I[def.inst](t, notes, dur, vel * (gainMul || 1), out, isle, vo); } catch (err) { console.warn(err); }
+      let notes, vm = 1;
+      if (typeof off === 'string') notes = off; else { notes = (Array.isArray(off) ? off : [off]).map(o => noteFor(o, chordDeg, isle, def.inst, oct)); vm = 1 / Math.sqrt(notes.length); }
+      try { I[def.inst](t, notes, dur, vel * vm * (gainMul || 1), out, s || sFor(def), vo); } catch (err) { console.warn(err); }
       if (vo) vo.hits.push([t, vel, dur]);
     }
   }
 
-  function sectionFlags() {
-    const sec = SONG[secIdx]; let n = 0, any = false;
-    for (const vo of voices.values()) if (!vo.muted) { n++; if (vo.def.sec.includes(sec)) any = true; }
-    return { sec, arrange: n >= ARRANGE_MIN && any };
-  }
   function crash(t) {
     const nz = noiseSrc(t, 2), hp = filt('highpass', 4500), g = gainEnv(t, 0.002, 0.22, 0.01, 1.6);
     nz.connect(hp); hp.connect(g); g.connect(musicBus); const sg = ctx.createGain(); sg.gain.value = 0.5; g.connect(sg); sg.connect(revIn);
   }
   function scheduleStep(t) {
     if (step === 0) {
-      if (!firstLoop) secIdx = (secIdx + 1) % SONG.length; firstLoop = false;
-      const f0 = sectionFlags(); secQ.push({ t, idx: secIdx, arrange: f0.arrange });
-      if (f0.arrange && f0.sec === 'C' && SONG[(secIdx + SONG.length - 1) % SONG.length] !== 'C') crash(t);
+      secQ.push({ t, idx: verse });
+      if (verse === 0 && voices.size >= 4 && t > startTime + 1) crash(t); // a cymbal when the song comes back around
     }
-    const F = sectionFlags();
     for (const [uid, vo] of voices) {
       if (vo.muted) continue;
-      vo.resting = F.arrange && !vo.def.sec.includes(F.sec);
-      if (vo.resting) continue;
-      const evs = PIDX[vo.def.id][step]; if (evs.length) playEvents(vo.def, evs, t, vo.gain, vo);
+      const S0 = songOf(vo.def, isle), tr = S0.tracks[verse];
+      vo.resting = !tr;
+      if (!tr) continue;
+      const evs = tr.idx[step]; if (evs.length) playEvents(vo.def, evs, t, vo.gain, vo, 1, verse, step, vo.s);
     }
     if (preview) {
       if (ctx.currentTime > preview.until) { stopPreview(); }
-      else { const evs = PIDX[preview.def.id][step]; if (evs.length) playEvents(preview.def, evs, t, preview.gain, preview.vo); }
+      else { const pv = preview.verse, tr = songOf(preview.def, isle).tracks[pv], evs = tr ? tr.idx[step] : []; if (evs.length) playEvents(preview.def, evs, t, preview.gain, preview.vo, 1, pv, step); }
     }
   }
   function tick() {
@@ -1404,7 +1605,7 @@ const Audio = (() => {
     while (nextTime < ctx.currentTime + LOOK) {
       const sw = (step % 2 === 1) ? isle.swing * stepDur : 0;
       scheduleStep(nextTime + sw);
-      nextTime += stepDur; step = (step + 1) % 64;
+      nextTime += stepDur; step = (step + 1) % L; if (step === 0) verse = (verse + 1) % verseCount();
     }
   }
   function start() { if (running) return; running = true; timer = setInterval(tick, 25); }
@@ -1421,28 +1622,29 @@ const Audio = (() => {
     return { since, vel: v.lastVel, dur: v.lastDur, env: since < 0 ? 0 : Math.exp(-since * 9) * v.lastVel, sustain: since < v.lastDur ? v.lastVel : Math.exp(-(since - v.lastDur) * 8) * v.lastVel * (since < 4 ? 1 : 0) };
   }
 
-  function startPreview(def, opt = {}) { // opt.loop: keep playing until stopped; opt.solo: silence the rest of the island
-    if (!ctx) return;
+  function startPreview(def, opt = {}) { // opt.loop: keep playing until stopped; opt.solo: silence the rest of the island; opt.verse: which track
+    if (!ctx || !isle) return;
     stopPreview();
-    const gain = ctx.createGain(); gain.gain.value = def.vol * 1.1; gain.connect(musicBus);
-    const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.1) * 0.8; gain.connect(send); send.connect(revIn);
-    preview = { def, gain, until: opt.loop ? Infinity : ctx.currentTime + stepDur * 64 + 0.2, vo: { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 } };
+    const pin = ctx.createGain(); pin.gain.value = volOf(def) * 1.1; pin.connect(musicBus); const g0 = ctx.createGain(); g0.connect(colorChain(def, pin));
+    const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.1) * 0.8; pin.connect(send); send.connect(revIn);
+    const S0 = songOf(def, isle), pv = opt.verse != null && S0.tracks[opt.verse] ? opt.verse : S0.plays[0];
+    preview = { def, gain: g0, out: pin, verse: pv, until: opt.loop ? Infinity : ctx.currentTime + stepDur * L + 0.2, vo: { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 } };
     musicBus.gain.setTargetAtTime(st.musicVol, ctx.currentTime, 0.05);
-    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup * (v.uvol == null ? 1 : v.uvol) * (opt.solo ? 0 : 0.25), ctx.currentTime, 0.1);
+    for (const v of voices.values()) v.g2.gain.setTargetAtTime(volOf(v.def) * v.dup * (v.uvol == null ? 1 : v.uvol) * (opt.solo ? 0 : 0.25), ctx.currentTime, 0.1);
   }
   // one note of a Shape's sound (its first note), for the Studio
   function playOne(def) {
-    if (!ctx) return; const t = ctx.currentTime + 0.03, e = def.pat[0] || [0, 0, 2, 0.8];
-    const gain = ctx.createGain(); gain.gain.value = def.vol * 1.1; gain.connect(musicBus);
+    if (!ctx || !isle) return; const t = ctx.currentTime + 0.03, S0 = songOf(def, isle), v0 = S0.plays[0], e = S0.tracks[v0].evs[0] || [0, 0, 2, 0.8];
+    const gain = ctx.createGain(); gain.gain.value = volOf(def) * 1.1; gain.connect(musicBus); const inp = colorChain(def, gain);
     const send = ctx.createGain(); send.gain.value = (REV[def.inst] || 0.1) * 0.8; gain.connect(send); send.connect(revIn);
-    playEvents(def, [[0, e[1], Math.max(2, e[2]), 0.9]], t, gain, { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 });
+    playEvents(def, [[0, e[1], Math.max(2, e[2]), 0.9]], t, inp, { hits: [], last: -9, lastVel: 0, lastDur: 0.2, prevFreq: 0 }, 1, v0, e[0]);
     setTimeout(() => { try { gain.disconnect(); send.disconnect(); } catch (e2) {} }, 4000);
   }
-  function stepNow() { return ctx && isle ? Math.floor(((ctx.currentTime - startTime) / stepDur) % 64 + 64) % 64 : 0; } // the step being heard right now
+  function tracksOf(def) { return isle ? songOf(def, isle).plays : []; } // which verses (tracks) a Shape plays on this island
   function stopPreview() {
     if (!preview) return; const p = preview; preview = null;
-    p.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => { try { p.gain.disconnect(); } catch (e) {} }, 800);
-    for (const v of voices.values()) v.g2.gain.setTargetAtTime(v.def.vol * v.dup * (v.uvol == null ? 1 : v.uvol), ctx.currentTime, 0.2);
+    p.out.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => { try { p.out.disconnect(); } catch (e) {} }, 800);
+    for (const v of voices.values()) v.g2.gain.setTargetAtTime(volOf(v.def) * v.dup * (v.uvol == null ? 1 : v.uvol), ctx.currentTime, 0.2);
   }
   function previewHit() {
     if (!preview || !ctx) return 0; const v = preview.vo, now = ctx.currentTime;
@@ -1452,8 +1654,8 @@ const Audio = (() => {
 
   function section() {
     if (ctx) while (secQ.length && secQ[0].t <= ctx.currentTime) heard = secQ.shift();
-    const loopLen = stepDur * 64, prog = ctx ? Math.max(0, Math.min(1, (ctx.currentTime - heard.t) / loopLen)) : 0;
-    return { name: SECTION_NAME[SONG[heard.idx]], key: SONG[heard.idx], idx: heard.idx, arrange: heard.arrange, prog };
+    const loopLen = stepDur * L, prog = ctx ? Math.max(0, Math.min(1, (ctx.currentTime - heard.t) / loopLen)) : 0;
+    return { name: 'Verse ' + (heard.idx + 1), idx: heard.idx, prog };
   }
   function isResting(uid) { const v = voices.get(uid); return !!(v && v.resting); }
   function setMusicVol(x) { st.musicVol = x; if (musicBus) musicBus.gain.setTargetAtTime(x, ctx.currentTime, 0.05); }
@@ -1480,7 +1682,26 @@ const Audio = (() => {
     }
   }
 
-  return { init, resume, start, setIsland, section, isResting, get musicBus() { return musicBus; }, syncVoices, setMuted, beatPhase, hitInfo, startPreview, stopPreview, previewHit, playOne, stepNow,
+  // dev tool: render every Shape's real part on its home island and measure how loud it is (fills the LOUD table)
+  async function calibrate() {
+    const keep = [ctx, noiseBuf, isle, stepDur, L], out = {}, sr = 16000;
+    const home = id => ISLANDS.find(I => !I.special && I.commons.includes(id)) || ISLANDS.find(I => I.commons.includes(id)) || ISLAND.diamond;
+    for (const def of SHAPES.filter(s => !s.variant || s.variant === 'common' || s.variant === 'ruin' || s.variant === 'night')) {
+      const I0 = home(def.baseId), secs = 60 / I0.bpm / 4 * (I0.bar || 16) * 4 + 1.5;
+      const oc = new OfflineAudioContext(1, Math.ceil(sr * secs), sr); ctx = oc; isle = { ...I0 }; stepDur = 60 / I0.bpm / 4; L = (I0.bar || 16) * 4;
+      noiseBuf = oc.createBuffer(1, sr, sr); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const hp = oc.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 90; const sh = oc.createBiquadFilter(); sh.type = 'highshelf'; sh.frequency.value = 1500; sh.gain.value = 4;
+      const g = oc.createGain(); g.connect(hp); hp.connect(sh); sh.connect(oc.destination);
+      const S0 = songOf(def, isle), v0 = S0.plays[0], vo = { hits: [], prevFreq: 0 };
+      S0.tracks[v0].evs.forEach(e => { try { playEvents(def, [e], 0.05 + e[0] * stepDur, g, vo, 1, v0, e[0]); } catch (er) {} });
+      const buf = await oc.startRendering(), ch = buf.getChannelData(0); let sum = 0, n = 0; const W = 1600;
+      // loudness = average of the louder half of short windows, so rests don't count as "quiet"
+      const wins = []; for (let i = 0; i + W <= ch.length; i += W) { let s2 = 0; for (let j = i; j < i + W; j++) s2 += ch[j] * ch[j]; wins.push(s2 / W); }
+      wins.sort((x, y) => y - x); const top = wins.slice(0, Math.max(1, wins.length >> 1)); out[def.id] = Math.sqrt(top.reduce((x, y) => x + y, 0) / top.length);
+    }
+    [ctx, noiseBuf, isle, stepDur, L] = keep; return out;
+  }
+  return { init, resume, calibrate, start, setIsland, section, isResting, get musicBus() { return musicBus; }, syncVoices, setMuted, beatPhase, hitInfo, startPreview, stopPreview, previewHit, playOne, tracksOf, get previewVerse() { return preview ? preview.verse : null; },
            setMusicVol, setSfxVol, sfx, get ctx() { return ctx; }, get previewing() { return preview ? preview.def.id : null; }, st };
 })();
 
@@ -3847,35 +4068,22 @@ const UI = (() => {
   // ---------- STUDIO: listen to each Shape on this island on its own ----------
   let studioSel = null, studioRaf = 0;
   const studioOpen = () => modalKind === 'studio';
-  function trackCanvas(def, w, h) { // the Shape's 64-step track as note blocks, high notes higher; drums sit in the middle
-    const cv = document.createElement('canvas'), dpr = Math.min(2, devicePixelRatio || 1); cv.width = w * dpr; cv.height = h * dpr; cv.style.width = w + 'px'; cv.style.height = h + 'px'; cv.className = 'trackcv';
-    const notes = def.pat.flatMap(e => (Array.isArray(e[1]) ? e[1] : [e[1]]).map(n => ({ st: e[0] % 64, n: typeof n === 'number' ? n : null, len: Math.max(1, e[2] || 1), v: e[3] || 0.8 })));
-    const nums = notes.filter(x => x.n != null).map(x => x.n), lo = nums.length ? Math.min(...nums) : 0, hi = nums.length ? Math.max(...nums) : 1;
-    cv._draw = playStep => { const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
-      c.fillStyle = 'rgba(0,0,0,0.3)'; c.fillRect(0, 0, w, h); const sw = w / 64;
-      for (let i = 0; i <= 64; i++) { c.fillStyle = i % 16 === 0 ? 'rgba(255,255,255,0.35)' : i % 4 === 0 ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.04)'; c.fillRect(i * sw, 0, 1, h); }
-      const col = ELEMENTS[def.el[0]] ? ELEMENTS[def.el[0]].color : '#ffd23a';
-      notes.forEach(x => { const y = x.n == null ? h / 2 - 6 : h - 10 - (hi === lo ? 0.5 : (x.n - lo) / (hi - lo)) * (h - 28) - 6, on = playStep != null && playStep >= x.st && playStep < x.st + x.len;
-        c.globalAlpha = 0.55 + x.v * 0.45; c.fillStyle = on ? '#ffffff' : col; c.strokeStyle = '#1a1028'; c.lineWidth = 1.5; c.beginPath(); c.roundRect(x.st * sw + 1, y, Math.max(sw * x.len - 2, 4), 12, 3); c.fill(); c.stroke(); });
-      c.globalAlpha = 1; if (playStep != null) { c.fillStyle = '#ff4a6a'; c.fillRect(playStep * sw + sw / 2 - 1.5, 0, 3, h); } };
-    cv._draw(null); return cv;
-  }
   function openStudio(keep) {
     const ids = [...new Set(isl().monsters.filter(m => !m.statue).map(m => m.id))];
     if (studioSel && !ids.includes(studioSel)) studioSel = null; if (!studioSel) studioSel = ids[0] || null;
-    const d = studioSel && SHAPE[studioSel], playing = d && Audio.previewing === d.id;
+    const d = studioSel && SHAPE[studioSel], playing = d && Audio.previewing === d.id, pv = playing ? Audio.previewVerse : null;
+    const tracks = d ? Audio.tracksOf(d) : [];
     const body = !ids.length ? '<div class="info center" style="padding:24px">No Shapes on this island yet. Hatch some, then come back to listen to them one by one.</div>'
       : `<div class="studio"><div class="studio-list">${ids.map(id => `<div class="wcard pick ${id === studioSel ? 'sel' : ''}" data-stsel="${id}"><div class="wname">${SHAPE[id].name}</div><div class="wart"><div data-portrait="${id}" data-size="64"></div></div></div>`).join('')}</div>
         <div class="studio-main"><div class="row" style="gap:14px;align-items:center"><div class="stage" style="width:110px;height:110px;flex:none"><div data-portrait="${d.id}" data-size="104"></div></div><div style="flex:1;min-width:0"><div class="big-name" style="text-align:left">${d.name}</div><div class="muted">${elBadges(d.el)}</div>
-          <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn blue" data-stone>🔊 Play sound</button><button class="btn ${playing ? 'red' : 'green'}" data-sttrack>${playing ? '■ Stop track' : '▶ Play track'}</button></div></div></div>
-          <div class="sec">Track</div><div id="st-track"></div><div class="muted" style="margin-top:6px">${playing ? 'Playing on its own. The rest of the island is quiet until you stop.' : 'Play track loops this Shape\'s part by itself.'}</div></div></div>`;
+          <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn blue" data-stone>🔊 Play sound</button></div></div></div>
+          <div class="sec">Tracks</div><div class="row" style="gap:10px;flex-wrap:wrap">${tracks.map((v, k) => `<button class="btn ${pv === v ? 'red' : 'green'}" data-sttrack="${v}">${pv === v ? '■' : '▶'} Track ${k + 1}</button>`).join('')}</div>
+          <div class="muted" style="margin-top:8px">${playing ? 'Playing on its own. The rest of the island is quiet until you stop.' : 'Tap a track to loop it by itself.'}</div></div></div>`;
     if (keep && modalKind === 'studio') setBody(body); else open('studio', 'Studio', '#5a4a8a', null, body);
-    const tw = Math.min(560, (modal.querySelector('.studio-main') || modal).clientWidth - 4), host = modal.querySelector('#st-track');
-    let cv = null; if (host && d) { cv = trackCanvas(d, Math.max(240, tw), 110); host.appendChild(cv); }
-    cancelAnimationFrame(studioRaf); const loop = () => { if (modalKind !== 'studio') { Audio.stopPreview(); return; } if (cv) cv._draw(Audio.previewing === (d && d.id) ? Audio.stepNow() : null); studioRaf = requestAnimationFrame(loop); }; loop();
-    modal.querySelectorAll('[data-stsel]').forEach(el => el.onclick = () => { Audio.sfx('tap'); const was = Audio.previewing; studioSel = el.dataset.stsel; if (was) Audio.startPreview(SHAPE[studioSel], { loop: true, solo: true }); openStudio(true); });
+    cancelAnimationFrame(studioRaf); const loop = () => { if (modalKind !== 'studio') { Audio.stopPreview(); return; } studioRaf = requestAnimationFrame(loop); }; loop();
+    modal.querySelectorAll('[data-stsel]').forEach(el => el.onclick = () => { Audio.sfx('tap'); Audio.stopPreview(); studioSel = el.dataset.stsel; openStudio(true); });
     const one = modal.querySelector('[data-stone]'); if (one) one.onclick = () => Audio.playOne(d);
-    const tr = modal.querySelector('[data-sttrack]'); if (tr) tr.onclick = () => { if (Audio.previewing === d.id) Audio.stopPreview(); else Audio.startPreview(d, { loop: true, solo: true }); openStudio(true); };
+    modal.querySelectorAll('[data-sttrack]').forEach(el => el.onclick = () => { const v = +el.dataset.sttrack; if (Audio.previewing === d.id && Audio.previewVerse === v) Audio.stopPreview(); else Audio.startPreview(d, { loop: true, solo: true, verse: v }); openStudio(true); });
   }
 
   // ---------- SYNTHESIZER ----------
