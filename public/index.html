@@ -1061,7 +1061,9 @@ function songVerses(def, I) {
 // ---------- the composer ----------
 function composeVerse(def, I, vi) {
   const B = I.bar || 16, L = B * 4, beat = 4, nb = B / 4, verse = I.verses[vi], e = verse.e, role = SONG_ROLE[def.inst] || 'riff';
-  const R = mulberry(strHash(def.baseId + '|' + I.id)), rv = mulberry(strHash(def.baseId + '|' + I.id + '|' + vi)), ev = [];
+  // every verse gets brand-new rhythms and motifs (seeded per verse), then a feel of its own: main groove, lift, breakdown or finale
+  const R = mulberry(strHash(def.baseId + '|' + I.id + '|m' + vi)), rv = mulberry(strHash(def.baseId + '|' + I.id + '|' + vi)), ev = [];
+  const kind = verse.kind || ['main', 'lift', 'break', 'finale'][vi] || 'main';
   const add = (st, n, len, vel) => { if (st >= 0 && st < L) ev.push([st, n, Math.max(1, len), Math.max(0.15, Math.min(1, vel))]); };
   const waltz = I.groove === 'waltz', half = I.groove === 'half' || I.groove === 'march';
   const beats = [...Array(nb).keys()].map(k => k * beat);
@@ -1186,7 +1188,35 @@ function composeVerse(def, I, vi) {
       break;
     }
   }
-  return ev.sort((a, b) => a[0] - b[0]);
+  return verseFeel(ev, kind, role, B, L, def).sort((a, b) => a[0] - b[0]);
+}
+const _up = (n, k) => typeof n === 'number' ? n + k : Array.isArray(n) ? n.map(x => x + k) : n;
+function verseFeel(ev, kind, role, B, L, def) {
+  const melodic = ['mel', 'glide', 'riff', 'arp', 'bell', 'brass', 'comp'].includes(role), flip = strHash(def.baseId + 'flip') % 2;
+  if (kind === 'lift') { // brighter and busier: melodies jump up an octave, drums double up
+    if (melodic && (role !== 'comp' || flip)) ev = ev.map(e => [e[0], _up(e[1], 7), e[2], e[3]]);
+    if (role === 'hat') { const s = new Set(ev.map(e => e[0])); for (let i = 1; i < L; i += 2) if (!s.has(i) && i % 4 === 3) ev.push([i, def.inst === 'shaker' ? 'x' : 'c', 1, 0.35]); }
+    if (role === 'kick') ev.push(...[...Array(4).keys()].map(b => [b * B + B - 2, 'k', 1, 0.55]));
+    if (role === 'bass') ev = ev.flatMap(e => e[2] >= 4 && typeof e[1] === 'number' ? [[e[0], e[1], 2, e[3]], [e[0] + 2, e[1] + 7, 2, e[3] * 0.8]] : [e]);
+  } else if (kind === 'break') { // half-time breakdown: long notes, few drums, lots of space
+    if (role === 'kick') ev = ev.filter(e => e[0] % (B * 2) === 0);
+    else if (role === 'snare') ev = [...Array(4).keys()].filter(b => b % 2 === 1).map(b => [b * B + B / 2, 's', 1, 0.8]);
+    else if (role === 'hat') ev = ev.filter(e => e[0] % 4 === 0).map(e => [e[0], e[1] === 'x' ? 'x' : 'c', 1, e[0] % 8 === 0 ? 0.5 : 0.3]);
+    else if (role === 'perc' || role === 'beatbox') ev = ev.filter(e => e[0] % 4 === 0 && e[0] % B < B / 2);
+    else if (role === 'bass') ev = [...Array(4).keys()].flatMap(b => flip ? [[b * B, 0, B - 2, 0.75], [b * B + B - 2, 4, 2, 0.5]] : [[b * B, 0, B, 0.75]]);
+    else if (role === 'drone') ev = [[0, 0, B * 2, 0.75], [B * 2, 0, B * 2, 0.7]];
+    else if (role === 'hum') ev = [...Array(4).keys()].flatMap(b => [[b * B, [0, 4], B / 2, 0.7], [b * B + B / 2, [2, 4], B / 2, 0.55]]);
+    else if (role === 'comp') ev = [...Array(4).keys()].map(b => [b * B + (flip ? 0 : B / 2), (ev.find(x => Array.isArray(x[1])) || [0, [0, 2, 4]])[1], B / 2, 0.6]);
+    else if (melodic) { // keep the notes on the beat and let them ring
+      let keep = ev.filter(e => e[0] % 4 === 0); if (keep.length < 2) keep = [...new Map(ev.map(e => [Math.floor(e[0] / 8), [Math.floor(e[0] / 8) * 8, e[1], e[2], e[3]]])).values()]; ev = keep.map((e, i) => [e[0], role === 'riff' || role === 'arp' ? _up(e[1], -7 * flip) : e[1], Math.max(e[2], Math.min(8, (keep[i + 1] ? keep[i + 1][0] : L) - e[0])), e[3] * 0.85]);
+      if (role === 'arp') ev = ev.filter(e => e[0] % 8 === 0);
+    }
+  } else if (kind === 'finale') { // everything at once: octave doubles and a big fill at the end
+    if (melodic && (role === 'comp' || !flip)) ev = ev.map(e => [e[0], _up(e[1], 7), e[2], e[3]]);
+    if (melodic && flip) ev = ev.concat(ev.filter(e => e[0] >= L / 2).map(e => [e[0], _up(e[1], 7), e[2], e[3] * 0.6]));
+    if (role === 'snare' || role === 'perc') for (let s = L - B / 2; s < L; s++) if (s % 2 === 0 || s >= L - 4) ev.push([s, role === 'snare' ? 's' : (def.inst === 'tom' ? 'm' : def.inst === 'bongo' ? 'h' : def.inst === 'block' ? 'w' : 'k'), 1, 0.4 + (s - (L - B / 2)) / B]);
+  }
+  return ev;
 }
 
 // per Shape and island: its tracks (verse index -> events, indexed by step), cached
@@ -1519,7 +1549,7 @@ const Audio = (() => {
     return I0.root + sc[deg] + 12 * o + (OCT[inst] || 0) + (oct || 0);
   }
   // loudness of each instrument, measured offline (one note per beat, weighted like the ear hears it) so every Shape sits at a similar level
-  const LOUD = /*LOUD*/{aurielle:0.0434,banshelle:0.1034,bassoonix:0.7351,blobbess:0.1376,blocco:0.7112,bobble:0.2448,bongaroo:0.1248,bytestone:0.1202,carnivault:0.0842,celestar:0.2497,chronoliss:0.0725,circuitcrown:0.1099,clackle:0.0638,clocktri:0.0704,cobwick:0.1041,corruptus:0.2482,cryptling:0.0557,cubbit:0.0802,didgeroo:0.1561,dodecadon:0.1521,dreamweb:0.2150,echoshade:0.1442,elderspire:0.1351,fizzwick:0.0102,flutterby:0.2737,fractalith:0.1306,glitchling:0.1419,glitchloop:0.0731,gloobo:0.1877,gloopix:0.5180,grimwick:0.1099,grumblox:0.5918,hauntolith:0.1166,hexapella:0.1113,hexbloom:0.1305,howlbone:0.3006,jackolune:0.0918,jesterbyte:0.1504,kaleidrone:0.0789,kelpsong:0.1442,lanternox:0.0918,lulla:0.0669,lunette:0.1451,marquessa:0.1709,mobius:0.0939,monolith:0.0993,night_banshelle:0.2094,night_cobwick:0.4104,night_cryptling:0.1099,night_dreamweb:0.1013,night_grimwick:0.1013,night_howlbone:0.2072,night_jackolune:0.4812,night_lanternox:0.1018,night_lunette:0.3068,night_nightmoth:0.2975,night_phantasmo:0.0714,night_rattles:0.2555,night_skullwick:0.0823,night_spindle:0.0897,night_wickly:0.1521,nightmoth:0.1675,novastar:0.0787,nullvoid:0.1002,oddball:0.3012,organon:0.1826,phantasmo:0.1376,phantomarch:0.0865,pixelking:0.0514,polyphon:0.0780,prismatrix:0.0792,prismo:0.0773,rattles:0.0874,rumbletum:0.2050,runewhirl:0.1088,shatterheart:0.1375,skullwick:0.2529,snarlwave:0.5707,solara:0.1576,sovereign:0.7308,sparkplug:0.1069,spindle:0.1618,spiralord:0.1135,steamtrom:0.1141,throneheart:0.1655,tikki:0.0168,twinkla:0.1327,whirlo:0.1078,wickly:0.0820,wobbleknot:0.3008,zephyx:0.2080}/*END*/;
+  const LOUD = /*LOUD*/{aurielle:0.1118,banshelle:0.1037,bassoonix:0.8199,blobbess:0.1376,blocco:0.7225,bobble:0.2449,bongaroo:0.1329,bytestone:0.1191,carnivault:0.0823,celestar:0.2497,chronoliss:0.0735,circuitcrown:0.1106,clackle:0.0653,clocktri:0.0771,cobwick:0.1064,corruptus:0.2418,cryptling:0.0514,cubbit:0.0511,didgeroo:0.1561,dodecadon:0.1521,dreamweb:0.1456,echoshade:0.2267,elderspire:0.1444,fizzwick:0.0101,flutterby:0.2737,fractalith:0.1303,glitchling:0.1419,glitchloop:0.0731,gloobo:0.2174,gloopix:0.5180,grimwick:0.1112,grumblox:0.5239,hauntolith:0.1007,hexapella:0.1189,hexbloom:0.1293,howlbone:0.3006,jackolune:0.0927,jesterbyte:0.1349,kaleidrone:0.0810,kelpsong:0.1404,lanternox:0.0917,lulla:0.0669,lunette:0.1451,marquessa:0.1709,mobius:0.0939,monolith:0.0993,night_banshelle:0.2193,night_cobwick:0.5091,night_cryptling:0.1114,night_dreamweb:0.0652,night_grimwick:0.1166,night_howlbone:0.1718,night_jackolune:0.6300,night_lanternox:0.0953,night_lunette:0.3068,night_nightmoth:0.2975,night_phantasmo:0.1175,night_rattles:0.2558,night_skullwick:0.0821,night_spindle:0.0927,night_wickly:0.1521,nightmoth:0.1675,novastar:0.0634,nullvoid:0.1052,oddball:0.3012,organon:0.1687,phantasmo:0.1376,phantomarch:0.0689,pixelking:0.0504,polyphon:0.0780,prismatrix:0.0792,prismo:0.0772,rattles:0.0871,rumbletum:0.2294,runewhirl:0.0932,shatterheart:0.1375,skullwick:0.2484,snarlwave:0.6230,solara:0.1576,sovereign:0.8133,sparkplug:0.1258,spindle:0.1680,spiralord:0.1306,steamtrom:0.0948,throneheart:0.1406,tikki:0.0165,twinkla:0.1342,whirlo:0.1131,wickly:0.0656,wobbleknot:0.3008,zephyx:0.1081}/*END*/;
   const ROLE_MUL = { kick:0.95, snare:0.85, hat:0.7, perc:0.85, beatbox:0.85, bass:0.82, drone:0.75, pad:0.72, organ:0.78, swell:0.75, gong:0.7, bell:0.9, arp:0.85, riff:0.95, comp:0.85, hum:0.85, mel:1.05, glide:1.0, brass:0.95 };
   function volOf(def) { const m = LOUD[def.id] || LOUD[def.baseId]; return (m ? Math.min(1.8, LOUD_K / Math.pow(m, 0.72)) : 0.4) * (ROLE_MUL[SONG_ROLE[def.inst]] || 0.9); }
   const LOUD_K = 0.092;
