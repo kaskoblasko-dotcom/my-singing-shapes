@@ -2760,6 +2760,8 @@ const Admin = {
   spawnEgg(id) { const I0 = isl(); if (I0.hatch.length >= hatchSlots()) { Audio.sfx('error'); return UI.toast('Hatchery is full', 'bad'); } I0.hatch.push({ id, start: now() - 1000, end: now() }); markDirty(); UI.toast(`${SHAPE[id].name} egg added (ready to hatch)`, 'good'); },
   spawnNow(id) { const I0 = isl(); const p = findFreeSpot(); I0.monsters.push({ uid: S.uid++, id, x: p.x, y: p.y, level: 1, feeds: 0, last: now(), muted: false }); const first = !S.discovered[id]; S.discovered[id] = true; markFound(id); syncAudio(); FX.burst(p.x, p.y - 50, 'spark', 14); Audio.sfx(first ? 'discover' : 'place'); markDirty(); UI.toast(`${SHAPE[id].name} placed`, 'good'); },
   clearIsland() { const I0 = isl(); I0.monsters = []; pruneCopies(); I0.structs.forEach(s => s.br = null); syncAudio(); markDirty(); UI.toast('Removed all Shapes from this island'); },
+  completeStatue(uid) { const m = hauntStatues().find(x => x.uid === uid); if (!m) return UI.toast('That statue is already awake', 'bad'); wakeStatue(m); markDirty(); },
+  completeStatues() { const list = hauntStatues(); if (!list.length) return UI.toast('No statues on Eclipse Island', 'bad'); list.forEach(m => wakeStatue(m, true)); markDirty(); Audio.sfx('discover'); UI.toast(`Woke up ${list.length} statue${list.length > 1 ? 's' : ''} on Eclipse Island`, 'good'); },
   clearDecos() { isl().decos = []; markDirty(); UI.toast('Removed all decorations'); },
 };
 
@@ -2864,12 +2866,17 @@ function teleport(m, dest) {
 function hauntStatues() { const H = S.islands.haunt; return H ? H.monsters.filter(m => m.statue) : []; }
 function zapTargets(eggId) { const b = SHAPE[eggId].baseId; return hauntStatues().filter(m => zapNeeds(m.id).includes(b) && !m.statue.got.includes(b)).sort((x, y) => y.statue.got.length - x.statue.got.length); }
 function canZapFrom(iid) { return !ISLAND[iid].special && !!S.unlocked.haunt; } // only the 5 main islands
+function wakeStatue(m, quiet) {
+  m.statue = null; m.last = now(); if (!S.discovered[m.id] && !quiet) setTimeout(() => UI.discovered(m.id), 400); S.discovered[m.id] = true; markFound(m.id, 'haunt');
+  if (!quiet) UI.toast(`${SHAPE[m.id].name} woke up on Eclipse Island!`, 'good'); addXP(100 * SHAPE[m.id].el.length);
+  if (S.current === 'haunt') syncAudio();
+}
 function zapEgg(idx, statueUid) {
   const I0 = isl(), e = I0.hatch[idx]; if (!e || !canZapFrom(S.current)) return false;
   const m = hauntStatues().find(x => x.uid === statueUid), b = SHAPE[e.id].baseId; if (!m || !zapNeeds(m.id).includes(b) || m.statue.got.includes(b)) return false;
   I0.hatch.splice(idx, 1); m.statue.got.push(b); if (!m.statue.end) m.statue.end = now() + ZAP_TIME * 1000;
   Audio.sfx('discover'); track('zapped');
-  if (m.statue.got.length >= zapNeeds(m.id).length) { m.statue = null; m.last = now(); if (!S.discovered[m.id]) setTimeout(() => UI.discovered(m.id), 400); S.discovered[m.id] = true; markFound(m.id, 'haunt'); UI.toast(`${SHAPE[m.id].name} woke up on Eclipse Island!`, 'good'); addXP(100 * SHAPE[m.id].el.length); }
+  if (m.statue.got.length >= zapNeeds(m.id).length) wakeStatue(m);
   else UI.toast(`Zapped to ${SHAPE[m.id].name} (${m.statue.got.length}/${zapNeeds(m.id).length})`, 'good');
   markDirty(); return true;
 }
@@ -3913,6 +3920,7 @@ const UI = (() => {
       <div class="sec">⏱️ Timers</div><div class="info row">${B('finishTimers', 'Finish timers (this island)', 'blue')}${B('finishAllIslands', 'Finish timers (all islands)', 'blue')}${B('fillBanks', 'Fill coin banks')}</div>
       <div class="sec">🥚 Spawn a Shape</div><div class="info"><select id="ad-shape" style="width:100%;font:inherit;font-weight:800;padding:8px;border:3px solid var(--ink);border-radius:11px;margin-bottom:8px">${opts}</select><div class="row">${B('spawnEgg', 'Add ready egg to Hatchery', 'green')}${B('spawnNow', 'Place on island now', 'pink')}</div></div>
       <div class="sec">📖 Collection & islands</div><div class="info row">${B('discoverAll', 'Discover all Shapes', 'green')}${B('resetCollection', 'Reset collection')}${B('unlockIslands', 'Unlock all islands', 'blue')}</div>
+      <div class="sec">🗿 Eclipse statues <span class="muted">(${hauntStatues().length} asleep)</span></div><div class="info">${hauntStatues().length ? `<select id="ad-statue" style="width:100%;font:inherit;font-weight:800;padding:8px;border:3px solid var(--ink);border-radius:11px;margin-bottom:8px">${hauntStatues().map(m => `<option value="${m.uid}">${SHAPE[m.id].name} (${m.statue.got.length}/${zapNeeds(m.id).length} zapped)</option>`).join('')}</select>` : '<div class="muted" style="margin-bottom:8px">No statues right now.</div>'}<div class="row">${B('completeStatue', 'Complete statue', 'green')}${B('completeStatues', 'Complete all statues', 'purple')}</div></div>
       <div class="sec">🏰 This island</div><div class="info row">${B('maxUpgrades', 'Max castle', 'blue')}${B('clearObstacles', 'Remove obstacles', 'red')}${B('maxLevels', 'Max level all Shapes', 'green')}${B('clearDecos', 'Remove decorations', 'red')}${B('clearIsland', 'Remove all Shapes', 'red')}</div>`;
     open('admin', 'Admin Panel', '#5a3ab0', 'gear', body);
     const sel = modal.querySelector('#ad-shape'); const firstOk = [...sel.options].find(o => !o.disabled); if (firstOk) sel.value = firstOk.value;
@@ -3920,6 +3928,7 @@ const UI = (() => {
       const [a, n] = b.dataset.a.split(':'); Audio.sfx('tap');
       if (a === 'setlevel') Admin.setLevel(+modal.querySelector('#ad-lvl').value);
       else if (a === 'spawnEgg' || a === 'spawnNow') Admin[a](sel.value);
+      else if (a === 'completeStatue' || a === 'completeStatues') { const ss = modal.querySelector('#ad-statue'); if (a === 'completeStatue') { if (!ss) return toast('No statues right now', 'bad'); Admin.completeStatue(+ss.value); } else Admin.completeStatues(); const pb = modal.querySelector('.panel-body'), y = pb ? pb.scrollTop : 0; openAdmin(); const pb2 = modal.querySelector('.panel-body'); if (pb2) pb2.scrollTop = y; return; }
       else if (a === 'clearIsland' || a === 'resetCollection') { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to confirm'; return; } Admin[a](); }
       else Admin[a](n != null ? +n : undefined);
       refreshHUD(); const lv = modal && modal.querySelector('.sec .muted'); if (lv) lv.textContent = `(now ${S.level})`;
